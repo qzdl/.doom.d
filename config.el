@@ -11,6 +11,10 @@
 (setq doom-theme 'doom-one)
 (setq display-line-numbers-type 'relative)
 
+;;; KEYFREQ
+;; blessed be, zah lee
+(keyfreq-mode 1)
+(keyfreq-autosave-mode 1)
 
 ;;; ORG
 (use-package! org
@@ -21,7 +25,9 @@
         "c" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
-        "M-p" #'outline-previous-visible-heading)
+        "M-p" #'outline-previous-visible-heading
+        "C-c l" #'org-insert-link
+        "C-c L" #'org-cliplink)
   (setq org-src-window-setup 'current-window
         org-return-follows-link t
         org-babel-load-languages '((emacs-lisp . t)
@@ -75,12 +81,17 @@
 (require 'org-protocol)
 (global-set-key (kbd "C-c c") 'org-capture)
 
+;;; ORG-RECOLL
+(require 'org-recoll)
+(global-set-key (kbd "C-c g") #'org-recoll-search)
+(global-set-key (kbd "C-c u") #'org-recoll-update-index)
+
 ;; helper capture function
 (defun qzdl/current-roam-link ()
   (interactive)
   "Get link to org-roam file with title"
   (concat "* TODO [[" (buffer-file-name) "]["
-          (nth 0 (org-roam--extract-titles)) "]]"))
+          (car (org-roam--extract-titles)) "]]"))
 
 (defun qzdl/org-inbox-capture ()
   (interactive)
@@ -106,9 +117,6 @@
           (file ,(concat qzdl/org-agenda-directory "templates/weekly_review.org")))
         ("r" "Reading" todo ""
           ((org-agenda-files '(,(concat qzdl/org-agenda-directory "reading.org")))))))
-
-
-(org-protocol-capture)
 
 ;;; ORG-AGENDA
 (use-package! org-agenda
@@ -148,7 +156,6 @@
 
 
 ;;; ORG-ROAM
-
 (use-package! org-roam
   :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
   :hook
@@ -196,7 +203,6 @@
 - source :: ${ref}"
            :unnarrowed t))))
 
-
 (use-package company-org-roam
   :when (featurep! :completion company)
   :after org-roam
@@ -205,16 +211,16 @@
     'org-mode
     '(company-org-roam company-yasnippet company-dabbrev)))
 
-(define-key! org-mode-map
-  "C-c l" #'org-insert-link
-  "C-c L" #'org-cliplink)
-
 (define-key! org-roam-mode-map
   "C-c n l" #'org-roam
   "C-c n f" #'org-roam-find-file
   "C-c n b" #'org-roam-switch-to-buffer
   "C-c n g" #'org-roam-graph-show
+  "C-c n C" #'qzdl/org-roam-capture-current
   "C-c n i" #'org-roam-insert)
+
+(define-key org-roam-mode-map (kbd "C-c n C") #'qzdl/org-roam-capture-current)
+
 (org-roam-mode +1)
 
 (setq org-refile-targets '(("next.org" :level . 0)

@@ -59,4 +59,8 @@
   :recipe (:host github :repo "jethrokuan/org-ref-ox-hugo" :branch "custom/overrides"))
 (package! gif-screencast
   :recipe (:host gitlab :repo "ambrevar/emacs-gif-screencast"))
-(package! slime)
+(package! mathpix.el
+  :recipe (:host github :repo "jethrokuan/mathpix.el"))
+(package! keyfreq)
+(package! org-recoll
+ :recipe (:host github :repo "alraban/org-recoll"))
