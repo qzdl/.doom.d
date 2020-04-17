@@ -16,6 +16,27 @@
 (keyfreq-mode 1)
 (keyfreq-autosave-mode 1)
 
+;;; TRANSPARENCY
+;; totally stolen from https://www.emacswiki.org/emacs/TransparentEmacs
+(setq qzdl/preferred-transparency-alpha '(90 . 85))
+
+(set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
+(add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
+
+(defun qzdl/toggle-transparency ()
+  "Toggle between max opacity and `qzdl/preferred-transparency-alpha'"
+   (interactive)
+   (let ((alpha (frame-parameter nil 'alpha)))
+     (set-frame-parameter
+      nil 'alpha
+      (if (eql (cond ((numberp alpha) alpha)
+                     ((numberp (cdr alpha)) (cdr alpha))
+                     ;; Also handle undocumented (<active> <inactive>) form.
+                     ((numberp (cadr alpha)) (cadr alpha)))
+               100)
+          qzdl/preferred-transparency-alpha '(100 . 100)))))
+
+
 ;;; ORG
 (use-package! org
   :mode ("\\.org\\'" . org-mode)
@@ -103,12 +124,20 @@
   "Capture a task in agenda mode."
   (org-capture nil "I"))
 
+(defun qzdl/org-roam-capture-todo ()
+  (interactive)
+  "Capture a task in agenda mode."
+  (org-roam-capture nil "_"))
+
+
 (setq org-capture-templates
       `(("i" "inbox" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
           "* TODO %?")
+        ;; capture link to live `org-roam' thing
         ("I" "current-roam" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
          (function qzdl/current-roam-link)
          :immediate-finish t)
+        ;; fire directly into inbox
         ("c" "org-protocol-capture" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
           "* TODO [[%:link][%:description]]\n\n %i"
           :immediate-finish t)
@@ -155,7 +184,36 @@
                    (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))))
 
 
+
 ;;; ORG-ROAM
+(defun qzdl/utc-timestamp ()
+  (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
+
+(setq qzdl/capture-title-timestamp "%(qzdl/utc-timestamp)-${slug}")
+
+(setq qzdl/graph-backends '("dot" "neato"))
+
+(defun my/open-link (f)
+  (if (get-buffer-window "*org-roam*" (selected-frame))
+      (if (string= (buffer-name) "*org-roam*")
+          (find-file-other-window f)
+          (find-file f))
+    (find-file f)))
+
+(org-link-frame-setup '((f . my/open-link)))
+
+(defun qzdl/available-graph-backends ()
+  (mapcar (lambda (e) (if (equal org-roam-graph-executable e)
+                     (concat e " (current)") e))
+          qzdl/graph-backends))
+
+(defun qzdl/org-roam-choose-graph-backend ()
+  (interactive)
+  (setq org-roam-graph-executable
+        (completing-read "Choose a graph backend: "
+                         (qzdl/available-graph-backends)))
+  (message (concat "Graph backend set to " org-roam-graph-executable)))
+
 (use-package! org-roam
   :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
   :hook
@@ -175,31 +233,42 @@
         :desc "org-roam-capture" "c" #'org-roam-capture)
   (setq org-roam-directory org-roam-directory
         org-roam-db-location (concat org-roam-directory "org-roam.db")
+        org-roam-graph-executable "dot"
+        org-roam-graph-extra-config '(("overlap" . "false"))
         org-roam-graph-exclude-matcher "private")
   :config
   (require 'org-roam-protocol)
   (setq org-roam-capture-templates
-        '(("d" "default" plain (function org-roam--capture-get-point)
+        `(("d" "default" plain (function org-roam--capture-get-point)
            "%?"
-           :file-name "%<%Y%m%d%H%M%S>-${slug}"
+           :file-name ,qzdl/capture-title-timestamp
            :head "#+SETUPFILE:./hugo_setup.org
 #+HUGO_SECTION: zettels
 #+HUGO_SLUG: ${slug}
 #+TITLE: ${title}\n"
            :unnarrowed t)
+          ("_" "pass-though-todo" plain (function org-roam--capture-get-point)
+           "%?"
+           :file-name ,qzdl/capture-title-timestamp
+           :head "#+SETUPFILE:./hugo_setup.org
+#+HUGO_SECTION: zettels
+#+HUGO_SLUG: ${slug}
+#+TITLE: ${title}\n"
+           :immediate-finish t)
           ("p" "private" plain (function org-roam-capture--get-point)
            "%?"
-           :file-name "private-%<%Y%m%d%H%M%S>-${slug}"
+           :file-name ,(concat "private-" qzdl/capture-title-timestamp)
            :head "#+TITLE: ${title}\n"
            :unnarrowed t)))
-  (setq org-roam-ref-capture-templates
-        '(("r" "ref" plain (function org-roam-capture--get-point)
+  (setq org-roam-capture-ref-templates
+        `(("r" "ref" plain (function org-roam-capture--get-point)
            "%?"
-           :file-name "websites/%<%Y%m%d%H%M%S>-${slug}"
+           :file-name ,qzdl/capture-title-timestamp
            :head "#+SETUPFILE:./hugo_setup.org
 #+ROAM_KEY: ${ref}
 #+HUGO_SLUG: ${slug}
 #+TITLE: ${title}
+#+SOURCE: ${ref}
 - source :: ${ref}"
            :unnarrowed t))))
 
@@ -216,10 +285,11 @@
   "C-c n f" #'org-roam-find-file
   "C-c n b" #'org-roam-switch-to-buffer
   "C-c n g" #'org-roam-graph-show
-  "C-c n C" #'qzdl/org-roam-capture-current
+  "C-c n C-c" #'qzdl/org-roam-capture-current
+  "C-c n I" #'qzdl/org-roam-capture-todo
   "C-c n i" #'org-roam-insert)
 
-(define-key org-roam-mode-map (kbd "C-c n C") #'qzdl/org-roam-capture-current)
+(define-key org-roam-mode-map (kbd "C-c n c-c") #'qzdl/org-roam-capture-current)
 
 (org-roam-mode +1)
 
