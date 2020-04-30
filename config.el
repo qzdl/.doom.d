@@ -25,17 +25,16 @@
 
 (defun qzdl/toggle-transparency ()
   "Toggle between max opacity and `qzdl/preferred-transparency-alpha'"
-   (interactive)
-   (let ((alpha (frame-parameter nil 'alpha)))
-     (set-frame-parameter
-      nil 'alpha
-      (if (eql (cond ((numberp alpha) alpha)
-                     ((numberp (cdr alpha)) (cdr alpha))
-                     ;; Also handle undocumented (<active> <inactive>) form.
-                     ((numberp (cadr alpha)) (cadr alpha)))
-               100)
-          qzdl/preferred-transparency-alpha '(100 . 100)))))
-
+  (interactive)
+  (let ((alpha (frame-parameter nil 'alpha)))
+    (set-frame-parameter
+     nil 'alpha
+     (if (eql (cond ((numberp alpha) alpha)
+                    ((numberp (cdr alpha)) (cdr alpha))
+                    ;; Also handle undocumented (<active> <inactive>) form.
+                    ((numberp (cadr alpha)) (cadr alpha)))
+              100)
+         qzdl/preferred-transparency-alpha '(100 . 100)))))
 
 ;;; ORG
 (use-package! org
@@ -47,8 +46,9 @@
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
         "M-p" #'outline-previous-visible-heading
-        "C-c l" #'org-insert-link
-        "C-c L" #'org-cliplink)
+        ;; "C-c l" #'org-insert-link
+
+        )
   (setq org-src-window-setup 'current-window
         org-return-follows-link t
         org-babel-load-languages '((emacs-lisp . t)
@@ -98,8 +98,8 @@
         ("t" . "theorem")))
 
 ;;; ORG-CAPTURE
-(require 'org-capture)
-(require 'org-protocol)
+; (require 'org-capture)
+; (require 'org-protocol)
 (global-set-key (kbd "C-c c") 'org-capture)
 
 ;;; ORG-RECOLL
@@ -107,12 +107,18 @@
 (global-set-key (kbd "C-c g") #'org-recoll-search)
 (global-set-key (kbd "C-c u") #'org-recoll-update-index)
 
-;; helper capture function
+;; helper capture function for `org-roam' in `agenda-mode'
 (defun qzdl/current-roam-link ()
   (interactive)
   "Get link to org-roam file with title"
   (concat "* TODO [[" (buffer-file-name) "]["
           (car (org-roam--extract-titles)) "]]"))
+
+;; capture current OR item as in agenda mode
+(setq org-capture-templates
+      `(("I" "current-roam" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
+         (function qzdl/current-roam-link)
+         :immediate-finish t)))
 
 (defun qzdl/org-inbox-capture ()
   (interactive)
@@ -183,8 +189,6 @@
                    (org-agenda-files '(,(concat qzdl/org-agenda-directory "next.org")))
                    (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))))
 
-
-
 ;;; ORG-ROAM
 (defun qzdl/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
@@ -192,15 +196,6 @@
 (setq qzdl/capture-title-timestamp "%(qzdl/utc-timestamp)-${slug}")
 
 (setq qzdl/graph-backends '("dot" "neato"))
-
-(defun my/open-link (f)
-  (if (get-buffer-window "*org-roam*" (selected-frame))
-      (if (string= (buffer-name) "*org-roam*")
-          (find-file-other-window f)
-          (find-file f))
-    (find-file f)))
-
-(org-link-frame-setup '((f . my/open-link)))
 
 (defun qzdl/available-graph-backends ()
   (mapcar (lambda (e) (if (equal org-roam-graph-executable e)
