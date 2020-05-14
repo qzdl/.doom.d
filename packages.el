@@ -50,16 +50,26 @@
 ;; our package manager can't deal with; see raxod502/straight.el#279)
 ;(package! builtin-package :recipe (:branch "develop"))
 
+;;; Code:
+(package! exwm)
+(package! org-jira)
+(package! hyperbole)
+
 (package! org-roam
   :recipe (:host github :repo "jethrokuan/org-roam"))
 (package! company-org-roam
   :recipe (:host github :repo "jethrokuan/company-org-roam"))
 (package! org-journal)
+(package! org-recoll
+ :recipe (:host github :repo "alraban/org-recoll"))
+(package! ob-ipython)
+
 ; (package! org-ref-ox-hugo :recipe (:host github :repo "jethrokuan/org-ref-ox-hugo" :branch "custom/overrides"))
 (package! gif-screencast
   :recipe (:host gitlab :repo "ambrevar/emacs-gif-screencast"))
 (package! mathpix.el
   :recipe (:host github :repo "jethrokuan/mathpix.el"))
+
 (package! keyfreq)
-(package! org-recoll
- :recipe (:host github :repo "alraban/org-recoll"))
+(package! google-translate)
+;;; packages.el ends here

@@ -5,16 +5,34 @@
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 
+;;; DVORAK
+;;; stellar tips from https://www.emacswiki.org/emacs/DvorakKeyboard
+;; flip `C-u' with `C-x'
+(define-key key-translation-map [?\C-x] [?\C-u])
+(define-key key-translation-map [?\C-u] [?\C-x])
+
+;;; NICE BINDINGS
+(global-set-key (kbd "C-x <C-return>") #'+eshell/toggle)
+
 
 ;;; VISUAL
-(setq doom-font (font-spec :family "monospace" :size 30))
+(setq doom-font (font-spec :family "monospace" :size 15))
 (setq doom-theme 'doom-one)
 (setq display-line-numbers-type 'relative)
+(set-language-environment "UTF-8")
+(set-default-coding-systems 'utf-8)
+
+;;; PDF
+;; auto-enable midnight to take colours from theme.
+(add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
 
 ;;; KEYFREQ
 ;; blessed be, zah lee
 (keyfreq-mode 1)
 (keyfreq-autosave-mode 1)
+
+;;; JIRA
+(setq jiralib-url "https://jira.thinkproject.com")
 
 ;;; TRANSPARENCY
 ;; totally stolen from https://www.emacswiki.org/emacs/TransparentEmacs
@@ -37,6 +55,13 @@
          qzdl/preferred-transparency-alpha '(100 . 100)))))
 
 ;;; ORG
+
+(require 'org-protocol)
+
+;; total freakshow on that hook
+(eval-after-load nil
+  (remove-hook 'org-mode-hook #'ob-ipython-auto-configure-kernels))
+
 (use-package! org
   :mode ("\\.org\\'" . org-mode)
   :init
@@ -45,15 +70,13 @@
         "c" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
-        "M-p" #'outline-previous-visible-heading
-        ;; "C-c l" #'org-insert-link
-
-        )
+        "M-p" #'outline-previous-visible-heading)
   (setq org-src-window-setup 'current-window
         org-return-follows-link t
         org-babel-load-languages '((emacs-lisp . t)
                                    ;; (common-lisp . t)
                                    (python . t)
+                                   (ipython . t)
                                    (dot . t)
                                    (R . t))
         org-confirm-babel-evaluate nil
@@ -98,7 +121,7 @@
         ("t" . "theorem")))
 
 ;;; ORG-CAPTURE
-; (require 'org-capture)
+(require 'org-capture)
 ; (require 'org-protocol)
 (global-set-key (kbd "C-c c") 'org-capture)
 
@@ -113,12 +136,6 @@
   "Get link to org-roam file with title"
   (concat "* TODO [[" (buffer-file-name) "]["
           (car (org-roam--extract-titles)) "]]"))
-
-;; capture current OR item as in agenda mode
-(setq org-capture-templates
-      `(("I" "current-roam" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
-         (function qzdl/current-roam-link)
-         :immediate-finish t)))
 
 (defun qzdl/org-inbox-capture ()
   (interactive)
@@ -222,9 +239,10 @@
         :desc "org-roam-insert" "i" #'org-roam-insert
         :desc "org-roam-switch-to-buffer" "b" #'org-roam-switch-to-buffer
         :desc "org-roam-find-file" "f" #'org-roam-find-file
-        :desc "org-roam-show-graph" "g" #'org-roam-graph-show
         :desc "org-roam-insert" "i" #'org-roam-insert
+        :desc "qzdl/org-roam-capture-todo" "I" #'qzdl/org-roam-capture-todo
         :desc "qzdl/org-roam-capture-current" "C" #'qzdl/org-roam-capture-current
+        :desc "qzdl/org-roam-capture-current" "C-c" #'qzdl/org-roam-capture-current
         :desc "org-roam-capture" "c" #'org-roam-capture)
   (setq org-roam-directory org-roam-directory
         org-roam-db-location (concat org-roam-directory "org-roam.db")
@@ -256,7 +274,7 @@
            :head "#+TITLE: ${title}\n"
            :unnarrowed t)))
   (setq org-roam-capture-ref-templates
-        `(("r" "ref" plain (function org-roam-capture--get-point)
+        `(("r" " ref" plain (function org-roam-capture--get-point)
            "%?"
            :file-name ,qzdl/capture-title-timestamp
            :head "#+SETUPFILE:./hugo_setup.org
@@ -275,16 +293,7 @@
     'org-mode
     '(company-org-roam company-yasnippet company-dabbrev)))
 
-(define-key! org-roam-mode-map
-  "C-c n l" #'org-roam
-  "C-c n f" #'org-roam-find-file
-  "C-c n b" #'org-roam-switch-to-buffer
-  "C-c n g" #'org-roam-graph-show
-  "C-c n C-c" #'qzdl/org-roam-capture-current
-  "C-c n I" #'qzdl/org-roam-capture-todo
-  "C-c n i" #'org-roam-insert)
 
-(define-key org-roam-mode-map (kbd "C-c n c-c") #'qzdl/org-roam-capture-current)
 
 (org-roam-mode +1)
 
