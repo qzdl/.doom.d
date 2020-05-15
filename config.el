@@ -1,6 +1,5 @@
 ;;;; -*- lexical-binding: t -*-
 
-
 ;;; INTRODUCE YOSELF
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
@@ -83,6 +82,7 @@
         org-use-speed-commands t
         org-catch-invisible-edits 'show
         org-preview-latex-image-directory "/tmp/ltximg/"
+        ;; ORG SRC BLOCKS `C-c C-,'
         org-structure-template-alist '(("a" . "export ascii")
                                        ("c" . "center")
                                        ("C" . "comment")
@@ -103,22 +103,6 @@
 (setq org-directory "~/life/")
 (setq qzdl/org-agenda-directory (concat org-directory "gtd/"))
 (setq org-roam-directory (concat org-directory "roam/"))
-
-;;; ORG SRC BLOCKS `C-c C-,'
-(setq org-structure-template-alist
-      '(("a" . "export ascii")
-        ("c" . "center")
-        ("C" . "comment")
-        ("e" . "example")
-        ("E" . "export")
-        ("h" . "export html")
-        ("l" . "export latex")
-        ("q" . "quote")
-        ("s" . "src")
-        ("el" . "src emacs-lisp")
-        ("v" . "verse")
-        ("d" . "definition")
-        ("t" . "theorem")))
 
 ;;; ORG-CAPTURE
 (require 'org-capture)

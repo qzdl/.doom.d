@@ -1,3 +1,4 @@
+
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
 
@@ -61,7 +62,8 @@
   :recipe (:host github :repo "jethrokuan/company-org-roam"))
 (package! org-journal)
 (package! org-recoll
- :recipe (:host github :repo "alraban/org-recoll"))
+  :recipe (:host github :repo "alraban/org-recoll"))
+(package! ox-reveal)
 (package! ob-ipython)
 
 ; (package! org-ref-ox-hugo :recipe (:host github :repo "jethrokuan/org-ref-ox-hugo" :branch "custom/overrides"))
