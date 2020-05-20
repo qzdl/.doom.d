@@ -10,6 +10,7 @@
 (define-key key-translation-map [?\C-x] [?\C-u])
 (define-key key-translation-map [?\C-u] [?\C-x])
 
+
 ;;; NICE BINDINGS
 (global-set-key (kbd "C-x <C-return>") #'+eshell/toggle)
 
@@ -54,7 +55,7 @@
          qzdl/preferred-transparency-alpha '(100 . 100)))))
 
 ;;; ORG
-
+(require 'ox-reveal)
 (require 'org-protocol)
 
 ;; total freakshow on that hook
@@ -215,7 +216,7 @@
   :hook
   (after-init . org-roam-mode)
   :custom-face
-  (org-roam-link ((t (:inherit org-link :foreground "#005200"))))
+  (org-roam-link ((t (:inherit org-link :foreground "#df85ff"))))
   :init
   (map! :leader
         :prefix "n"
@@ -232,7 +233,7 @@
         org-roam-db-location (concat org-roam-directory "org-roam.db")
         org-roam-graph-executable "dot"
         org-roam-graph-extra-config '(("overlap" . "false"))
-        org-roam-graph-exclude-matcher "private")
+        org-roam-graph-exclude-matcher nil)
   :config
   (require 'org-roam-protocol)
   (setq org-roam-capture-templates
