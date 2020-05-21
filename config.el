@@ -31,6 +31,11 @@
 (keyfreq-mode 1)
 (keyfreq-autosave-mode 1)
 
+(add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
+(load-theme 'tron-legacy t)
+(setq tron-legacy-vivid-cursor t)
+
+
 ;;; JIRA
 (setq jiralib-url "https://jira.thinkproject.com")
 
@@ -225,7 +230,7 @@
         :desc "org-roam-switch-to-buffer" "b" #'org-roam-switch-to-buffer
         :desc "org-roam-find-file" "f" #'org-roam-find-file
         :desc "org-roam-insert" "i" #'org-roam-insert
-        :desc "qzdl/org-roam-capture-todo" "I" #'qzdl/org-roam-capture-todo
+        :desc "qzdl/org-roam-capture-todo" "_" #'qzdl/org-roam-capture-todo
         :desc "qzdl/org-roam-capture-current" "C" #'qzdl/org-roam-capture-current
         :desc "qzdl/org-roam-capture-current" "C-c" #'qzdl/org-roam-capture-current
         :desc "org-roam-capture" "c" #'org-roam-capture)

@@ -72,6 +72,11 @@
 (package! mathpix.el
   :recipe (:host github :repo "jethrokuan/mathpix.el"))
 
+(package! explain-pause-mode
+  :recipe (:host github :repo "lastquestion/explain-pause-mode"))
 (package! keyfreq)
 (package! google-translate)
+
+(package! tron-legacy-emacs-theme
+  :recipe (:host github :repo "ianpan870102/tron-legacy-emacs-theme"))
 ;;; packages.el ends here
