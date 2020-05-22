@@ -1,8 +1,15 @@
 ;;;; -*- lexical-binding: t -*-
 
+(require 'exwm)
+(require 'exwm-config)
+(exwm-config-default)
+(server-start)
+
+
 ;;; INTRODUCE YOSELF
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
+
 
 ;;; DVORAK
 ;;; stellar tips from https://www.emacswiki.org/emacs/DvorakKeyboard
@@ -12,7 +19,12 @@
 
 
 ;;; NICE BINDINGS
-(global-set-key (kbd "C-x <C-return>") #'+eshell/toggle)
+(map! "C-x <C-return>" #'+eshell/toggle)
+
+
+;;; HYPERBOLE
+(require 'hyperbole)
+(map! "C-<mouse-2>" #'hkey-either)
 
 
 ;;; VISUAL
@@ -22,9 +34,11 @@
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)
 
+
 ;;; PDF
 ;; auto-enable midnight to take colours from theme.
 (add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
+
 
 ;;; KEYFREQ
 ;; blessed be, zah lee
@@ -38,6 +52,7 @@
 
 ;;; JIRA
 (setq jiralib-url "https://jira.thinkproject.com")
+
 
 ;;; TRANSPARENCY
 ;; totally stolen from https://www.emacswiki.org/emacs/TransparentEmacs
@@ -58,6 +73,7 @@
                     ((numberp (cadr alpha)) (cadr alpha)))
               100)
          qzdl/preferred-transparency-alpha '(100 . 100)))))
+
 
 ;;; ORG
 (require 'ox-reveal)
@@ -105,20 +121,24 @@
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
 
+
 ;;; ORG-DIRS
 (setq org-directory "~/life/")
 (setq qzdl/org-agenda-directory (concat org-directory "gtd/"))
 (setq org-roam-directory (concat org-directory "roam/"))
+
 
 ;;; ORG-CAPTURE
 (require 'org-capture)
 ; (require 'org-protocol)
 (global-set-key (kbd "C-c c") 'org-capture)
 
+
 ;;; ORG-RECOLL
 (require 'org-recoll)
 (global-set-key (kbd "C-c g") #'org-recoll-search)
 (global-set-key (kbd "C-c u") #'org-recoll-update-index)
+
 
 ;; helper capture function for `org-roam' in `agenda-mode'
 (defun qzdl/current-roam-link ()
@@ -142,23 +162,23 @@
   "Capture a task in agenda mode."
   (org-roam-capture nil "_"))
 
-
 (setq org-capture-templates
       `(("i" "inbox" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
-          "* TODO %?")
+         "* TODO %?")
         ;; capture link to live `org-roam' thing
         ("I" "current-roam" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
          (function qzdl/current-roam-link)
          :immediate-finish t)
         ;; fire directly into inbox
         ("c" "org-protocol-capture" entry (file ,(concat qzdl/org-agenda-directory "inbox.org"))
-          "* TODO [[%:link][%:description]]\n\n %i"
-          :immediate-finish t)
+         "* TODO [[%:link][%:description]]\n\n %i"
+         :immediate-finish t)
         ("w" "Weekly Review" entry
-          (file+olp+datetree ,(concat qzdl/org-agenda-directory "reviews.org"))
-          (file ,(concat qzdl/org-agenda-directory "templates/weekly_review.org")))
+         (file+olp+datetree ,(concat qzdl/org-agenda-directory "reviews.org"))
+         (file ,(concat qzdl/org-agenda-directory "templates/weekly_review.org")))
         ("r" "Reading" todo ""
-          ((org-agenda-files '(,(concat qzdl/org-agenda-directory "reading.org")))))))
+         ((org-agenda-files '(,(concat qzdl/org-agenda-directory "reading.org")))))))
+
 
 ;;; ORG-AGENDA
 (use-package! org-agenda
@@ -195,6 +215,7 @@
                   ((org-agenda-overriding-header "One-off Tasks")
                    (org-agenda-files '(,(concat qzdl/org-agenda-directory "next.org")))
                    (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))))
+
 
 ;;; ORG-ROAM
 (defun qzdl/utc-timestamp ()
