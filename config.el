@@ -79,6 +79,14 @@
 (require 'ox-reveal)
 (require 'org-protocol)
 
+;; handle opening { C-c C-o } or { RET }
+(setq org-file-apps
+      '((auto-mode . emacs)
+        (directory . emacs)
+        ("\\.mm\\'" . default)
+        ("\\.x?html?\\'" . default)
+        ("\\.pdf\\'" . emacs)))
+
 ;; total freakshow on that hook
 (eval-after-load nil
   (remove-hook 'org-mode-hook #'ob-ipython-auto-configure-kernels))
