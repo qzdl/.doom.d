@@ -79,4 +79,8 @@
 
 (package! tron-legacy-emacs-theme
   :recipe (:host github :repo "ianpan870102/tron-legacy-emacs-theme"))
+
+(package! emacs-wallpaper
+  :recipe (:host github :repo "farlado/emacs-wallpaper"))
+
 ;;; packages.el ends here
