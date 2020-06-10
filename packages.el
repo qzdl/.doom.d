@@ -55,6 +55,7 @@
 (package! exwm)
 (package! org-jira)
 (package! hyperbole)
+(package! org-drill)
 
 (package! org-roam
   :recipe (:host github :repo "jethrokuan/org-roam"))

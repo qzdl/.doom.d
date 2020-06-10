@@ -7,11 +7,27 @@
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)
 
+(setq qzdl/toggle-time-state t)
+(display-time-mode qzdl/toggle-time-state)
+
+(defun qzdl/toggle-time-in-modeline ()
+  (interactive)
+  (message
+   (concat "Time display in modeline is "
+           (if (display-time-mode
+                (setq qzdl/toggle-time-state
+                      (qzdl/toggle-1->0 qzdl/toggle-time-state)))
+               "on" "off"))))
+
+(map! :leader
+      (:prefix-map ("t" . "toggle")
+       :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
+
 (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
 (load-theme 'tron-legacy t)
 (setq tron-legacy-vivid-cursor t)
 
-(setq qzdl/preferred-transparency-alpha '(90 . 85))
+(setq qzdl/preferred-transparency-alpha '(80 . 70))
 
 (set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
 (add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
@@ -31,6 +47,15 @@
   (message (concat "Frame transparency set to "
                    (number-to-string (car (frame-parameter nil 'alpha))))))
 
+(require 'exwm-randr)
+
+(setq exwm-randr-workspace-output-plist '(0 "DP-1"))
+(add-hook 'exwm-randr-screen-change-hook
+          (lambda ()
+            (start-process-shell-command
+             "xrandr" nil "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+
+(exwm-randr-enable)
 (exwm-enable)
 
 (setq qzdl/startup-programs
@@ -89,12 +114,20 @@
         ([?\M-v] . [prior])
         ([?\C-v] . [next])
         ([?\C-d] . [delete])
-        ([?\C-k] . [S-end delete])))
+        ([?\C-k] . [S-end delete])
+        ;; cut/paste.
+        ([?\C-w] . [?\C-x])
+        ([?\M-w] . [?\C-c])
+        ([?\C-y] . [?\C-v])
+        ;; search
+        ([?\C-s] . [?\C-f])))
 
+(setq wallpaper-cycle-interval 900)
 (use-package! wallpaper
   :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
          (after-init . wallpaper-cycle-mode))
-  :custom ((wallpaper-cycle-single t)
+  :custom ((wallpaper-cycle-interval 900)
+           (wallpaper-cycle-single t)
            (wallpaper-scaling 'fill)
            (wallpaper-cycle-directory "~/.config/wallpapers")))
 
@@ -108,6 +141,9 @@
 (defun qzdl/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
 
+(defun qzdl/toggle-1->0 (n)
+  (if (equal 1 n) 0 1))
+
 (require 'hyperbole)
 
 (map! "C-<mouse-2>" #'hkey-either)
@@ -116,6 +152,13 @@
 
 (keyfreq-mode 1)
 (keyfreq-autosave-mode 1)
+
+(setq org-file-apps
+      '((auto-mode . emacs)
+        (directory . emacs)
+        ("\\.mm\\'" . default)
+        ("\\.x?html?\\'" . default)
+        ("\\.pdf\\'" . emacs)))
 
 (eval-after-load nil
   (remove-hook 'org-mode-hook #'ob-ipython-auto-configure-kernels))
@@ -166,13 +209,6 @@
                                        ("t" . "theorem")))
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
-
-(setq org-file-apps
-      '((auto-mode . emacs)
-        (directory . emacs)
-        ("\\.mm\\'" . default)
-        ("\\.x?html?\\'" . default)
-        ("\\.pdf\\'" . emacs)))
 
 (setq jiralib-url "https://jira.thinkproject.com")
 
@@ -251,8 +287,6 @@
         org-roam-graph-exclude-matcher "")
   :config
   (require 'org-roam-protocol))
-
-
 
 (org-roam-mode +1)
 
