@@ -1,8 +1,9 @@
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 
-(setq doom-font (font-spec :family "monospace" :size 15))
+(setq doom-font (font-spec :family "monospace" :size 30))
 (setq doom-theme nil)
+(setq doom-modeline-height 10)
 (setq display-line-numbers-type 'relative)
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)
@@ -23,11 +24,23 @@
       (:prefix-map ("t" . "toggle")
        :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
 
-(add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
-(load-theme 'tron-legacy t)
-(setq tron-legacy-vivid-cursor t)
+(defun qzdl/load-tron-legacy ()
+  (interactive)
+  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
+  (load-theme 'tron-legacy t)
+  (setq tron-legacy-vivid-cursor t))
 
-(setq qzdl/preferred-transparency-alpha '(80 . 70))
+(defun qzdl/load-k ()
+  (interactive)
+  (load-theme 'k t))
+
+(defun qzdl/load-pink-mountain ()
+  (interactive)
+  (load-theme 'pink-mountain t))
+
+(qzdl/load-k)
+
+(setq qzdl/preferred-transparency-alpha '(80 . 0))
 
 (set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
 (add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
@@ -47,15 +60,33 @@
   (message (concat "Frame transparency set to "
                    (number-to-string (car (frame-parameter nil 'alpha))))))
 
+(load-file "~/.doom.d/snippets/bgex.el")
+(require 'bgex)
+
+;; Image on frame (dynamic color mode (SRC * DST / factor))
+;; (bgex-set-image-default "~/.config/wall.xpm" t)
+;; Color for HTML-mode (dynamic color mode)
+;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
+
+;; ;; Color for buffer-name (*scratch*)
+;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
+;; (bgex-set-color-default "skyblue")
+;; ;; XPM string
+;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
+;; (bgex-set-xpm-string-default "XPM strging" t)
+
 (require 'exwm-randr)
 
-(setq exwm-randr-workspace-output-plist '(0 "DP-1"))
-(add-hook 'exwm-randr-screen-change-hook
-          (lambda ()
-            (start-process-shell-command
-             "xrandr" nil "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+(defun qzdl/exwm-ultrawide ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "HMDI-1"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+  (exwm-randr-enable))
 
-(exwm-randr-enable)
+
+(qzdl/exwm-ultrawide)
 (exwm-enable)
 
 (setq qzdl/startup-programs
@@ -143,6 +174,8 @@
 
 (defun qzdl/toggle-1->0 (n)
   (if (equal 1 n) 0 1))
+
+
 
 (require 'hyperbole)
 
@@ -313,7 +346,7 @@
            :head ,qzdl/org-roam-capture-head
            :unnarrowed t)))
 
-(setq org-roam-capture-ref-templates
+  (setq org-roam-capture-ref-templates
         `(("r" " ref" plain (function org-roam-capture--get-point)
            "%?"
            :file-name ,qzdl/capture-title-timestamp

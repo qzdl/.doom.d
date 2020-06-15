@@ -1,10 +1,4 @@
 #+Title: Emacs Configuration
-|------+--------|
-| bind | action |
-|------+--------|
-|      |        |
-|------+--------|
-
 
 * Doom Tweaks
 ** ID & Email
@@ -12,12 +6,30 @@
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 #+end_src
+* System Specific
+xps:
+  base
+  (font . 30)
+  (display . "eDP-1")
+  uw
+  (font . 15)
+  (display . "HDMI-1")
+  (randr . "--scale 2x2")
+
+fuj:
+  base
+  (font . 15)
+  (display . "eDP-1")
+  uw
+  (font . 15)
+  (display . "DP-1")
 * Visual
 ** Fonts & Text
 
 #+begin_src emacs-lisp
-(setq doom-font (font-spec :family "monospace" :size 15))
+(setq doom-font (font-spec :family "monospace" :size 30))
 (setq doom-theme nil)
+(setq doom-modeline-height 10)
 (setq display-line-numbers-type 'relative)
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)
@@ -46,9 +58,21 @@
 #+end_src
 ** Theme
 #+begin_src emacs-lisp
-(add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
-(load-theme 'tron-legacy t)
-(setq tron-legacy-vivid-cursor t)
+(defun qzdl/load-tron-legacy ()
+  (interactive)
+  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
+  (load-theme 'tron-legacy t)
+  (setq tron-legacy-vivid-cursor t))
+
+(defun qzdl/load-k ()
+  (interactive)
+  (load-theme 'k t))
+
+(defun qzdl/load-pink-mountain ()
+  (interactive)
+  (load-theme 'pink-mountain t))
+
+(qzdl/load-k)
 #+end_src
 
 #+RESULTS:
@@ -57,7 +81,7 @@
 ** Transparency
 Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
 #+begin_src emacs-lisp
-(setq qzdl/preferred-transparency-alpha '(80 . 70))
+(setq qzdl/preferred-transparency-alpha '(80 . 0))
 
 (set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
 (add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
@@ -81,18 +105,40 @@ Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWik
 #+RESULTS:
 : qzdl/toggle-transparency
 
+** bgex
+To create a source image, run ~convert a.png a.xpm~
+#+begin_src emacs-lisp
+(load-file "~/.doom.d/snippets/bgex.el")
+(require 'bgex)
+
+;; Image on frame (dynamic color mode (SRC * DST / factor))
+;; (bgex-set-image-default "~/.config/wall.xpm" t)
+;; Color for HTML-mode (dynamic color mode)
+;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
+
+;; ;; Color for buffer-name (*scratch*)
+;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
+;; (bgex-set-color-default "skyblue")
+;; ;; XPM string
+;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
+;; (bgex-set-xpm-string-default "XPM strging" t)
+#+end_src
+
 * EXWM
 ** Initialisation
 #+begin_src emacs-lisp
 (require 'exwm-randr)
 
-(setq exwm-randr-workspace-output-plist '(0 "DP-1"))
-(add-hook 'exwm-randr-screen-change-hook
-          (lambda ()
-            (start-process-shell-command
-             "xrandr" nil "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+(defun qzdl/exwm-ultrawide ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "HMDI-1"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+  (exwm-randr-enable))
 
-(exwm-randr-enable)
+
+(qzdl/exwm-ultrawide)
 (exwm-enable)
 #+end_src
 
@@ -257,6 +303,10 @@ coerce non-numeric arguments into something that will toggle.
 #+begin_src emacs-lisp
 (defun qzdl/toggle-1->0 (n)
   (if (equal 1 n) 0 1))
+#+end_src
+** Region functions
+#+begin_src emacs-lisp
+
 #+end_src
 * Hyperbole
 ** Initialisation :init:
@@ -480,7 +530,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 : qzdl/org-roam-capture-todo
 
 ** org-roam
-
+*** Initialisation :init:
 #+begin_src emacs-lisp
 (use-package! org-roam
   :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
@@ -563,6 +613,9 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 *** Convenience Functions
 *** Choose graphviz backend
+A nice example of using <link-to-elisp-doc 'completing-read>
+
+mapping a function over a collection is such an easy way to get things done
 #+begin_src emacs-lisp
 (setq qzdl/graph-backends '("dot" "neato"))
 
@@ -649,7 +702,6 @@ Run analysis from source file on org-roam DB
 : org-journal-today
 
 ** TODO org-drill
-
 ** ox (export)
 #+begin_src emacs-lisp
 (require 'ox-reveal)
