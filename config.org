@@ -235,8 +235,10 @@ To create a source image, run ~convert a.png a.xpm~
 : (([2] . [left]) ([6] . [right]) ([16] . [up]) ([14] . [down]) ([1] . [home]) ([5] . [end]) ([134217846] . [prior]) ([22] . [next]) ([4] . [delete]) ([11] . [S-end delete]))
 
 ** Wallpaper
+<link-to-elisp-doc 'wallpaper-cycle-interval> is measured in seconds, 900 being 15 minutes
 #+begin_src emacs-lisp
 (setq wallpaper-cycle-interval 900)
+
 (use-package! wallpaper
   :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
          (after-init . wallpaper-cycle-mode))
@@ -306,7 +308,25 @@ coerce non-numeric arguments into something that will toggle.
 #+end_src
 ** Region functions
 #+begin_src emacs-lisp
+#+end_src
+* Programming
+** SQL
+For reference: [[https://www.emacswiki.org/emacs/SqlMode][EmacsWiki: Sql Mode]]
 
+*** Upcase SQL Keywords :func:
+Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]] (#toc4)
+#+begin_src emacs-lisp
+  (defun qzdl/upcase-sql-keywords ()
+    (interactive)
+    (save-excursion
+      (dolist (keywords sql-mode-postgres-font-lock-keywords)
+        (goto-char (point-min))
+        (while (re-search-forward (car keywords) nil t)
+          (goto-char (+ 1 (match-beginning 0)))
+          (when (eql font-lock-keyword-face (face-at-point))
+            (backward-char)
+            (upcase-word 1)
+            (forward-char))))))
 #+end_src
 * Hyperbole
 ** Initialisation :init:

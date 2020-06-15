@@ -154,6 +154,7 @@
         ([?\C-s] . [?\C-f])))
 
 (setq wallpaper-cycle-interval 900)
+
 (use-package! wallpaper
   :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
          (after-init . wallpaper-cycle-mode))
@@ -176,6 +177,18 @@
   (if (equal 1 n) 0 1))
 
 
+
+(defun qzdl/upcase-sql-keywords ()
+  (interactive)
+  (save-excursion
+    (dolist (keywords sql-mode-postgres-font-lock-keywords)
+      (goto-char (point-min))
+      (while (re-search-forward (car keywords) nil t)
+        (goto-char (+ 1 (match-beginning 0)))
+        (when (eql font-lock-keyword-face (face-at-point))
+          (backward-char)
+          (upcase-word 1)
+          (forward-char))))))
 
 (require 'hyperbole)
 
@@ -346,7 +359,7 @@
            :head ,qzdl/org-roam-capture-head
            :unnarrowed t)))
 
-  (setq org-roam-capture-ref-templates
+(setq org-roam-capture-ref-templates
         `(("r" " ref" plain (function org-roam-capture--get-point)
            "%?"
            :file-name ,qzdl/capture-title-timestamp
