@@ -1,7 +1,7 @@
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 
-(setq doom-font (font-spec :family "monospace" :size 30))
+(setq doom-font (font-spec :family "monospace" :size 16))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
 (setq display-line-numbers-type 'relative)
@@ -40,7 +40,7 @@
 
 (qzdl/load-k)
 
-(setq qzdl/preferred-transparency-alpha '(80 . 0))
+(setq qzdl/preferred-transparency-alpha '(80 . 70))
 
 (set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
 (add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
@@ -79,12 +79,11 @@
 
 (defun qzdl/exwm-ultrawide ()
   (interactive)
-  (setq exwm-randr-workspace-monitor-plist '(0 "HMDI-1"))
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-1"))
   (add-hook 'exwm-randr-screen-change-hook
             (lambda ()(start-process-shell-command "xrandr" nil
-                                              "xrandr --output HDMI-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+                                              "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
   (exwm-randr-enable))
-
 
 (qzdl/exwm-ultrawide)
 (exwm-enable)
@@ -165,6 +164,14 @@
 
 (server-start)
 
+(map! "s-h" #'windmove-left)
+(map! "s-j" #'windmove-down)
+(map! "s-k" #'windmove-up)
+(map! "s-l" #'windmove-right)
+
+(map! "s-n" #'next-buffer)
+(map! "s-p" #'previous-buffer)
+
 (define-key key-translation-map [?\C-x] [?\C-u])
 (define-key key-translation-map [?\C-u] [?\C-x])
 
@@ -176,19 +183,34 @@
 (defun qzdl/toggle-1->0 (n)
   (if (equal 1 n) 0 1))
 
+(defun qzdl/toggle-on->off (n)
+  (if (equal 1 n) "on" "off"))
 
+(setq qzdl/psql-error-rollback 0)
 
-(defun qzdl/upcase-sql-keywords ()
+(qzdl/toggle-1->0 qzdl/psql-error-rollback)
+
+(defun qzdl/psql-toggle-error-rollback ()
   (interactive)
-  (save-excursion
-    (dolist (keywords sql-mode-postgres-font-lock-keywords)
-      (goto-char (point-min))
-      (while (re-search-forward (car keywords) nil t)
-        (goto-char (+ 1 (match-beginning 0)))
-        (when (eql font-lock-keyword-face (face-at-point))
-          (backward-char)
-          (upcase-word 1)
-          (forward-char))))))
+  (setq qzdl/psql-error-rollback
+        (qzdl/toggle-1->0 qzdl/psql-error-rollback))
+  (sql-send-string
+   (concat "\\set ON_ERROR_ROLLBACK "
+           (qzdl/toggle-on->off qzdl/psql-error-rollback)))
+  (sql-send-string
+   "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
+
+  (defun qzdl/upcase-sql-keywords ()
+    (interactive)
+    (save-excursion
+      (dolist (keywords sql-mode-postgres-font-lock-keywords)
+        (goto-char (point-min))
+        (while (re-search-forward (car keywords) nil t)
+          (goto-char (+ 1 (match-beginning 0)))
+          (when (eql font-lock-keyword-face (face-at-point))
+            (backward-char)
+            (upcase-word 1)
+            (forward-char))))))
 
 (require 'hyperbole)
 
@@ -359,7 +381,7 @@
            :head ,qzdl/org-roam-capture-head
            :unnarrowed t)))
 
-(setq org-roam-capture-ref-templates
+  (setq org-roam-capture-ref-templates
         `(("r" " ref" plain (function org-roam-capture--get-point)
            "%?"
            :file-name ,qzdl/capture-title-timestamp
@@ -388,7 +410,8 @@
   :init
   (map! "<f1>" #'qzdl/switch-to-agenda)
   (setq org-agenda-block-separator nil
-        org-agenda-start-with-log-mode t)
+        org-agenda-start-with-log-mode t
+        org-agenda-files (list org-roam-directory))
   (defun qzdl/switch-to-agenda ()
     (interactive)
     (org-agenda nil " "))
@@ -428,6 +451,7 @@
   (org-journal-file-format "private-%Y-%m-%d.org")
   (org-journal-dir org-roam-directory)
   (org-journal-carryover-items nil)
+  (org-journal-enable-agenda-integration nil)
   (org-journal-date-format "%Y-%m-%d")
   :config
   (defun org-journal-today ()

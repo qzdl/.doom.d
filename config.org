@@ -27,7 +27,7 @@ fuj:
 ** Fonts & Text
 
 #+begin_src emacs-lisp
-(setq doom-font (font-spec :family "monospace" :size 30))
+(setq doom-font (font-spec :family "monospace" :size 16))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
 (setq display-line-numbers-type 'relative)
@@ -37,8 +37,11 @@ fuj:
 
 #+RESULTS:
 : (utf-8-unix . utf-8-unix)
-** Time in the modeline :kbd:
 
+
+** Time in the modeline :kbd:
+An example of this can be found in [[Time in the modeline]]. Equal is used here to
+coerce non-numeric arguments into something that will toggle.
 #+begin_src emacs-lisp
 (setq qzdl/toggle-time-state t)
 (display-time-mode qzdl/toggle-time-state)
@@ -56,6 +59,7 @@ fuj:
       (:prefix-map ("t" . "toggle")
        :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
 #+end_src
+
 ** Theme
 #+begin_src emacs-lisp
 (defun qzdl/load-tron-legacy ()
@@ -75,13 +79,11 @@ fuj:
 (qzdl/load-k)
 #+end_src
 
-#+RESULTS:
-: t
 
 ** Transparency
 Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
 #+begin_src emacs-lisp
-(setq qzdl/preferred-transparency-alpha '(80 . 0))
+(setq qzdl/preferred-transparency-alpha '(80 . 70))
 
 (set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
 (add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
@@ -131,12 +133,11 @@ To create a source image, run ~convert a.png a.xpm~
 
 (defun qzdl/exwm-ultrawide ()
   (interactive)
-  (setq exwm-randr-workspace-monitor-plist '(0 "HMDI-1"))
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-1"))
   (add-hook 'exwm-randr-screen-change-hook
             (lambda ()(start-process-shell-command "xrandr" nil
-                                              "xrandr --output HDMI-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+                                              "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
   (exwm-randr-enable))
-
 
 (qzdl/exwm-ultrawide)
 (exwm-enable)
@@ -261,6 +262,23 @@ To create a source image, run ~convert a.png a.xpm~
 * Miscellanious :kbd:
 ** Global Bindings
 These Key Binds Are focused around ergonomics more than mnemonics
+*** Window control
+#+begin_src emacs-lisp
+(map! "s-h" #'windmove-left)
+(map! "s-j" #'windmove-down)
+(map! "s-k" #'windmove-up)
+(map! "s-l" #'windmove-right)
+#+end_src
+
+#+RESULTS:
+
+*** BUffer control
+#+begin_src emacs-lisp
+(map! "s-n" #'next-buffer)
+(map! "s-p" #'previous-buffer)
+#+end_src
+
+#+RESULTS:
 
 *** Switch {C-x} and {C-u}
 A tip associated with Dvorak, that is equally charming without the dvorak keyboard layout.
@@ -276,8 +294,6 @@ This stellar advice came from [[https://www.emacswiki.org/emacs/DvorakKeyboard][
 *** Shell pop
 #+begin_src emacs-lisp
 (map! "C-x C-'" #'+eshell/toggle)
-
-
 #+end_src
 
 #+RESULTS:
@@ -293,25 +309,45 @@ incase the shell needs to be changed
 
 #+RESULTS:
 : qzdl/utc-timestamp
-*** toggle between non-nil -> [ 0 | 1 ]
+*** toggle between non-nil -> [ 0 | 1 ], [ on | off ]
 This function is used for quality of life in ensuring correct bottom values are
 used when toggling modes; the set of activation values are not necessarily using
 ~[t | nil]~, but can be =[(t n>0) | n<=0]=, which can throw a spanner in the
 works for a regular style ~(mode (setq toggle (not toggle)))~ type of
 arrangement, given ~[t | nil]~.
 
-An example of this can be found in [[Time in the modeline]]. Equal is used here to
-coerce non-numeric arguments into something that will toggle.
+An example of this can be found in [[Time in the modeline]], or [[Toggle
+ERROR_ROLLBACK]]. Equal is used here to coerce non-numeric arguments into
+something that will toggle.
 #+begin_src emacs-lisp
 (defun qzdl/toggle-1->0 (n)
   (if (equal 1 n) 0 1))
-#+end_src
-** Region functions
-#+begin_src emacs-lisp
+
+(defun qzdl/toggle-on->off (n)
+  (if (equal 1 n) "on" "off"))
 #+end_src
 * Programming
 ** SQL
 For reference: [[https://www.emacswiki.org/emacs/SqlMode][EmacsWiki: Sql Mode]]
+*** Toggle ERROR_ROLLBACK :psql:
+#+begin_src emacs-lisp
+(setq qzdl/psql-error-rollback 0)
+
+(qzdl/toggle-1->0 qzdl/psql-error-rollback)
+
+(defun qzdl/psql-toggle-error-rollback ()
+  (interactive)
+  (setq qzdl/psql-error-rollback
+        (qzdl/toggle-1->0 qzdl/psql-error-rollback))
+  (sql-send-string
+   (concat "\\set ON_ERROR_ROLLBACK "
+           (qzdl/toggle-on->off qzdl/psql-error-rollback)))
+  (sql-send-string
+   "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
+#+end_src
+
+#+RESULTS:
+: qzdl/psql-toggle-error-rollback
 
 *** Upcase SQL Keywords :func:
 Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]] (#toc4)
@@ -665,7 +701,8 @@ Run analysis from source file on org-roam DB
   :init
   (map! "<f1>" #'qzdl/switch-to-agenda)
   (setq org-agenda-block-separator nil
-        org-agenda-start-with-log-mode t)
+        org-agenda-start-with-log-mode t
+        org-agenda-files (list org-roam-directory))
   (defun qzdl/switch-to-agenda ()
     (interactive)
     (org-agenda nil " "))
@@ -711,6 +748,7 @@ Run analysis from source file on org-roam DB
   (org-journal-file-format "private-%Y-%m-%d.org")
   (org-journal-dir org-roam-directory)
   (org-journal-carryover-items nil)
+  (org-journal-enable-agenda-integration nil)
   (org-journal-date-format "%Y-%m-%d")
   :config
   (defun org-journal-today ()

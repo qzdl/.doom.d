@@ -16,7 +16,7 @@
 
 (doom! :input
        ;;chinese
-       japanese
+       ;;japanese
 
        :completion
        company           ; the ultimate code completion backend
@@ -88,7 +88,7 @@
        ;;ein               ; tame Jupyter notebooks with emacs
        (eval +overlay)     ; run code, run (also, repls)
        ;;gist              ; interacting with github gists
-       lookup              ; navigate your code and its documentation
+       lookup              ; navigate your code and its documentation0
        ;;lsp
        ;;macos             ; MacOS-specific commands
        magit             ; a git porcelain for Emacs
