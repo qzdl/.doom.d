@@ -1,4 +1,7 @@
+# ------------------------------------------------------------------------------
 #+Title: Emacs Configuration
+#+STARTUP: showall showstars latexpreview
+# ------------------------------------------------------------------------------
 
 * Doom Tweaks
 ** ID & Email
@@ -30,7 +33,7 @@ fuj:
 (setq doom-font (font-spec :family "monospace" :size 16))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
-(setq display-line-numbers-type 'relative)
+(setq display-line-numbers-type nil)
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)
 #+end_src
@@ -66,7 +69,18 @@ coerce non-numeric arguments into something that will toggle.
 ** Elegance
 #+begin_src emacs-lisp
 (load! "elegance/elegance.el")
-(load! "elgance/sanity.el")
+(load! "elegance/sanity.el")
+#+end_src
+** Writeroom
+When centering, use all available width, and respond to resizing somethinh
+12345678901234567890123456789012345678901234567890123456789012345678901234567890
+somethingh som
+#+begin_src emacs-lisp
+(setq writeroom-width 80)
+
+(add-to-list 'writeroom-mode-hook
+             (lambda () (setq writeroom-border-width 50)))
+
 #+end_src
 ** Theme
 #+begin_src emacs-lisp
@@ -306,6 +320,10 @@ This stellar advice came from [[https://www.emacswiki.org/emacs/DvorakKeyboard][
 
 **** TODO Abstract this to a ~user-shell/toggle~ function
 incase the shell needs to be changed
+*** ROT13 buffer
+#+begin_src emacs-lisp
+(map! "s-B" 'toggle-rot13-mode)
+#+end_src
 ** Functions
 *** UTC Timestamp
 #+begin_src emacs-lisp
@@ -391,6 +409,12 @@ Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https:/
     (eros--make-result-overlay (concat output value)
       :where (point)
       :duration eros-eval-result-duration)))
+#+end_src
+
+** Emacs Lisp
+*** eval-defun
+#+begin_src emacs-lisp
+(define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 #+end_src
 * Hyperbole
 ** Initialisation :init:
@@ -797,3 +821,11 @@ Run analysis from source file on org-roam DB
 
 #+RESULTS:
 : ox-reveal
+
+
+
+
+integral:
+\[
+\int_{-\infty}^{+\infty} e^{-x^2} dx = \sqrt{\pi}
+]

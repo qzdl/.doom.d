@@ -87,9 +87,4 @@
   :recipe (:host github :repo "farlado/emacs-wallpaper"))
 
 
-(package! elegant-emacs
-  :recipe (:host github :repo "rougier/elegant-emacs"))
-
-
-
 ;;; packages.el ends here

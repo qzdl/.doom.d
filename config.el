@@ -4,7 +4,7 @@
 (setq doom-font (font-spec :family "monospace" :size 16))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
-(setq display-line-numbers-type 'relative)
+(setq display-line-numbers-type nil)
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)
 
@@ -27,7 +27,12 @@
        :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
 
 (load! "elegance/elegance.el")
-(load! "elgance/sanity.el")
+(load! "elegance/sanity.el")
+
+(setq writeroom-width 80)
+
+(add-to-list 'writeroom-mode-hook
+             (lambda () (setq writeroom-border-width 50)))
 
 (defun qzdl/load-tron-legacy ()
   (interactive)
@@ -180,6 +185,8 @@
 
 (map! "C-x C-'" #'+eshell/toggle)
 
+(map! "s-B" 'toggle-rot13-mode)
+
 (defun qzdl/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
 
@@ -225,6 +232,8 @@
     (eros--make-result-overlay (concat output value)
       :where (point)
       :duration eros-eval-result-duration)))
+
+(define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 
 (require 'hyperbole)
 
