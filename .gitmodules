@@ -1,0 +1,3 @@
+[submodule "elegance"]
+	path = elegance
+	url = https://github.com/rougier/elegant-emacs

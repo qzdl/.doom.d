@@ -57,6 +57,8 @@
 (package! hyperbole)
 (package! org-drill)
 
+(package! speed-type)
+
 (package! org-roam
   :recipe (:host github :repo "jethrokuan/org-roam"))
 (package! company-org-roam
@@ -83,5 +85,11 @@
 
 (package! emacs-wallpaper
   :recipe (:host github :repo "farlado/emacs-wallpaper"))
+
+
+(package! elegant-emacs
+  :recipe (:host github :repo "rougier/elegant-emacs"))
+
+
 
 ;;; packages.el ends here

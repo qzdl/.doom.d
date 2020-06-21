@@ -8,6 +8,8 @@
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)
 
+(tooltip-mode 1)
+
 (setq qzdl/toggle-time-state t)
 (display-time-mode qzdl/toggle-time-state)
 
@@ -24,6 +26,9 @@
       (:prefix-map ("t" . "toggle")
        :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
 
+(load! "elegance/elegance.el")
+(load! "elgance/sanity.el")
+
 (defun qzdl/load-tron-legacy ()
   (interactive)
   (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
@@ -37,8 +42,6 @@
 (defun qzdl/load-pink-mountain ()
   (interactive)
   (load-theme 'pink-mountain t))
-
-(qzdl/load-k)
 
 (setq qzdl/preferred-transparency-alpha '(80 . 70))
 
@@ -212,6 +215,17 @@
             (upcase-word 1)
             (forward-char))))))
 
+(if (symbolp 'cl-font-lock-built-in-mode)
+    (cl-font-lock-built-in-mode 1))
+
+(defun qzdl/slime-eval-last-expression-eros ()
+  (interactive)
+  (destructuring-bind (output value)
+      (sly-eval `(slynk:eval-and-grab-output ,(sly-last-expression)))
+    (eros--make-result-overlay (concat output value)
+      :where (point)
+      :duration eros-eval-result-duration)))
+
 (require 'hyperbole)
 
 (map! "C-<mouse-2>" #'hkey-either)
@@ -257,6 +271,7 @@
                                    (ipython . t)
                                    (dot . t)
                                    (R . t))
+        org-ellipses " ..."
         org-confirm-babel-evaluate nil
         org-use-speed-commands t
         org-catch-invisible-edits 'show
