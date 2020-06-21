@@ -3,6 +3,6 @@
 #+SINCE:   earlier
 #+STARTUP: inlineimages nofold
 
-file:./images/screenshot-01.png
+[[file:images/screenshot-01.png]]
 
 * Table of Contents :TOC_3:noexport:
