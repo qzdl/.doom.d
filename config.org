@@ -319,7 +319,7 @@ These Key Binds Are focused around ergonomics more than mnemonics
 
 #+RESULTS:
 
-*** BUffer control
+*** Buffer control
 #+begin_src emacs-lisp
 (map! "s-n" #'next-buffer)
 (map! "s-p" #'previous-buffer)
@@ -508,9 +508,11 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 ** Directories
 #+begin_src emacs-lisp
-(setq org-directory "~/life/")
-(setq qzdl/org-agenda-directory (concat org-directory "gtd/"))
-(setq org-roam-directory (concat org-directory "roam/"))
+(setq org-directory "~/life/"
+      qzdl/notes-directory (concat org-directory "roam/")
+      qzdl/org-agenda-directory (concat org-directory "gtd/")
+      org-noter-notes-search-path (list qzdl/notes-directory)
+      org-roam-directory qzdl/notes-directory)
 #+end_src
 
 #+RESULTS:
@@ -527,7 +529,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ((next.org :level . 0) (someday.org :level . 0) (reading.org :level . 1) (projects.org :maxlevel . 1))
 
-** Org-mode
+** org-mode
 #+begin_src emacs-lisp
 (use-package! org
   :mode ("\\.org\\'" . org-mode)
@@ -691,7 +693,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
         org-roam-db-location (concat org-roam-directory "org-roam.db")
         org-roam-graph-executable "dot"
         org-roam-graph-extra-config '(("overlap" . "false"))
-        org-roam-graph-exclude-matcher "")
+        org-roam-graph-exclude-matcher nil)
   :config
   (require 'org-roam-protocol))
 
@@ -776,6 +778,33 @@ mapping a function over a collection is such an easy way to get things done
 Run analysis from source file on org-roam DB
 - restrict graph (e.g. exclude sensitive information)
 
+*** org-roam-server
+[[https://github.com/org-roam/org-roam-server][GitHub - org-roam/org-roam-server]]
+#+begin_src emacs-lisp
+(use-package! org-roam-server
+:config
+(setq org-roam-server-host "127.0.0.1"
+      org-roam-server-port 8080
+      org-roam-server-export-inline-images t
+      org-roam-server-authenticate nil
+      org-roam-server-network-label-truncate t
+      org-roam-server-network-label-truncate-length 60))
+#+end_src
+
+** org-noter
+See [[Directories]] for <link-to-elisp-doc 'org-noter-notes-search-path>
+#+begin_src emacs-lisp
+
+#+end_src
+
+** org-ref
+https://github.com/jkitchin/org-ref
+#+begin_src emacs-lisp
+(require 'org-ref)
+(setq reftex-bib-path  '("~/life/tex.bib")
+      reftex-default-bibliography reftex-bib-path
+      org-ref-default-bibliography reftex-bib-path)
+#+end_src
 ** org-agenda
 #+begin_src emacs-lisp
 (use-package! org-agenda
@@ -852,7 +881,9 @@ Run analysis from source file on org-roam DB
 
 
 
-integral:
-\[
-\int_{-\infty}^{+\infty} e^{-x^2} dx = \sqrt{\pi}
-]
+
+* GNUs
+Following [[https://www.emacswiki.org/emacs/GnusTutorial][EmacsWiki: Gnus Tutorial]]
+#+begin_src emacs-lisp
+(setq gnus-secondary-select-methods '((nntp "list.postgres.org")))
+#+end_src
