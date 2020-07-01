@@ -93,7 +93,24 @@
                                               "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
   (exwm-randr-enable))
 
-(qzdl/exwm-ultrawide)
+(defun qzdl/exwm-tpb ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-1"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --mode 1680x1050 --pos 1920x0 --rotate normal --output eDP-1 --primary --mode 1920x1080 --pos 0x920 --rotate normal --output DP-2 --off")))
+  (exwm-randr-enable))
+
+
+(defun qzdl/exwm-110vga ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-2"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
+  (exwm-randr-enable))
+
+(qzdl/exwm-110vga)
 (exwm-enable)
 
 (setq qzdl/startup-programs
@@ -171,6 +188,9 @@
            (wallpaper-cycle-directory "~/.config/wallpapers")))
 
 (server-start)
+
+  (map! "<mouse-8>" 'better-jumper-jump-backward)
+  (map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "s-h" #'windmove-left)
 (map! "s-j" #'windmove-down)
@@ -254,9 +274,11 @@
 (eval-after-load nil
   (remove-hook 'org-mode-hook #'ob-ipython-auto-configure-kernels))
 
-(setq org-directory "~/life/")
-(setq qzdl/org-agenda-directory (concat org-directory "gtd/"))
-(setq org-roam-directory (concat org-directory "roam/"))
+(setq org-directory "~/life/"
+      qzdl/notes-directory (concat org-directory "roam/")
+      qzdl/org-agenda-directory (concat org-directory "gtd/")
+      org-noter-notes-search-path (list qzdl/notes-directory)
+      org-roam-directory qzdl/notes-directory)
 
 (setq org-refile-targets '(("next.org" :level . 0)
                            ("someday.org" :level . 0)
@@ -376,7 +398,7 @@
         org-roam-db-location (concat org-roam-directory "org-roam.db")
         org-roam-graph-executable "dot"
         org-roam-graph-extra-config '(("overlap" . "false"))
-        org-roam-graph-exclude-matcher "")
+        org-roam-graph-exclude-matcher nil)
   :config
   (require 'org-roam-protocol))
 
@@ -429,6 +451,22 @@
         (completing-read "Choose a graph backend: "
                          (qzdl/available-graph-backends)))
   (message (concat "Graph backend set to " org-roam-graph-executable)))
+
+(use-package! org-roam-server
+:config
+(setq org-roam-server-host "127.0.0.1"
+      org-roam-server-port 8080
+      org-roam-server-export-inline-images t
+      org-roam-server-authenticate nil
+      org-roam-server-network-label-truncate t
+      org-roam-server-network-label-truncate-length 60))
+
+
+
+(require 'org-ref)
+(setq reftex-bib-path  '("~/life/tex.bib")
+      reftex-default-bibliography reftex-bib-path
+      org-ref-default-bibliography reftex-bib-path)
 
 (use-package! org-agenda
   :init
@@ -483,3 +521,5 @@
     (org-journal-new-entry t)))
 
 (require 'ox-reveal)
+
+(setq gnus-secondary-select-methods '((nntp "list.postgres.org")))
