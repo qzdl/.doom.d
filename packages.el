@@ -60,9 +60,14 @@
 (package! speed-type)
 
 (package! org-roam
-  :recipe (:host github :repo "jethrokuan/org-roam"))
+  :recipe (:host github :repo "org-roam/org-roam"))
 (package! company-org-roam
-  :recipe (:host github :repo "jethrokuan/company-org-roam"))
+  :recipe (:host github :repo "org-roam/company-org-roam"))
+(package! org-roam-server)
+(package! org-roam-bibtex)
+  
+
+(package! org-ref)
 (package! org-journal)
 (package! org-recoll
   :recipe (:host github :repo "alraban/org-recoll"))
