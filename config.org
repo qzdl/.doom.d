@@ -1,6 +1,5 @@
 # ------------------------------------------------------------------------------
 #+Title: Emacs Configuration
-#+STARTUP: showall showstars latexpreview
 # ------------------------------------------------------------------------------
 
 * Doom Tweaks
@@ -159,7 +158,24 @@ To create a source image, run ~convert a.png a.xpm~
                                               "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
   (exwm-randr-enable))
 
-(qzdl/exwm-ultrawide)
+(defun qzdl/exwm-tpb ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-1"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --mode 1680x1050 --pos 1920x0 --rotate normal --output eDP-1 --primary --mode 1920x1080 --pos 0x920 --rotate normal --output DP-2 --off")))
+  (exwm-randr-enable))
+
+
+(defun qzdl/exwm-110vga ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-2"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
+  (exwm-randr-enable))
+
+(qzdl/exwm-110vga)
 (exwm-enable)
 #+end_src
 
@@ -282,6 +298,17 @@ To create a source image, run ~convert a.png a.xpm~
 * Miscellanious :kbd:
 ** Global Bindings
 These Key Binds Are focused around ergonomics more than mnemonics
+*** Mouse jumping
+#ERGO
+<link-to-elisp-doc 'better-jumper-jump-backwards>
+#+begin_src emacs-lisp
+  (map! "<mouse-8>" 'better-jumper-jump-backward)
+  (map! "<mouse-9>" 'better-jumper-jump-forward)
+#+end_src
+
+#+RESULTS:
+
+
 *** Window control
 #+begin_src emacs-lisp
 (map! "s-h" #'windmove-left)
