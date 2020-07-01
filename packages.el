@@ -52,44 +52,63 @@
 ;(package! builtin-package :recipe (:branch "develop"))
 
 ;;; Code:
+
 (package! exwm)
-(package! org-jira)
+(package! emacs-wallpaper
+  :recipe (:host github :repo "farlado/emacs-wallpaper"))
+
 (package! hyperbole)
-(package! org-drill)
 
 (package! speed-type)
 
+;;=============
+;; ORG STUFF ;;
+;;=============
+(package! org-drill)
+(package! org-jira)
+(package! org-journal)
+
+;;; ORG ROAM
 (package! org-roam
   :recipe (:host github :repo "org-roam/org-roam"))
 (package! company-org-roam
   :recipe (:host github :repo "org-roam/company-org-roam"))
 (package! org-roam-server)
 (package! org-roam-bibtex)
-  
 
+;;; OTHER PDF & BIB
 (package! org-ref)
-(package! org-journal)
+(package! org-pdftools)
+(package! org-noter-pdftools)
+
 (package! org-recoll
   :recipe (:host github :repo "alraban/org-recoll"))
+
+;;; OX
 (package! ox-reveal)
+
+;;; BABEL
 (package! ob-ipython)
 
-; (package! org-ref-ox-hugo :recipe (:host github :repo "jethrokuan/org-ref-ox-hugo" :branch "custom/overrides"))
+;;========
+;; MISC ;;
+;;========
+(package! keyfreq)
+(package! google-translate)
 (package! gif-screencast
   :recipe (:host gitlab :repo "ambrevar/emacs-gif-screencast"))
 (package! mathpix.el
   :recipe (:host github :repo "jethrokuan/mathpix.el"))
-
 (package! explain-pause-mode
   :recipe (:host github :repo "lastquestion/explain-pause-mode"))
-(package! keyfreq)
-(package! google-translate)
+(package! counsel-spotify
+  :recipe (:host github :repo "Lautaro-Garcia/counsel-spotify"))
 
+;;=========
+;; THEME ;;
+;;=========
 (package! tron-legacy-emacs-theme
   :recipe (:host github :repo "ianpan870102/tron-legacy-emacs-theme"))
-
-(package! emacs-wallpaper
-  :recipe (:host github :repo "farlado/emacs-wallpaper"))
 
 
 ;;; packages.el ends here
