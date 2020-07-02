@@ -103,7 +103,7 @@
   :recipe (:host github :repo "lastquestion/explain-pause-mode"))
 (package! counsel-spotify
   :recipe (:host github :repo "Lautaro-Garcia/counsel-spotify"))
-
+(package! ereader)
 ;;=========
 ;; THEME ;;
 ;;=========

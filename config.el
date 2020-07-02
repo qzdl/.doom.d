@@ -110,7 +110,7 @@
                                               "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
   (exwm-randr-enable))
 
-(qzdl/exwm-110vga)
+(qzdl/exwm-tpb)
 (exwm-enable)
 
 (setq qzdl/startup-programs
@@ -192,6 +192,9 @@
   (map! "<mouse-8>" 'better-jumper-jump-backward)
   (map! "<mouse-9>" 'better-jumper-jump-forward)
 
+(map! "C-x C-k" #'custom/kill-this-buffer)
+(map! "C-x k" #'kmacro-keymap)
+
 (map! "s-h" #'windmove-left)
 (map! "s-j" #'windmove-down)
 (map! "s-k" #'windmove-up)
@@ -215,6 +218,16 @@
 
 (defun qzdl/toggle-on->off (n)
   (if (equal 1 n) "on" "off"))
+
+(map! :leader
+      (:prefix-map ("n" . "notes")
+       (:prefix-map ("d" . "by date")
+          :desc "Arbitrary date" "d" #'org-roam-dailies-date
+          :desc "Today"          "t" #'org-roam-dailies-today
+          :desc "Tomorrow"       "m" #'org-roam-dailies-tomorrow
+          :desc "Yesterday"      "y" #'org-roam-dailies-yesterday)
+       "f" #'org-roam-find-file
+       "F" #'find-file-in-notes))
 
 (setq qzdl/psql-error-rollback 0)
 
@@ -327,6 +340,8 @@
 (setq jiralib-url "https://jira.thinkproject.com")
 
 (require 'org-recoll)
+
+(setq org-recoll-command-invocation "recollq -t -A")
 
 (global-set-key (kbd "C-c g") #'org-recoll-search)
 (global-set-key (kbd "C-c u") #'org-recoll-update-index)

@@ -175,7 +175,7 @@ To create a source image, run ~convert a.png a.xpm~
                                               "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
   (exwm-randr-enable))
 
-(qzdl/exwm-110vga)
+(qzdl/exwm-tpb)
 (exwm-enable)
 #+end_src
 
@@ -308,7 +308,11 @@ These Key Binds Are focused around ergonomics more than mnemonics
 
 #+RESULTS:
 
-
+*** Switch {C-x C-k} and {C-x k}
+#+begin_src emacs-lisp
+(map! "C-x C-k" #'custom/kill-this-buffer)
+(map! "C-x k" #'kmacro-keymap)
+#+end_src
 *** Window control
 #+begin_src emacs-lisp
 (map! "s-h" #'windmove-left)
@@ -377,6 +381,25 @@ something that will toggle.
 (defun qzdl/toggle-on->off (n)
   (if (equal 1 n) "on" "off"))
 #+end_src
+* Hydra
+** n
+The =n= of {C-c n} denotes notes.
+
+#+begin_src emacs-lisp
+
+(map! :leader
+      (:prefix-map ("n" . "notes")
+       (:prefix-map ("d" . "by date")
+          :desc "Arbitrary date" "d" #'org-roam-dailies-date
+          :desc "Today"          "t" #'org-roam-dailies-today
+          :desc "Tomorrow"       "m" #'org-roam-dailies-tomorrow
+          :desc "Yesterday"      "y" #'org-roam-dailies-yesterday)
+       "f" #'org-roam-find-file
+       "F" #'find-file-in-notes))
+#+end_src
+
+#+RESULTS:
+
 * Programming
 ** SQL
 For reference: [[https://www.emacswiki.org/emacs/SqlMode][EmacsWiki: Sql Mode]]
@@ -585,8 +608,11 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 ** org-recoll
 *** Initialisation :init:
+
 #+begin_src emacs-lisp
 (require 'org-recoll)
+
+(setq org-recoll-command-invocation "recollq -t -A")
 #+end_src
 
 #+RESULTS:
