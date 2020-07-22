@@ -54,6 +54,11 @@
 ;;; Code:
 
 (package! exwm)
+(package! ivy-posframe
+  :recipe (:host github :repo "tumashu/ivy-posframe"))
+(package! perfect-margin
+  :recipe (:host github :repo "mpwang/perfect-margin"))
+(package! minimap)
 (package! emacs-wallpaper
   :recipe (:host github :repo "farlado/emacs-wallpaper"))
 
@@ -104,6 +109,7 @@
 (package! counsel-spotify
   :recipe (:host github :repo "Lautaro-Garcia/counsel-spotify"))
 (package! ereader)
+
 ;;=========
 ;; THEME ;;
 ;;=========

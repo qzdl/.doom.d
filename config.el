@@ -1,3 +1,39 @@
+  (map! "<mouse-8>" 'better-jumper-jump-backward)
+  (map! "<mouse-9>" 'better-jumper-jump-forward)
+
+(map! "C-x C-k" #'custom/kill-this-buffer)
+(map! "C-x k" #'kmacro-keymap)
+
+(map! "s-h" #'windmove-left)
+(map! "s-j" #'windmove-down)
+(map! "s-k" #'windmove-up)
+(map! "s-l" #'windmove-right)
+
+(map! "s-n" #'next-buffer)
+(map! "s-p" #'previous-buffer)
+
+(define-key key-translation-map [?\C-x] [?\C-u])
+(define-key key-translation-map [?\C-u] [?\C-x])
+
+(map! "C-x C-'" #'+eshell/toggle)
+
+(map! "s-B" 'toggle-rot13-mode)
+
+(defun qzdl/utc-timestamp ()
+  (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
+
+(defun qzdl/toggle-1->0 (n)
+  (if (equal 1 n) 0 1))
+
+(defun qzdl/toggle-on->off (n)
+  (if (equal 1 n) "on" "off"))
+
+(defun qz/pprint (form &optional output-stream)
+  (princ (with-temp-buffer
+           (cl-prettyprint form)
+           (buffer-string))
+         output-stream))
+
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 
@@ -48,6 +84,13 @@
   (interactive)
   (load-theme 'pink-mountain t))
 
+(require 'ivy-posframe)
+(setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-center)))
+(add-hook! 'exwm-init-hook
+  (after! ivy-posframe
+    (add-to-list 'ivy-posframe-parameters '(parent-frame . nil))))
+(ivy-posframe-mode 1)
+
 (setq qzdl/preferred-transparency-alpha '(80 . 70))
 
 (set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
@@ -68,20 +111,7 @@
   (message (concat "Frame transparency set to "
                    (number-to-string (car (frame-parameter nil 'alpha))))))
 
-(load-file "~/.doom.d/snippets/bgex.el")
-(require 'bgex)
-
-;; Image on frame (dynamic color mode (SRC * DST / factor))
-;; (bgex-set-image-default "~/.config/wall.xpm" t)
-;; Color for HTML-mode (dynamic color mode)
-;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
-
-;; ;; Color for buffer-name (*scratch*)
-;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
-;; (bgex-set-color-default "skyblue")
-;; ;; XPM string
-;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
-;; (bgex-set-xpm-string-default "XPM strging" t)
+(perfect-margin-mode 1)
 
 (require 'exwm-randr)
 
@@ -110,7 +140,7 @@
                                               "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
   (exwm-randr-enable))
 
-(qzdl/exwm-tpb)
+(qzdl/exwm-ultrawide)
 (exwm-enable)
 
 (setq qzdl/startup-programs
@@ -142,22 +172,34 @@
           (lambda ()
             (exwm-workspace-rename-buffer exwm-class-name)))
 
+;; ensure doom recognises x-windows as 'real' per <link-to-elisp-doc
+;; 'doom-real-buffer-p>
+ (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
+
+(defun qz/mark-this-buffer-as-real ()
+  (interactive)
+  (doom-mark-buffer-as-real-h))
+
+(defun qz/read-process-shell-command (command)
+  "Used to launch a program by creating a process. Invokes
+`start-process-shell-command' with COMMAND"
+  (interactive (list (read-shell-command "λ ")))
+  (start-process-shell-command command nil command))
+
 (setq exwm-input-global-keys
-      `(;; 's-r': Reset (to line-mode).
-        ([?\s-r] . exwm-reset)
-        ;; 's-w': Switch workspace.
-        ([?\s-w] . exwm-workspace-switch)
-        ;; 's-&': Launch application.
-        ([?\s-&] . (lambda (command)
-                     (interactive (list (read-shell-command "λ ")))
-                     (start-process-shell-command command nil command)))
-        ;; 's-N': Switch to certain workspace.
-        ,@(mapcar (lambda (i)
-                    `(,(kbd (format "s-%d" i)) .
+      `(([?\s-r] . exwm-reset)                     ;; `s-r': Reset (to line-mode).
+        ([?\s-w] . exwm-workspace-switch)          ;; `s-w': Switch workspace.
+        ([?\s-&] . qz/read-process-shell-command)  ;; `s-&': Launch program
+        ,@(mapcar (lambda (i)                           ;; `s-N': Switch to certain workspace.
+                    `(,(kbd (format "s-%d" i)) .   ;; expands to n binds ([s-N] . λ exwm-wsc N)
                       (lambda ()
                         (interactive)
                         (exwm-workspace-switch-create ,i))))
                   (number-sequence 0 9))))
+
+
+
+(qz/pprint exwm-input-global-keys)
 
 (setq exwm-input-simulation-keys
       '(([?\C-b] . [left])
@@ -169,6 +211,9 @@
         ([?\M-v] . [prior])
         ([?\C-v] . [next])
         ([?\C-d] . [delete])
+        ([?\M-d] . [C-delete])
+        ([?\M-b] . [C-left])
+        ([?\M-f] . [C-right])
         ([?\C-k] . [S-end delete])
         ;; cut/paste.
         ([?\C-w] . [?\C-x])
@@ -188,36 +233,6 @@
            (wallpaper-cycle-directory "~/.config/wallpapers")))
 
 (server-start)
-
-  (map! "<mouse-8>" 'better-jumper-jump-backward)
-  (map! "<mouse-9>" 'better-jumper-jump-forward)
-
-(map! "C-x C-k" #'custom/kill-this-buffer)
-(map! "C-x k" #'kmacro-keymap)
-
-(map! "s-h" #'windmove-left)
-(map! "s-j" #'windmove-down)
-(map! "s-k" #'windmove-up)
-(map! "s-l" #'windmove-right)
-
-(map! "s-n" #'next-buffer)
-(map! "s-p" #'previous-buffer)
-
-(define-key key-translation-map [?\C-x] [?\C-u])
-(define-key key-translation-map [?\C-u] [?\C-x])
-
-(map! "C-x C-'" #'+eshell/toggle)
-
-(map! "s-B" 'toggle-rot13-mode)
-
-(defun qzdl/utc-timestamp ()
-  (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
-
-(defun qzdl/toggle-1->0 (n)
-  (if (equal 1 n) 0 1))
-
-(defun qzdl/toggle-on->off (n)
-  (if (equal 1 n) "on" "off"))
 
 (map! :leader
       (:prefix-map ("n" . "notes")
@@ -341,7 +356,8 @@
 
 (require 'org-recoll)
 
-(setq org-recoll-command-invocation "recollq -t -A")
+(setq org-recoll-command-invocation "recollq -t -A"
+      org-recoll-results-num 100)
 
 (global-set-key (kbd "C-c g") #'org-recoll-search)
 (global-set-key (kbd "C-c u") #'org-recoll-update-index)

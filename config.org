@@ -1,302 +1,7 @@
-# ------------------------------------------------------------------------------
-#+Title: Emacs Configuration
-# ------------------------------------------------------------------------------
+#+title: Emacs Configuration
 
-* Doom Tweaks
-** ID & Email
-#+begin_src emacs-lisp
-(setq user-full-name "Samuel Culpepper"
-      user-mail-address "samuel@samuelculpepper.com")
-#+end_src
-* System Specific
-xps:
-  base
-  (font . 30)
-  (display . "eDP-1")
-  uw
-  (font . 15)
-  (display . "HDMI-1")
-  (randr . "--scale 2x2")
-
-fuj:
-  base
-  (font . 15)
-  (display . "eDP-1")
-  uw
-  (font . 15)
-  (display . "DP-1")
-* Visual
-** Fonts & Text
-
-#+begin_src emacs-lisp
-(setq doom-font (font-spec :family "monospace" :size 16))
-(setq doom-theme nil)
-(setq doom-modeline-height 10)
-(setq display-line-numbers-type nil)
-(set-language-environment "UTF-8")
-(set-default-coding-systems 'utf-8)
-#+end_src
-
-#+RESULTS:
-: (utf-8-unix . utf-8-unix)
-
-** Tooltips
-#+begin_src emacs-lisp
-(tooltip-mode 1)
-#+end_src
-** Time in the modeline :kbd:
-An example of this can be found in [[Time in the modeline]]. Equal is used here to
-coerce non-numeric arguments into something that will toggle.
-#+begin_src emacs-lisp
-(setq qzdl/toggle-time-state t)
-(display-time-mode qzdl/toggle-time-state)
-
-(defun qzdl/toggle-time-in-modeline ()
-  (interactive)
-  (message
-   (concat "Time display in modeline is "
-           (if (display-time-mode
-                (setq qzdl/toggle-time-state
-                      (qzdl/toggle-1->0 qzdl/toggle-time-state)))
-               "on" "off"))))
-
-(map! :leader
-      (:prefix-map ("t" . "toggle")
-       :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
-#+end_src
-
-** Elegance
-#+begin_src emacs-lisp
-(load! "elegance/elegance.el")
-(load! "elegance/sanity.el")
-#+end_src
-** Writeroom
-When centering, use all available width, and respond to resizing somethinh
-12345678901234567890123456789012345678901234567890123456789012345678901234567890
-somethingh som
-#+begin_src emacs-lisp
-(setq writeroom-width 80)
-
-(add-to-list 'writeroom-mode-hook
-             (lambda () (setq writeroom-border-width 50)))
-
-#+end_src
-** Theme
-#+begin_src emacs-lisp
-(defun qzdl/load-tron-legacy ()
-  (interactive)
-  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
-  (load-theme 'tron-legacy t)
-  (setq tron-legacy-vivid-cursor t))
-
-(defun qzdl/load-k ()
-  (interactive)
-  (load-theme 'k t))
-
-(defun qzdl/load-pink-mountain ()
-  (interactive)
-  (load-theme 'pink-mountain t))
-#+end_src
-
-
-** Transparency
-Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
-#+begin_src emacs-lisp
-(setq qzdl/preferred-transparency-alpha '(80 . 70))
-
-(set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
-(add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
-
-(defun qzdl/toggle-transparency ()
-  "Toggle between max opacity and `qzdl/preferred-transparency-alpha'"
-  (interactive)
-  (let ((alpha (frame-parameter nil 'alpha)))
-    (set-frame-parameter
-     nil 'alpha
-     (if (eql (cond ((numberp alpha) alpha)
-                    ((numberp (cdr alpha)) (cdr alpha))
-                    ;; Also handle undocumented (<active> <inactive>) form.
-                    ((numberp (cadr alpha)) (cadr alpha)))
-              100)
-         qzdl/preferred-transparency-alpha '(100 . 100))))
-  (message (concat "Frame transparency set to "
-                   (number-to-string (car (frame-parameter nil 'alpha))))))
-#+end_src
-
-#+RESULTS:
-: qzdl/toggle-transparency
-
-** bgex
-To create a source image, run ~convert a.png a.xpm~
-#+begin_src emacs-lisp
-(load-file "~/.doom.d/snippets/bgex.el")
-(require 'bgex)
-
-;; Image on frame (dynamic color mode (SRC * DST / factor))
-;; (bgex-set-image-default "~/.config/wall.xpm" t)
-;; Color for HTML-mode (dynamic color mode)
-;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
-
-;; ;; Color for buffer-name (*scratch*)
-;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
-;; (bgex-set-color-default "skyblue")
-;; ;; XPM string
-;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
-;; (bgex-set-xpm-string-default "XPM strging" t)
-#+end_src
-
-* EXWM
-** Initialisation
-#+begin_src emacs-lisp
-(require 'exwm-randr)
-
-(defun qzdl/exwm-ultrawide ()
-  (interactive)
-  (setq exwm-randr-workspace-monitor-plist '(0 "DP-1"))
-  (add-hook 'exwm-randr-screen-change-hook
-            (lambda ()(start-process-shell-command "xrandr" nil
-                                              "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
-  (exwm-randr-enable))
-
-(defun qzdl/exwm-tpb ()
-  (interactive)
-  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-1"))
-  (add-hook 'exwm-randr-screen-change-hook
-            (lambda ()(start-process-shell-command "xrandr" nil
-                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --mode 1680x1050 --pos 1920x0 --rotate normal --output eDP-1 --primary --mode 1920x1080 --pos 0x920 --rotate normal --output DP-2 --off")))
-  (exwm-randr-enable))
-
-
-(defun qzdl/exwm-110vga ()
-  (interactive)
-  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-2"))
-  (add-hook 'exwm-randr-screen-change-hook
-            (lambda ()(start-process-shell-command "xrandr" nil
-                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
-  (exwm-randr-enable))
-
-(qzdl/exwm-tpb)
-(exwm-enable)
-#+end_src
-
-#+RESULTS:
-
-** Startup Programs :init:
-#+begin_src emacs-lisp
-(setq qzdl/startup-programs
-      '("compton"
-        "unclutter"))
-
-(defun qzdl/run-programs-n-process (p)
-  (mapcar (lambda (c) (start-process-shell-command c nil c)) p))
-
-(defun qzdl/seq-to-kill (p)
-  (mapcar (lambda (s) (concat "killall " s)) p))
-
-(defun qzdl/run-startup-programs ()
-  (interactive)
-  (qzdl/run-programs-n-process
-   (qzdl/seq-to-kill qzdl/startup-programs))
-  (qzdl/run-programs-n-process qzdl/startup-programs))
-
-(qzdl/run-startup-programs)
-#+end_src
-
-#+RESULTS:
-| compton | unclutter |
-
-** Workspaces & Classes
-#+begin_src emacs-lisp
-(require 'exwm)
-
-;; Set the initial workspace number.
-(unless (get 'exwm-workspace-number 'saved-value)
-  (setq exwm-workspace-number 4))
-
-;; Make class name the buffer name
-(add-hook 'exwm-update-class-hook
-          (lambda ()
-            (exwm-workspace-rename-buffer exwm-class-name)))
-#+end_src
-
-#+RESULTS:
-| lambda | nil | (exwm-workspace-rename-buffer exwm-class-name) |
-
-** Bindings :kbd:
-*** Global :kbd:
-#+begin_src emacs-lisp
-(setq exwm-input-global-keys
-      `(;; 's-r': Reset (to line-mode).
-        ([?\s-r] . exwm-reset)
-        ;; 's-w': Switch workspace.
-        ([?\s-w] . exwm-workspace-switch)
-        ;; 's-&': Launch application.
-        ([?\s-&] . (lambda (command)
-                     (interactive (list (read-shell-command "λ ")))
-                     (start-process-shell-command command nil command)))
-        ;; 's-N': Switch to certain workspace.
-        ,@(mapcar (lambda (i)
-                    `(,(kbd (format "s-%d" i)) .
-                      (lambda ()
-                        (interactive)
-                        (exwm-workspace-switch-create ,i))))
-                  (number-sequence 0 9))))
-#+end_src
-
-#+RESULTS:
-: (([8388722] . exwm-reset) ([8388727] . exwm-workspace-switch) ([8388646] lambda (command) (interactive (list (read-shell-command λ ))) (start-process-shell-command command nil command)) ([8388656] lambda nil (interactive) (exwm-workspace-switch-create 0)) ([8388657] lambda nil (interactive) (exwm-workspace-switch-create 1)) ([8388658] lambda nil (interactive) (exwm-workspace-switch-create 2)) ([8388659] lambda nil (interactive) (exwm-workspace-switch-create 3)) ([8388660] lambda nil (interactive) (exwm-workspace-switch-create 4)) ([8388661] lambda nil (interactive) (exwm-workspace-switch-create 5)) ([8388662] lambda nil (interactive) (exwm-workspace-switch-create 6)) ([8388663] lambda nil (interactive) (exwm-workspace-switch-create 7)) ([8388664] lambda nil (interactive) (exwm-workspace-switch-create 8)) ([8388665] lambda nil (interactive) (exwm-workspace-switch-create 9)))
-
-*** Line Editing :kbd:
-
-#+begin_src emacs-lisp
-(setq exwm-input-simulation-keys
-      '(([?\C-b] . [left])
-        ([?\C-f] . [right])
-        ([?\C-p] . [up])
-        ([?\C-n] . [down])
-        ([?\C-a] . [home])
-        ([?\C-e] . [end])
-        ([?\M-v] . [prior])
-        ([?\C-v] . [next])
-        ([?\C-d] . [delete])
-        ([?\C-k] . [S-end delete])
-        ;; cut/paste.
-        ([?\C-w] . [?\C-x])
-        ([?\M-w] . [?\C-c])
-        ([?\C-y] . [?\C-v])
-        ;; search
-        ([?\C-s] . [?\C-f])))
-#+end_src
-
-#+RESULTS:
-: (([2] . [left]) ([6] . [right]) ([16] . [up]) ([14] . [down]) ([1] . [home]) ([5] . [end]) ([134217846] . [prior]) ([22] . [next]) ([4] . [delete]) ([11] . [S-end delete]))
-
-** Wallpaper
-<link-to-elisp-doc 'wallpaper-cycle-interval> is measured in seconds, 900 being 15 minutes
-#+begin_src emacs-lisp
-(setq wallpaper-cycle-interval 900)
-
-(use-package! wallpaper
-  :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
-         (after-init . wallpaper-cycle-mode))
-  :custom ((wallpaper-cycle-interval 900)
-           (wallpaper-cycle-single t)
-           (wallpaper-scaling 'fill)
-           (wallpaper-cycle-directory "~/.config/wallpapers")))
-#+end_src
-
-#+RESULTS:
-| org-roam-mode | hproperty:set-face-after-init | wallpaper-cycle-mode | (closure (t) (&rest _) (progn (if (featurep 'sly) (sly-setup) (eval-after-load 'sly #'(lambda nil (sly-setup)))))) | doom-modeline-mode | doom-init-fonts-h | doom-init-leader-keys-h | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-auto-revert-mode--init-kludge | magit-startup-asserts | magit-version | hyperb:init | table--make-cell-map |
-
-* Emacs Server :init:
-#+begin_src emacs-lisp
-(server-start)
-#+end_src
-
-#+RESULTS:
-
-* Miscellanious :kbd:
-** Global Bindings
+* Globals
+** Global Bindings :kbd:
 These Key Binds Are focused around ergonomics more than mnemonics
 *** Mouse jumping
 #ERGO
@@ -355,7 +60,7 @@ incase the shell needs to be changed
 #+begin_src emacs-lisp
 (map! "s-B" 'toggle-rot13-mode)
 #+end_src
-** Functions
+** Functions :func:
 *** UTC Timestamp
 #+begin_src emacs-lisp
 (defun qzdl/utc-timestamp ()
@@ -381,12 +86,360 @@ something that will toggle.
 (defun qzdl/toggle-on->off (n)
   (if (equal 1 n) "on" "off"))
 #+end_src
+*** pprint with ~cl-prettyprint~
+[[https://stackoverflow.com/questions/3552106/pprint-in-emacs-lisp][elisp - PPRINT in Emacs Lisp? - Stack Overflow]]
+
+#+begin_src emacs-lisp
+(defun qz/pprint (form &optional output-stream)
+  (princ (with-temp-buffer
+           (cl-prettyprint form)
+           (buffer-string))
+         output-stream))
+#+end_src
+* Doom Tweaks
+** ID & Email :vars:
+#+begin_src emacs-lisp
+(setq user-full-name "Samuel Culpepper"
+      user-mail-address "samuel@samuelculpepper.com")
+#+end_src
+* System Specific
+xps:
+  base
+  (font . 30)
+  (display . "eDP-1")
+  uw
+  (font . 15)
+  (display . "HDMI-1")
+  (randr . "--scale 2x2")
+
+fuj:
+  base
+  (font . 15)
+  (display . "eDP-1")
+  uw
+  (font . 15)
+  (display . "DP-1")
+* Visual
+** Fonts & Text :vars:
+
+#+begin_src emacs-lisp
+(setq doom-font (font-spec :family "monospace" :size 16))
+(setq doom-theme nil)
+(setq doom-modeline-height 10)
+(setq display-line-numbers-type nil)
+(set-language-environment "UTF-8")
+(set-default-coding-systems 'utf-8)
+#+end_src
+
+#+RESULTS:
+: (utf-8-unix . utf-8-unix)
+
+** Tooltips :init:
+#+begin_src emacs-lisp
+(tooltip-mode 1)
+#+end_src
+** Time in the modeline :kbd:
+An example of this can be found in [[Time in the modeline]]. Equal is used here to
+coerce non-numeric arguments into something that will toggle.
+#+begin_src emacs-lisp
+(setq qzdl/toggle-time-state t)
+(display-time-mode qzdl/toggle-time-state)
+
+(defun qzdl/toggle-time-in-modeline ()
+  (interactive)
+  (message
+   (concat "Time display in modeline is "
+           (if (display-time-mode
+                (setq qzdl/toggle-time-state
+                      (qzdl/toggle-1->0 qzdl/toggle-time-state)))
+               "on" "off"))))
+
+(map! :leader
+      (:prefix-map ("t" . "toggle")
+       :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
+#+end_src
+
+** Elegance :init:
+#+begin_src emacs-lisp
+(load! "elegance/elegance.el")
+(load! "elegance/sanity.el")
+#+end_src
+** Writeroom :vars:
+When centering, use all available width, and respond to resizing somethinh
+12345678901234567890123456789012345678901234567890123456789012345678901234567890
+somethingh som
+#+begin_src emacs-lisp
+(setq writeroom-width 80)
+
+(add-to-list 'writeroom-mode-hook
+             (lambda () (setq writeroom-border-width 50)))
+
+#+end_src
+** Theme :func:
+#+begin_src emacs-lisp
+(defun qzdl/load-tron-legacy ()
+  (interactive)
+  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
+  (load-theme 'tron-legacy t)
+  (setq tron-legacy-vivid-cursor t))
+
+(defun qzdl/load-k ()
+  (interactive)
+  (load-theme 'k t))
+
+(defun qzdl/load-pink-mountain ()
+  (interactive)
+  (load-theme 'pink-mountain t))
+#+end_src
+** ivy-posframe :init:
+[[https://github.com/tumashu/ivy-posframe][GitHub - tumashu/ivy-posframe: ivy-posframe is a ivy extension, which let ivy...]]
+
+#+begin_src emacs-lisp
+(require 'ivy-posframe)
+(setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-center)))
+(add-hook! 'exwm-init-hook
+  (after! ivy-posframe
+    (add-to-list 'ivy-posframe-parameters '(parent-frame . nil))))
+(ivy-posframe-mode 1)
+#+end_src
+** Transparency :func:
+Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
+#+begin_src emacs-lisp
+(setq qzdl/preferred-transparency-alpha '(80 . 70))
+
+(set-frame-parameter (selected-frame) 'alpha qzdl/preferred-transparency-alpha)
+(add-to-list 'default-frame-alist `(alpha . ,qzdl/preferred-transparency-alpha))
+
+(defun qzdl/toggle-transparency ()
+  "Toggle between max opacity and `qzdl/preferred-transparency-alpha'"
+  (interactive)
+  (let ((alpha (frame-parameter nil 'alpha)))
+    (set-frame-parameter
+     nil 'alpha
+     (if (eql (cond ((numberp alpha) alpha)
+                    ((numberp (cdr alpha)) (cdr alpha))
+                    ;; Also handle undocumented (<active> <inactive>) form.
+                    ((numberp (cadr alpha)) (cadr alpha)))
+              100)
+         qzdl/preferred-transparency-alpha '(100 . 100))))
+  (message (concat "Frame transparency set to "
+                   (number-to-string (car (frame-parameter nil 'alpha))))))
+#+end_src
+
+#+RESULTS:
+: qzdl/toggle-transparency
+
+** bgex :init:
+To create a source image, run ~convert a.png a.xpm~
+#+begin_src emacs-lisp :tangle no
+(load-file "~/.doom.d/snippets/bgex.el")
+(require 'bgex)
+
+;; Image on frame (dynamic color mode (SRC * DST / factor))
+;; (bgex-set-image-default "~/.config/wall.xpm" t)
+;; Color for HTML-mode (dynamic color mode)
+;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
+
+;; ;; Color for buffer-name (*scratch*)
+;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
+;; (bgex-set-color-default "skyblue")
+;; ;; XPM string
+;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
+;; (bgex-set-xpm-string-default "XPM strging" t)
+#+end_src
+
+#+RESULTS:
+: bgex
+** perfect-margin
+#+begin_src emacs-lisp
+(perfect-margin-mode 1)
+#+end_src
+* EXWM
+** Initialisation :func:init:
+#+begin_src emacs-lisp
+(require 'exwm-randr)
+
+(defun qzdl/exwm-ultrawide ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-1"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+  (exwm-randr-enable))
+
+(defun qzdl/exwm-tpb ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-1"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --mode 1680x1050 --pos 1920x0 --rotate normal --output eDP-1 --primary --mode 1920x1080 --pos 0x920 --rotate normal --output DP-2 --off")))
+  (exwm-randr-enable))
+
+
+(defun qzdl/exwm-110vga ()
+  (interactive)
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1" 1 "DP-2"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+                                              "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
+  (exwm-randr-enable))
+
+(qzdl/exwm-ultrawide)
+(exwm-enable)
+#+end_src
+
+#+RESULTS:
+
+** Startup Programs :init:
+#+begin_src emacs-lisp
+(setq qzdl/startup-programs
+      '("compton"
+        "unclutter"))
+
+(defun qzdl/run-programs-n-process (p)
+  (mapcar (lambda (c) (start-process-shell-command c nil c)) p))
+
+(defun qzdl/seq-to-kill (p)
+  (mapcar (lambda (s) (concat "killall " s)) p))
+
+(defun qzdl/run-startup-programs ()
+  (interactive)
+  (qzdl/run-programs-n-process
+   (qzdl/seq-to-kill qzdl/startup-programs))
+  (qzdl/run-programs-n-process qzdl/startup-programs))
+
+(qzdl/run-startup-programs)
+#+end_src
+
+#+RESULTS:
+| compton | unclutter |
+
+** Workspaces & Classes :vars:
+#+begin_src emacs-lisp
+(require 'exwm)
+
+;; Set the initial workspace number.
+(unless (get 'exwm-workspace-number 'saved-value)
+  (setq exwm-workspace-number 4))
+
+;; Make class name the buffer name
+(add-hook 'exwm-update-class-hook
+          (lambda ()
+            (exwm-workspace-rename-buffer exwm-class-name)))
+
+;; ensure doom recognises x-windows as 'real' per <link-to-elisp-doc
+;; 'doom-real-buffer-p>
+ (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
+
+(defun qz/mark-this-buffer-as-real ()
+  (interactive)
+  (doom-mark-buffer-as-real-h))
+
+#+end_src
+
+#+RESULTS:
+| lambda | nil | (exwm-workspace-rename-buffer exwm-class-name) |
+
+** Bindings :kbd:
+*** Global :kbd:
+#+begin_src emacs-lisp
+(defun qz/read-process-shell-command (command)
+  "Used to launch a program by creating a process. Invokes
+`start-process-shell-command' with COMMAND"
+  (interactive (list (read-shell-command "λ ")))
+  (start-process-shell-command command nil command))
+
+(setq exwm-input-global-keys
+      `(([?\s-r] . exwm-reset)                     ;; `s-r': Reset (to line-mode).
+        ([?\s-w] . exwm-workspace-switch)          ;; `s-w': Switch workspace.
+        ([?\s-&] . qz/read-process-shell-command)  ;; `s-&': Launch program
+        ,@(mapcar (lambda (i)                           ;; `s-N': Switch to certain workspace.
+                    `(,(kbd (format "s-%d" i)) .   ;; expands to n binds ([s-N] . λ exwm-wsc N)
+                      (lambda ()
+                        (interactive)
+                        (exwm-workspace-switch-create ,i))))
+                  (number-sequence 0 9))))
+
+
+
+(qz/pprint exwm-input-global-keys)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+
+(([8388722] . exwm-reset)
+ ([8388727] . exwm-workspace-switch)
+ ([8388646] . qz/read-process-shell-command)
+ ([8388656] lambda nil (interactive) (exwm-workspace-switch-create 0))
+ ([8388657] lambda nil (interactive) (exwm-workspace-switch-create 1))
+ ([8388658] lambda nil (interactive) (exwm-workspace-switch-create 2))
+ ([8388659] lambda nil (interactive) (exwm-workspace-switch-create 3))
+ ([8388660] lambda nil (interactive) (exwm-workspace-switch-create 4))
+ ([8388661] lambda nil (interactive) (exwm-workspace-switch-create 5))
+ ([8388662] lambda nil (interactive) (exwm-workspace-switch-create 6))
+ ([8388663] lambda nil (interactive) (exwm-workspace-switch-create 7))
+ ([8388664] lambda nil (interactive) (exwm-workspace-switch-create 8))
+ ([8388665] lambda nil (interactive) (exwm-workspace-switch-create 9)))
+#+end_example
+
+*** Line Editing :kbd:
+
+#+begin_src emacs-lisp
+(setq exwm-input-simulation-keys
+      '(([?\C-b] . [left])
+        ([?\C-f] . [right])
+        ([?\C-p] . [up])
+        ([?\C-n] . [down])
+        ([?\C-a] . [home])
+        ([?\C-e] . [end])
+        ([?\M-v] . [prior])
+        ([?\C-v] . [next])
+        ([?\C-d] . [delete])
+        ([?\M-d] . [C-delete])
+        ([?\M-b] . [C-left])
+        ([?\M-f] . [C-right])
+        ([?\C-k] . [S-end delete])
+        ;; cut/paste.
+        ([?\C-w] . [?\C-x])
+        ([?\M-w] . [?\C-c])
+        ([?\C-y] . [?\C-v])
+        ;; search
+        ([?\C-s] . [?\C-f])))
+#+end_src
+
+#+RESULTS:
+: (([2] . [left]) ([6] . [right]) ([16] . [up]) ([14] . [down]) ([1] . [home]) ([5] . [end]) ([134217846] . [prior]) ([22] . [next]) ([4] . [delete]) ([134217828] . [C-delete]) ([134217826] . [C-left]) ([134217830] . [C-right]) ([11] . [S-end delete]) ([23] . [24]) ([134217847] . [3]) ([25] . [22]) ([19] . [6]))
+
+** Wallpaper :init:
+<link-to-elisp-doc 'wallpaper-cycle-interval> is measured in seconds, 900 being 15 minutes
+#+begin_src emacs-lisp
+(setq wallpaper-cycle-interval 900)
+
+(use-package! wallpaper
+  :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
+         (after-init . wallpaper-cycle-mode))
+  :custom ((wallpaper-cycle-interval 900)
+           (wallpaper-cycle-single t)
+           (wallpaper-scaling 'fill)
+           (wallpaper-cycle-directory "~/.config/wallpapers")))
+#+end_src
+
+#+RESULTS:
+| org-roam-mode | hproperty:set-face-after-init | wallpaper-cycle-mode | (closure (t) (&rest _) (progn (if (featurep 'sly) (sly-setup) (eval-after-load 'sly #'(lambda nil (sly-setup)))))) | doom-modeline-mode | doom-init-fonts-h | doom-init-leader-keys-h | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-auto-revert-mode--init-kludge | magit-startup-asserts | magit-version | hyperb:init | table--make-cell-map |
+
+* Emacs Server :init:
+#+begin_src emacs-lisp
+(server-start)
+#+end_src
+
+#+RESULTS:
+
 * Hydra
-** n
+** n :kbd:
 The =n= of {C-c n} denotes notes.
 
 #+begin_src emacs-lisp
-
 (map! :leader
       (:prefix-map ("n" . "notes")
        (:prefix-map ("d" . "by date")
@@ -403,7 +456,7 @@ The =n= of {C-c n} denotes notes.
 * Programming
 ** SQL
 For reference: [[https://www.emacswiki.org/emacs/SqlMode][EmacsWiki: Sql Mode]]
-*** Toggle ERROR_ROLLBACK :psql:
+*** Toggle ERROR_ROLLBACK :psql:func:
 #+begin_src emacs-lisp
 (setq qzdl/psql-error-rollback 0)
 
@@ -440,7 +493,7 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 #+end_src
 
 ** Common Lisp
-*** cl-font-lock-built-in-mode
+*** cl-font-lock-built-in-mode :vars:
 "Highlight built-in functions, variables, and types in ‘lisp-mode’."
 - Enable feature from 28.1 if exists
   <link-to-elisp-doc 'cl-font-lock-built-in-mode>
@@ -449,7 +502,7 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
     (cl-font-lock-built-in-mode 1))
 #+end_src
 ***
-*** sly eval-overlay
+*** sly eval-overlay :func:
 Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https://www.reddit.com/r/emacs/comments/bi4xk1/evaluation_overlays_in_slime_for_common_lisp/][Evaluation overlays in slime for common lisp : emacs]]
 #+begin_src emacs-lisp
 (defun qzdl/slime-eval-last-expression-eros ()
@@ -462,7 +515,7 @@ Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https:/
 #+end_src
 
 ** Emacs Lisp
-*** eval-defun
+*** eval-defun :kbd:
 #+begin_src emacs-lisp
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 #+end_src
@@ -483,7 +536,7 @@ Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https:/
 #+RESULTS:
 
 * PDF
-** Dark-Mode on entry
+** Dark-Mode on entry :vars:
 This function takes colours from the current [[Theme]], and applies a colour-mask to
 the view of the pdf as it's rendered by PDFTools.
 #+begin_src emacs-lisp
@@ -493,7 +546,7 @@ the view of the pdf as it's rendered by PDFTools.
 #+RESULTS:
 | doom-modeline-set-pdf-modeline | pdf-view-midnight-minor-mode |
 
-* KeyFreq
+* KeyFreq :init:
 A package that logs command usage; blessed be Xah Lee
 #+begin_src emacs-lisp
 (keyfreq-mode 1)
@@ -504,7 +557,7 @@ A package that logs command usage; blessed be Xah Lee
 : t
 
 * Org
-** Tweaks
+** Tweaks :vars:
 *** File apps
 Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 - <link-to-elisp-doc 'org-file-apps>
@@ -529,7 +582,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 #+RESULTS:
 
-** Directories
+** Directories :vars:
 #+begin_src emacs-lisp
 (setq org-directory "~/life/"
       qzdl/notes-directory (concat org-directory "roam/")
@@ -541,7 +594,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ~/life/roam/
 
-** Refile
+** Refile :vars:
 #+begin_src emacs-lisp
 (setq org-refile-targets '(("next.org" :level . 0)
                            ("someday.org" :level . 0)
@@ -552,7 +605,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ((next.org :level . 0) (someday.org :level . 0) (reading.org :level . 1) (projects.org :maxlevel . 1))
 
-** org-mode
+** org-mode :init:vars:
 #+begin_src emacs-lisp
 (use-package! org
   :mode ("\\.org\\'" . org-mode)
@@ -598,7 +651,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ((\.odc\' . archive-mode) (\.odf\' . archive-mode) (\.odi\' . archive-mode) (\.otp\' . archive-mode) (\.odp\' . archive-mode) (\.otg\' . archive-mode) (\.odg\' . archive-mode) (\.ots\' . archive-mode) (\.ods\' . archive-mode) (\.odm\' . archive-mode) (\.ott\' . archive-mode) (\.odt\' . archive-mode) (\.kotl?\' . kotl-mode) (/bspwmrc\' . sh-mode) (\.\(?:zunit\|env\)\' . sh-mode) (/Pipfile\' . conf-mode) ([./]flake8\' . conf-mode) (/README\(?:\.md\)?\' . gfm-mode) (\.tex\' . LaTeX-mode) (\.jl\' . ess-julia-mode) (\.Cask\' . emacs-lisp-mode) (\.rss\' . nxml-mode) (\.xs\(?:d\|lt\)\' . nxml-mode) (\.p\(?:list\|om\)\' . nxml-mode) (\.[pP][dD][fF]\' . pdf-view-mode) (\.\(?:hex\|nes\)\' . hexl-mode) (rc\' . conf-mode) (\.log\' . text-mode) (/LICENSE\' . text-mode) (requirements\.in . pip-requirements-mode) (requirements[^z-a]*\.txt\' . pip-requirements-mode) (\.pip\' . pip-requirements-mode) (\.hva\' . latex-mode) (\.drv\' . latex-mode) (\.cpp[rR]\' . poly-c++r-mode) (\.[Rr]cpp\' . poly-r+c++-mode) (\.[rR]brew\' . poly-brew+r-mode) (\.[rR]html\' . poly-html+r-mode) (\.rapport\' . poly-rapport-mode) (\.[rR]md\' . poly-markdown+r-mode) (\.[rR]nw\' . poly-noweb+r-mode) (\.Snw\' . poly-noweb+r-mode) (\.nw\' . poly-noweb-mode) (\.md\' . poly-markdown-mode) (\.\(?:md\|markdown\|mkd\|mdown\|mkdn\|mdwn\)\' . markdown-mode) (\.ado\' . ess-stata-mode) (\.do\' . ess-stata-mode) (\.[Ss][Aa][Ss]\' . SAS-mode) (\.Sout . S-transcript-mode) (\.[Ss]t\' . S-transcript-mode) (\.Rd\' . Rd-mode) (DESCRIPTION$ . conf-colon-mode) (/Makevars\(\.win\)?$ . makefile-mode) (\.[Rr]out . ess-r-transcript-mode) (CITATION\' . ess-r-mode) (NAMESPACE\' . ess-r-mode) (\.[rR]profile\' . ess-r-mode) (\.[rR]\' . ess-r-mode) (/R/.*\.q\' . ess-r-mode) (\.[Jj][Aa][Gg]\' . ess-jags-mode) (\.[Bb][Mm][Dd]\' . ess-bugs-mode) (\.[Bb][Oo][Gg]\' . ess-bugs-mode) (\.[Bb][Uu][Gg]\' . ess-bugs-mode) (\.jl\' . julia-mode) (\.tsv\' . tsv-mode) (\.[Cc][Ss][Vv]\' . csv-mode) (\(?:build\|profile\)\.boot\' . clojure-mode) (\.cljs\' . clojurescript-mode) (\.cljc\' . clojurec-mode) (\.\(clj\|dtm\|edn\)\' . clojure-mode) (/git-rebase-todo\' . git-rebase-mode) (/git/ignore\' . gitignore-mode) (/info/exclude\' . gitignore-mode) (/\.gitignore\' . gitignore-mode) (/etc/gitconfig\' . gitconfig-mode) (/\.gitmodules\' . gitconfig-mode) (/git/config\' . gitconfig-mode) (/modules/.*/config\' . gitconfig-mode) (/\.git/config\' . gitconfig-mode) (/\.gitconfig\' . gitconfig-mode) (\.gpg\(~\|\.~[0-9]+~\)?\' nil epa-file) (\.\(?:3fr\|a\(?:rw\|vs\)\|bmp[23]?\|c\(?:als?\|myka?\|r[2w]\|u[rt]\)\|d\(?:c[mrx]\|ds\|jvu\|ng\|px\)\|exr\|f\(?:ax\|its\)\|gif\(?:87\)?\|hrz\|ic\(?:on\|[bo]\)\|j\(?:\(?:pe\|[np]\)g\)\|k\(?:25\|dc\)\|m\(?:iff\|ng\|rw\|s\(?:l\|vg\)\|tv\)\|nef\|o\(?:rf\|tb\)\|p\(?:bm\|c\(?:ds\|[dltx]\)\|db\|ef\|gm\|i\(?:ct\|x\)\|jpeg\|n\(?:g\(?:24\|32\|8\)\|[gm]\)\|pm\|sd\|tif\|wp\)\|r\(?:a[fs]\|gb[ao]?\|l[ae]\)\|s\(?:c[rt]\|fw\|gi\|r[2f]\|un\|vgz?\)\|t\(?:ga\|i\(?:ff\(?:64\)?\|le\|m\)\|tf\)\|uyvy\|v\(?:da\|i\(?:car\|d\|ff\)\|st\)\|w\(?:bmp\|pg\)\|x\(?:3f\|bm\|cf\|pm\|wd\|[cv]\)\|y\(?:cbcra?\|uv\)\)\' . image-mode) (\.elc\' . elisp-byte-code-mode) (\.zst\' nil jka-compr) (\.dz\' nil jka-compr) (\.xz\' nil jka-compr) (\.lzma\' nil jka-compr) (\.lz\' nil jka-compr) (\.g?z\' nil jka-compr) (\.bz2\' nil jka-compr) (\.Z\' nil jka-compr) (\.vr[hi]?\' . vera-mode) (\(?:\.\(?:rbw?\|ru\|rake\|thor\|jbuilder\|rabl\|gemspec\|podspec\)\|/\(?:Gem\|Rake\|Cap\|Thor\|Puppet\|Berks\|Vagrant\|Guard\|Pod\)file\)\' . ruby-mode) (\.re?st\' . rst-mode) (\.py[iw]?\' . python-mode) (\.m\' . octave-maybe-mode) (\.less\' . less-css-mode) (\.scss\' . scss-mode) (\.awk\' . awk-mode) (\.\(u?lpc\|pike\|pmod\(\.in\)?\)\' . pike-mode) (\.idl\' . idl-mode) (\.java\' . java-mode) (\.m\' . objc-mode) (\.ii\' . c++-mode) (\.i\' . c-mode) (\.lex\' . c-mode) (\.y\(acc\)?\' . c-mode) (\.h\' . c-or-c++-mode) (\.c\' . c-mode) (\.\(CC?\|HH?\)\' . c++-mode) (\.[ch]\(pp\|xx\|\+\+\)\' . c++-mode) (\.\(cc\|hh\)\' . c++-mode) (\.\(bat\|cmd\)\' . bat-mode) (\.[sx]?html?\(\.[a-zA-Z_]+\)?\' . mhtml-mode) (\.svgz?\' . image-mode) (\.svgz?\' . xml-mode) (\.x[bp]m\' . image-mode) (\.x[bp]m\' . c-mode) (\.p[bpgn]m\' . image-mode) (\.tiff?\' . image-mode) (\.gif\' . image-mode) (\.png\' . image-mode) (\.jpe?g\' . image-mode) (\.te?xt\' . text-mode) (\.[tT]e[xX]\' . tex-mode) (\.ins\' . tex-mode) (\.ltx\' . latex-mode) (\.dtx\' . doctex-mode) (\.org\' . org-mode) (\.el\' . emacs-lisp-mode) (Project\.ede\' . emacs-lisp-mode) (\.\(scm\|stk\|ss\|sch\)\' . scheme-mode) (\.l\' . lisp-mode) (\.li?sp\' . lisp-mode) (\.[fF]\' . fortran-mode) (\.for\' . fortran-mode) (\.p\' . pascal-mode) (\.pas\' . pascal-mode) (\.\(dpr\|DPR\)\' . delphi-mode) (\.ad[abs]\' . ada-mode) (\.ad[bs]\.dg\' . ada-mode) (\.\([pP]\([Llm]\|erl\|od\)\|al\)\' . perl-mode) (Imakefile\' . makefile-imake-mode) (Makeppfile\(?:\.mk\)?\' . makefile-makepp-mode) (\.makepp\' . makefile-makepp-mode) (\.mk\' . makefile-gmake-mode) (\.make\' . makefile-gmake-mode) ([Mm]akefile\' . makefile-gmake-mode) (\.am\' . makefile-automake-mode) (\.texinfo\' . texinfo-mode) (\.te?xi\' . texinfo-mode) (\.[sS]\' . asm-mode) (\.asm\' . asm-mode) (\.css\' . css-mode) (\.mixal\' . mixal-mode) (\.gcov\' . compilation-mode) (/\.[a-z0-9-]*gdbinit . gdb-script-mode) (-gdb\.gdb . gdb-script-mode) ([cC]hange\.?[lL]og?\' . change-log-mode) ([cC]hange[lL]og[-.][0-9]+\' . change-log-mode) (\$CHANGE_LOG\$\.TXT . change-log-mode) (\.scm\.[0-9]*\' . scheme-mode) (\.[ckz]?sh\'\|\.shar\'\|/\.z?profile\' . sh-mode) (\.bash\' . sh-mode) (\(/\|\`\)\.\(bash_\(profile\|history\|log\(in\|out\)\)\|z?log\(in\|out\)\)\' . sh-mode) (\(/\|\`\)\.\(shrc\|zshrc\|m?kshrc\|bashrc\|t?cshrc\|esrc\)\' . sh-mode) (\(/\|\`\)\.\([kz]shenv\|xinitrc\|startxrc\|xsession\)\' . sh-mode) (\.m?spec\' . sh-mode) (\.m[mes]\' . nroff-mode) (\.man\' . nroff-mode) (\.sty\' . latex-mode) (\.cl[so]\' . latex-mode) (\.bbl\' . latex-mode) (\.bib\' . bibtex-mode) (\.bst\' . bibtex-style-mode) (\.sql\' . sql-mode) (\(acinclude\|aclocal\|acsite\)\.m4\' . autoconf-mode) (\.m[4c]\' . m4-mode) (\.mf\' . metafont-mode) (\.mp\' . metapost-mode) (\.vhdl?\' . vhdl-mode) (\.article\' . text-mode) (\.letter\' . text-mode) (\.i?tcl\' . tcl-mode) (\.exp\' . tcl-mode) (\.itk\' . tcl-mode) (\.icn\' . icon-mode) (\.sim\' . simula-mode) (\.mss\' . scribe-mode) (\.f9[05]\' . f90-mode) (\.f0[38]\' . f90-mode) (\.indent\.pro\' . fundamental-mode) (\.\(pro\|PRO\)\' . idlwave-mode) (\.srt\' . srecode-template-mode) (\.prolog\' . prolog-mode) (\.tar\' . tar-mode) (\.\(arc\|zip\|lzh\|lha\|zoo\|[jew]ar\|xpi\|rar\|cbr\|7z\|ARC\|ZIP\|LZH\|LHA\|ZOO\|[JEW]AR\|XPI\|RAR\|CBR\|7Z\)\' . archive-mode) (\.oxt\' . archive-mode) (\.\(deb\|[oi]pk\)\' . archive-mode) (\`/tmp/Re . text-mode) (/Message[0-9]*\' . text-mode) (\`/tmp/fol/ . text-mode) (\.oak\' . scheme-mode) (\.sgml?\' . sgml-mode) (\.x[ms]l\' . xml-mode) (\.dbk\' . xml-mode) (\.dtd\' . sgml-mode) (\.ds\(ss\)?l\' . dsssl-mode) (\.js[mx]?\' . javascript-mode) (\.har\' . javascript-mode) (\.json\' . javascript-mode) (\.[ds]?va?h?\' . verilog-mode) (\.by\' . bovine-grammar-mode) (\.wy\' . wisent-grammar-mode) ([:/\]\..*\(emacs\|gnus\|viper\)\' . emacs-lisp-mode) (\`\..*emacs\' . emacs-lisp-mode) ([:/]_emacs\' . emacs-lisp-mode) (/crontab\.X*[0-9]+\' . shell-script-mode) (\.ml\' . lisp-mode) (\.ld[si]?\' . ld-script-mode) (ld\.?script\' . ld-script-mode) (\.xs\' . c-mode) (\.x[abdsru]?[cnw]?\' . ld-script-mode) (\.zone\' . dns-mode) (\.soa\' . dns-mode) (\.asd\' . lisp-mode) (\.\(asn\|mib\|smi\)\' . snmp-mode) (\.\(as\|mi\|sm\)2\' . snmpv2-mode) (\.\(diffs?\|patch\|rej\)\' . diff-mode) (\.\(dif\|pat\)\' . diff-mode) (\.[eE]?[pP][sS]\' . ps-mode) (\.\(?:PDF\|DVI\|OD[FGPST]\|DOCX\|XLSX?\|PPTX?\|pdf\|djvu\|dvi\|od[fgpst]\|docx\|xlsx?\|pptx?\)\' . doc-view-mode-maybe) (configure\.\(ac\|in\)\' . autoconf-mode) (\.s\(v\|iv\|ieve\)\' . sieve-mode) (BROWSE\' . ebrowse-tree-mode) (\.ebrowse\' . ebrowse-tree-mode) (#\*mail\* . mail-mode) (\.g\' . antlr-mode) (\.mod\' . m2-mode) (\.ses\' . ses-mode) (\.docbook\' . sgml-mode) (\.com\' . dcl-mode) (/config\.\(?:bat\|log\)\' . fundamental-mode) (/\.\(authinfo\|netrc\)\' . authinfo-mode) (\.\(?:[iI][nN][iI]\|[lL][sS][tT]\|[rR][eE][gG]\|[sS][yY][sS]\)\' . conf-mode) (\.la\' . conf-unix-mode) (\.ppd\' . conf-ppd-mode) (java.+\.conf\' . conf-javaprop-mode) (\.properties\(?:\.[a-zA-Z0-9._-]+\)?\' . conf-javaprop-mode) (\.toml\' . conf-toml-mode) (\.desktop\' . conf-desktop-mode) (/\.redshift\.conf\' . conf-windows-mode) (\`/etc/\(?:DIR_COLORS\|ethers\|.?fstab\|.*hosts\|lesskey\|login\.?de\(?:fs\|vperm\)\|magic\|mtab\|pam\.d/.*\|permissions\(?:\.d/.+\)?\|protocols\|rpc\|services\)\' . conf-space-mode) (\`/etc/\(?:acpid?/.+\|aliases\(?:\.d/.+\)?\|default/.+\|group-?\|hosts\..+\|inittab\|ksysguarddrc\|opera6rc\|passwd-?\|shadow-?\|sysconfig/.+\)\' . conf-mode) ([cC]hange[lL]og[-.][-0-9a-z]+\' . change-log-mode) (/\.?\(?:gitconfig\|gnokiirc\|hgrc\|kde.*rc\|mime\.types\|wgetrc\)\' . conf-mode) (/\.\(?:asound\|enigma\|fetchmail\|gltron\|gtk\|hxplayer\|mairix\|mbsync\|msmtp\|net\|neverball\|nvidia-settings-\|offlineimap\|qt/.+\|realplayer\|reportbug\|rtorrent\.\|screen\|scummvm\|sversion\|sylpheed/.+\|xmp\)rc\' . conf-mode) (/\.\(?:gdbtkinit\|grip\|mpdconf\|notmuch-config\|orbital/.+txt\|rhosts\|tuxracer/options\)\' . conf-mode) (/\.?X\(?:default\|resource\|re\)s\> . conf-xdefaults-mode) (/X11.+app-defaults/\|\.ad\' . conf-xdefaults-mode) (/X11.+locale/.+/Compose\' . conf-colon-mode) (/X11.+locale/compose\.dir\' . conf-javaprop-mode) (\.~?[0-9]+\.[0-9][-.0-9]*~?\' nil t) (\.\(?:orig\|in\|[bB][aA][kK]\)\' nil t) ([/.]c\(?:on\)?f\(?:i?g\)?\(?:\.[a-zA-Z0-9._-]+\)?\' . conf-mode-maybe) (\.[1-9]\' . nroff-mode) (\.art\' . image-mode) (\.avs\' . image-mode) (\.bmp\' . image-mode) (\.cmyk\' . image-mode) (\.cmyka\' . image-mode) (\.crw\' . image-mode) (\.dcr\' . image-mode) (\.dcx\' . image-mode) (\.dng\' . image-mode) (\.dpx\' . image-mode) (\.fax\' . image-mode) (\.hrz\' . image-mode) (\.icb\' . image-mode) (\.icc\' . image-mode) (\.icm\' . image-mode) (\.ico\' . image-mode) (\.icon\' . image-mode) (\.jbg\' . image-mode) (\.jbig\' . image-mode) (\.jng\' . image-mode) (\.jnx\' . image-mode) (\.miff\' . image-mode) (\.mng\' . image-mode) (\.mvg\' . image-mode) (\.otb\' . image-mode) (\.p7\' . image-mode) (\.pcx\' . image-mode) (\.pdb\' . image-mode) (\.pfa\' . image-mode) (\.pfb\' . image-mode) (\.picon\' . image-mode) (\.pict\' . image-mode) (\.rgb\' . image-mode) (\.rgba\' . image-mode) (\.tga\' . image-mode) (\.wbmp\' . image-mode) (\.webp\' . image-mode) (\.wmf\' . image-mode) (\.wpg\' . image-mode) (\.xcf\' . image-mode) (\.xmp\' . image-mode) (\.xwd\' . image-mode) (\.yuv\' . image-mode) (\.tgz\' . tar-mode) (\.tbz2?\' . tar-mode) (\.txz\' . tar-mode) (\.tzst\' . tar-mode))
 
-** org-jira
+** org-jira :vars:
 #+begin_src emacs-lisp
 (setq jiralib-url "https://jira.thinkproject.com")
 #+end_src
@@ -607,18 +660,19 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 : https://jira.thinkproject.com
 
 ** org-recoll
-*** Initialisation :init:
+*** Initialisation :init:vars:
 
 #+begin_src emacs-lisp
 (require 'org-recoll)
 
-(setq org-recoll-command-invocation "recollq -t -A")
+(setq org-recoll-command-invocation "recollq -t -A"
+      org-recoll-results-num 100)
 #+end_src
 
 #+RESULTS:
 : org-recoll
 
-*** Bindngs :kbd:
+*** Bindings :kbd:
 #+begin_src emacs-lisp
 (global-set-key (kbd "C-c g") #'org-recoll-search)
 (global-set-key (kbd "C-c u") #'org-recoll-update-index)
@@ -627,7 +681,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : org-recoll-update-index
 
-** org-protocol
+** org-protocol :init:
 #+begin_src emacs-lisp
 (require 'org-protocol)
 #+end_src
@@ -636,7 +690,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 : org-protocol
 
 ** org-capture
-*** Templates :init:
+*** Templates :init:vars:
 #+begin_src emacs-lisp
 (require 'org-capture)
 
@@ -666,7 +720,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 | c | org-protocol-capture | entry | (file ~/life/gtd/inbox.org) | * TODO [[%:link][%:description]]     |                   |   |
 
 
-*** Convenience Functions
+*** Convenience Functions :func:
 #+begin_src emacs-lisp
 ;; helper capture function for `org-roam' for `agenda-mode'
 (defun qzdl/current-roam-link ()
@@ -695,7 +749,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 : qzdl/org-roam-capture-todo
 
 ** org-roam
-*** Initialisation :init:
+*** Initialisation :init:vars:
 #+begin_src emacs-lisp
 (use-package! org-roam
   :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
@@ -776,11 +830,10 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS: org-roam protocol capture
 | r | ref | plain | #'org-roam-capture--get-point | %? | :file-name | %(qzdl/utc-timestamp)-${slug} | :head | #+SETUPFILE:./hugo_setup.org |
 
-*** Convenience Functions
-*** Choose graphviz backend
+*** Choose graphviz backend :func:
 A nice example of using <link-to-elisp-doc 'completing-read>
 
-mapping a function over a collection is such an easy way to get things done
+mapping a function over a collection is such an easy way to get things done.
 #+begin_src emacs-lisp
 (setq qzdl/graph-backends '("dot" "neato"))
 
@@ -800,11 +853,11 @@ mapping a function over a collection is such an easy way to get things done
 #+RESULTS:
 : qzdl/org-roam-choose-graph-backend
 
-*** TODO Run analysis
+*** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
 - restrict graph (e.g. exclude sensitive information)
 
-*** org-roam-server
+*** org-roam-server :init:vars:
 [[https://github.com/org-roam/org-roam-server][GitHub - org-roam/org-roam-server]]
 #+begin_src emacs-lisp
 (use-package! org-roam-server

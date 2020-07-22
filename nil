@@ -1,0 +1,14 @@
+(load-file "~/.doom.d/snippets/bgex.el")
+(require 'bgex)
+
+;; Image on frame (dynamic color mode (SRC * DST / factor))
+;; (bgex-set-image-default "~/.config/wall.xpm" t)
+;; Color for HTML-mode (dynamic color mode)
+;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
+
+;; ;; Color for buffer-name (*scratch*)
+;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
+;; (bgex-set-color-default "skyblue")
+;; ;; XPM string
+;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
+;; (bgex-set-xpm-string-default "XPM strging" t)
