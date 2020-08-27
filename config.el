@@ -1,5 +1,5 @@
-  (map! "<mouse-8>" 'better-jumper-jump-backward)
-  (map! "<mouse-9>" 'better-jumper-jump-forward)
+(map! "<mouse-8>" 'better-jumper-jump-backward)
+(map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-x C-k" #'custom/kill-this-buffer)
 (map! "C-x k" #'kmacro-keymap)
@@ -37,7 +37,7 @@
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 
-(setq doom-font (font-spec :family "monospace" :size 16))
+(setq doom-font (font-spec :family "Fira Mono" :size 32))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
 (setq display-line-numbers-type nil)
@@ -83,13 +83,6 @@
 (defun qzdl/load-pink-mountain ()
   (interactive)
   (load-theme 'pink-mountain t))
-
-(require 'ivy-posframe)
-(setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-center)))
-(add-hook! 'exwm-init-hook
-  (after! ivy-posframe
-    (add-to-list 'ivy-posframe-parameters '(parent-frame . nil))))
-(ivy-posframe-mode 1)
 
 (setq qzdl/preferred-transparency-alpha '(80 . 70))
 
@@ -258,17 +251,17 @@
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-  (defun qzdl/upcase-sql-keywords ()
-    (interactive)
-    (save-excursion
-      (dolist (keywords sql-mode-postgres-font-lock-keywords)
-        (goto-char (point-min))
-        (while (re-search-forward (car keywords) nil t)
-          (goto-char (+ 1 (match-beginning 0)))
-          (when (eql font-lock-keyword-face (face-at-point))
-            (backward-char)
-            (upcase-word 1)
-            (forward-char))))))
+(defun qzdl/upcase-sql-keywords ()
+  (interactive)
+  (save-excursion
+    (dolist (keywords sql-mode-postgres-font-lock-keywords)
+      (goto-char (point-min))
+      (while (re-search-forward (car keywords) nil t)
+        (goto-char (+ 1 (match-beginning 0)))
+        (when (eql font-lock-keyword-face (face-at-point))
+          (backward-char)
+          (upcase-word 1)
+          (forward-char))))))
 
 (if (symbolp 'cl-font-lock-built-in-mode)
     (cl-font-lock-built-in-mode 1))
@@ -458,7 +451,7 @@
            :head ,qzdl/org-roam-capture-head
            :unnarrowed t)))
 
-  (setq org-roam-capture-ref-templates
+(setq org-roam-capture-ref-templates
         `(("r" " ref" plain (function org-roam-capture--get-point)
            "%?"
            :file-name ,qzdl/capture-title-timestamp
