@@ -58,7 +58,7 @@
   :recipe (:host github :repo "tumashu/ivy-posframe"))
 (package! perfect-margin
   :recipe (:host github :repo "mpwang/perfect-margin"))
-(package! minimap)
+
 (package! emacs-wallpaper
   :recipe (:host github :repo "farlado/emacs-wallpaper"))
 

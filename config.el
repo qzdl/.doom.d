@@ -9,6 +9,9 @@
 (map! "s-k" #'windmove-up)
 (map! "s-l" #'windmove-right)
 
+(map! "C-x C-o" #'ace-window)
+(map! "C-x o" #'delete-blank-lines)
+
 (map! "s-n" #'next-buffer)
 (map! "s-p" #'previous-buffer)
 
@@ -83,13 +86,6 @@
 (defun qzdl/load-pink-mountain ()
   (interactive)
   (load-theme 'pink-mountain t))
-
-(require 'ivy-posframe)
-(setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-center)))
-(add-hook! 'exwm-init-hook
-  (after! ivy-posframe
-    (add-to-list 'ivy-posframe-parameters '(parent-frame . nil))))
-(ivy-posframe-mode 1)
 
 (setq qzdl/preferred-transparency-alpha '(80 . 70))
 
@@ -359,8 +355,9 @@
 (setq org-recoll-command-invocation "recollq -t -A"
       org-recoll-results-num 100)
 
-(global-set-key (kbd "C-c g") #'org-recoll-search)
-(global-set-key (kbd "C-c u") #'org-recoll-update-index)
+(map! "C-c g" #'org-recoll-search)
+(map! "C-c u" #'org-recoll-update-index)
+(map! :mode org-recoll-mode "q" #'kill-this-buffer)
 
 (require 'org-protocol)
 
@@ -436,10 +433,10 @@
 (org-roam-mode +1)
 
 (setq qzdl/org-roam-capture-head
-      "#+SETUPFILE:./hugo_setup.org
-#+HUGO_SECTION: zettels
-#+HUGO_SLUG: ${slug}
-#+TITLE: ${title}\n")
+      "#+setupfile:./hugo_setup.org
+#+hugo_section: zettels
+#+hugo_slug: ${slug}
+#+title: ${title}\n")
 
 (setq org-roam-capture-templates
         `(("d" "default" plain (function org-roam--capture-get-point)
@@ -462,11 +459,11 @@
         `(("r" " ref" plain (function org-roam-capture--get-point)
            "%?"
            :file-name ,qzdl/capture-title-timestamp
-           :head "#+SETUPFILE:./hugo_setup.org
-#+ROAM_KEY: ${ref}
-#+HUGO_SLUG: ${slug}
-#+TITLE: ${title}
-#+SOURCE: ${ref}"
+           :head "#+setupfile:./hugo_setup.org
+#+roam_key: ${ref}
+#+hugo_slug: ${slug}
+#+title: ${title}
+#+source: ${ref}"
            :unnarrowed t)))
 
 (setq qzdl/graph-backends '("dot" "neato"))
@@ -540,12 +537,13 @@
   ("C-c n j" . org-journal-new-entry)
   ("C-c n t" . org-journal-today)
   :custom
-  (org-journal-date-prefix "#+TITLE: ")
+  (org-journal-date-prefix "#+title: ")
+  (org-journal)
   (org-journal-file-format "private-%Y-%m-%d.org")
   (org-journal-dir org-roam-directory)
   (org-journal-carryover-items nil)
   (org-journal-enable-agenda-integration nil)
-  (org-journal-date-format "%Y-%m-%d")
+  (org-journal-date-format "[%Y-%m-%d]")
   :config
   (defun org-journal-today ()
     (interactive)

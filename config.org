@@ -1,10 +1,10 @@
 #+title: Emacs Configuration
-
+ 
 * Globals
 ** Global Bindings :kbd:
 These Key Binds Are focused around ergonomics more than mnemonics
 *** Mouse jumping
-#ERGO
+ergonomic as fuck
 <link-to-elisp-doc 'better-jumper-jump-backwards>
 #+begin_src emacs-lisp
   (map! "<mouse-8>" 'better-jumper-jump-backward)
@@ -13,17 +13,25 @@ These Key Binds Are focused around ergonomics more than mnemonics
 
 #+RESULTS:
 
-*** Switch {C-x C-k} and {C-x k}
+*** Switch macro {C-x C-k} and kill-buffer {C-x k}
 #+begin_src emacs-lisp
 (map! "C-x C-k" #'custom/kill-this-buffer)
 (map! "C-x k" #'kmacro-keymap)
 #+end_src
-*** Window control
+*** HJKL Window control
 #+begin_src emacs-lisp
 (map! "s-h" #'windmove-left)
 (map! "s-j" #'windmove-down)
 (map! "s-k" #'windmove-up)
 (map! "s-l" #'windmove-right)
+#+end_src
+
+#+RESULTS:
+****
+*** Switch delete-blank-lines {C-x C-o} and other-window {C-x o}
+#+begin_src emacs-lisp
+(map! "C-x C-o" #'ace-window)
+(map! "C-x o" #'delete-blank-lines)
 #+end_src
 
 #+RESULTS:
@@ -159,7 +167,7 @@ coerce non-numeric arguments into something that will toggle.
        :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
 #+end_src
 
-** Elegance :init:
+** [[file:../../../life/roam/20200623T110813Z-elegance_el.org][Elegance]] :init:
 #+begin_src emacs-lisp
 (load! "elegance/elegance.el")
 (load! "elegance/sanity.el")
@@ -191,10 +199,10 @@ somethingh som
   (interactive)
   (load-theme 'pink-mountain t))
 #+end_src
-** ivy-posframe :init:
+** [[file:../../../life/roam/20200722T142750Z-ivy_posframe.org][ivy-posframe]] :init:
 [[https://github.com/tumashu/ivy-posframe][GitHub - tumashu/ivy-posframe: ivy-posframe is a ivy extension, which let ivy...]]
 
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
 (require 'ivy-posframe)
 (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-center)))
 (add-hook! 'exwm-init-hook
@@ -229,7 +237,7 @@ Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWik
 #+RESULTS:
 : qzdl/toggle-transparency
 
-** bgex :init:
+** [[file:../../../life/roam/20200613T123425Z-emacs_bgex.org][bgex]] :init:
 To create a source image, run ~convert a.png a.xpm~
 #+begin_src emacs-lisp :tangle no
 (load-file "~/.doom.d/snippets/bgex.el")
@@ -250,11 +258,11 @@ To create a source image, run ~convert a.png a.xpm~
 
 #+RESULTS:
 : bgex
-** perfect-margin
+** [[file:../../../life/roam/20200722T143926Z-perfect_margin.org][perfect-margin]]
 #+begin_src emacs-lisp
 (perfect-margin-mode 1)
 #+end_src
-* EXWM
+* [[file:../../../life/roam/20200615T124606Z-exwm.org][EXWM]]
 ** Initialisation :func:init:
 #+begin_src emacs-lisp
 (require 'exwm-randr)
@@ -453,8 +461,8 @@ The =n= of {C-c n} denotes notes.
 
 #+RESULTS:
 
-* Programming
-** SQL
+* [[file:../../../life/roam/20200412130848-programming.org][Programming]]
+** [[file:../../../life/roam/20200623T110142Z-sql.org][SQL]]
 For reference: [[https://www.emacswiki.org/emacs/SqlMode][EmacsWiki: Sql Mode]]
 *** Toggle ERROR_ROLLBACK :psql:func:
 #+begin_src emacs-lisp
@@ -492,7 +500,7 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
             (forward-char))))))
 #+end_src
 
-** Common Lisp
+** [[file:../../../life/roam/20200402172258-common_lisp.org][Common Lisp]]
 *** cl-font-lock-built-in-mode :vars:
 "Highlight built-in functions, variables, and types in ‘lisp-mode’."
 - Enable feature from 28.1 if exists
@@ -514,12 +522,12 @@ Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https:/
       :duration eros-eval-result-duration)))
 #+end_src
 
-** Emacs Lisp
+** [[file:../../../life/roam/20200415T145703Z-emacs_lisp.org][Emacs Lisp]]
 *** eval-defun :kbd:
 #+begin_src emacs-lisp
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 #+end_src
-* Hyperbole
+* [[file:../../../life/roam/20200511T193645Z-gnu_hyperbole.org][Hyperbole]]
 ** Initialisation :init:
 #+begin_src emacs-lisp
 (require 'hyperbole)
@@ -546,7 +554,7 @@ the view of the pdf as it's rendered by PDFTools.
 #+RESULTS:
 | doom-modeline-set-pdf-modeline | pdf-view-midnight-minor-mode |
 
-* KeyFreq :init:
+* [[file:../../../life/roam/20200722T143145Z-keyfreq.org][KeyFreq]] :init:
 A package that logs command usage; blessed be Xah Lee
 #+begin_src emacs-lisp
 (keyfreq-mode 1)
@@ -605,7 +613,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ((next.org :level . 0) (someday.org :level . 0) (reading.org :level . 1) (projects.org :maxlevel . 1))
 
-** org-mode :init:vars:
+** [[file:../../../life/roam/20200515T120103Z-org_mode.org][org-mode]] :init:vars:
 #+begin_src emacs-lisp
 (use-package! org
   :mode ("\\.org\\'" . org-mode)
@@ -659,7 +667,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : https://jira.thinkproject.com
 
-** org-recoll
+** [[file:../../../life/roam/20200701T083326Z-org_recoll.org][org-recoll]]
 *** Initialisation :init:vars:
 
 #+begin_src emacs-lisp
@@ -674,12 +682,12 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 *** Bindings :kbd:
 #+begin_src emacs-lisp
-(global-set-key (kbd "C-c g") #'org-recoll-search)
-(global-set-key (kbd "C-c u") #'org-recoll-update-index)
+(map! "C-c g" #'org-recoll-search)
+(map! "C-c u" #'org-recoll-update-index)
+(map! :mode org-recoll-mode "q" #'kill-this-buffer)
 #+end_src
 
 #+RESULTS:
-: org-recoll-update-index
 
 ** org-protocol :init:
 #+begin_src emacs-lisp
@@ -748,7 +756,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : qzdl/org-roam-capture-todo
 
-** org-roam
+** [[file:../../../life/roam/20200401202402-org_roam.org][org-roam]]
 *** Initialisation :init:vars:
 #+begin_src emacs-lisp
 (use-package! org-roam
@@ -787,10 +795,10 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+name: org-roam capture
 #+begin_src emacs-lisp
 (setq qzdl/org-roam-capture-head
-      "#+SETUPFILE:./hugo_setup.org
-,#+HUGO_SECTION: zettels
-,#+HUGO_SLUG: ${slug}
-,#+TITLE: ${title}\n")
+      "#+setupfile:./hugo_setup.org
+,#+hugo_section: zettels
+,#+hugo_slug: ${slug}
+,#+title: ${title}\n")
 
 (setq org-roam-capture-templates
         `(("d" "default" plain (function org-roam--capture-get-point)
@@ -819,11 +827,11 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
         `(("r" " ref" plain (function org-roam-capture--get-point)
            "%?"
            :file-name ,qzdl/capture-title-timestamp
-           :head "#+SETUPFILE:./hugo_setup.org
-#+ROAM_KEY: ${ref}
-#+HUGO_SLUG: ${slug}
-#+TITLE: ${title}
-#+SOURCE: ${ref}"
+           :head "#+setupfile:./hugo_setup.org
+#+roam_key: ${ref}
+#+hugo_slug: ${slug}
+#+title: ${title}
+#+source: ${ref}"
            :unnarrowed t)))
 #+end_src
 
@@ -884,7 +892,7 @@ https://github.com/jkitchin/org-ref
       reftex-default-bibliography reftex-bib-path
       org-ref-default-bibliography reftex-bib-path)
 #+end_src
-** org-agenda
+** [[file:../../../life/roam/20200612T111528Z-org_agenda.org][org-agenda]]
 #+begin_src emacs-lisp
 (use-package! org-agenda
   :init
@@ -926,19 +934,20 @@ https://github.com/jkitchin/org-ref
 #+RESULTS:
 : t
 
-** org-journal
+** [[file:../../../life/roam/20200602T101201Z-org_journal.org][org-journal]]
 #+begin_src emacs-lisp
 (use-package org-journal
   :bind
   ("C-c n j" . org-journal-new-entry)
   ("C-c n t" . org-journal-today)
   :custom
-  (org-journal-date-prefix "#+TITLE: ")
+  (org-journal-date-prefix "#+title: ")
+  (org-journal)
   (org-journal-file-format "private-%Y-%m-%d.org")
   (org-journal-dir org-roam-directory)
   (org-journal-carryover-items nil)
   (org-journal-enable-agenda-integration nil)
-  (org-journal-date-format "%Y-%m-%d")
+  (org-journal-date-format "[%Y-%m-%d]")
   :config
   (defun org-journal-today ()
     (interactive)
@@ -948,7 +957,7 @@ https://github.com/jkitchin/org-ref
 #+RESULTS:
 : org-journal-today
 
-** TODO org-drill
+** TODO [[file:../../../life/roam/20200722T143300Z-org_drill.org][org-drill]]
 ** ox (export)
 #+begin_src emacs-lisp
 (require 'ox-reveal)
@@ -956,10 +965,6 @@ https://github.com/jkitchin/org-ref
 
 #+RESULTS:
 : ox-reveal
-
-
-
-
 
 * GNUs
 Following [[https://www.emacswiki.org/emacs/GnusTutorial][EmacsWiki: Gnus Tutorial]]
