@@ -37,6 +37,10 @@
            (buffer-string))
          output-stream))
 
+(defun qz/bt-a2dp ()
+  (interactive)
+  (shell-command "pactl set-card-profile bluez_card.2C_41_A1_87_20_BA a2dp_sink"))
+
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 
@@ -65,8 +69,8 @@
       (:prefix-map ("t" . "toggle")
        :desc "Time in the modeline"   "T" #'qzdl/toggle-time-in-modeline))
 
-(load! "elegance/elegance.el")
-(load! "elegance/sanity.el")
+;(load! "elegance/elegance.el")
+;(load! "elegance/sanity.el")
 
 (setq writeroom-width 80)
 
@@ -108,6 +112,7 @@
                    (number-to-string (car (frame-parameter nil 'alpha))))))
 
 (perfect-margin-mode 1)
+(setq perfect-margin-ignore-regexps nil)
 
 (require 'exwm-randr)
 
@@ -117,6 +122,13 @@
   (add-hook 'exwm-randr-screen-change-hook
             (lambda ()(start-process-shell-command "xrandr" nil
                                               "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+  (exwm-randr-enable))
+
+(defun qzdl/exwm-usbc-ultrawide ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+  "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --off --output DP-2 --primary --mode 5120x1440 --pos 0x0 --rotate normal")))
   (exwm-randr-enable))
 
 (defun qzdl/exwm-tpb ()
@@ -136,7 +148,8 @@
                                               "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
   (exwm-randr-enable))
 
-(qzdl/exwm-ultrawide)
+(qzdl/exwm-usbc-ultrawide)
+;;(qzdl/exwm-tpb)
 (exwm-enable)
 
 (setq qzdl/startup-programs
@@ -165,12 +178,11 @@
 
 ;; Make class name the buffer name
 (add-hook 'exwm-update-class-hook
-          (lambda ()
-            (exwm-workspace-rename-buffer exwm-class-name)))
+          (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
 
 ;; ensure doom recognises x-windows as 'real' per <link-to-elisp-doc
 ;; 'doom-real-buffer-p>
- (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
+(add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
 
 (defun qz/mark-this-buffer-as-real ()
   (interactive)
@@ -269,15 +281,53 @@
 (if (symbolp 'cl-font-lock-built-in-mode)
     (cl-font-lock-built-in-mode 1))
 
-(defun qzdl/slime-eval-last-expression-eros ()
-  (interactive)
-  (destructuring-bind (output value)
-      (sly-eval `(slynk:eval-and-grab-output ,(sly-last-expression)))
-    (eros--make-result-overlay (concat output value)
-      :where (point)
-      :duration eros-eval-result-duration)))
+(autoload 'cider--make-result-overlay "cider-overlays")
+
+
+(defun endless/eval-overlay (value point)
+  (cider--make-result-overlay (format "%S" value)
+    :where point
+    :duration 'command)
+  ;; Preserve the return value.
+  value)
+
+
+;; (define-key! 'sly-mode-map "C-x C-e" 'sly-eval-last-expression)
 
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
+
+(defun qz/read-property-mod-buffer ()
+ (interactive)
+ (let* ((command (completing-read "command: " qz/buffer-mod-commands))
+       (args (+org--get-property (completing-read "property: " qz/buffer-mod-props))))
+   (setq current-prefix-arg '(4))
+   (shell-command (concat command " " args " &"))))
+
+(defun qz/get-ingredients-mod-buffer ()
+  (interactive)
+  (let* ((c (current-buffer))
+         (pt (point))
+         (json-object-type 'hash-table)
+         (json-array-type 'list)
+         (json-key-type 'string)
+         (jsono (json-read-from-string
+                 (shell-command-to-string
+                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
+         (ingreds (gethash "ingredients" jsono)))
+    (insert "* Ingredients\n")
+    (insert
+     (apply
+      'concat
+      (mapcar (lambda (e)
+                (concat "- " (gethash "line" e)
+                        " [" (number-to-string (gethash "cups" (gethash "measure" e)))
+                        " cups]\n")) ingreds)))))
+
+(require 'em-tramp)
+(setq eshell-prefer-lisp-functions t
+      eshell-prefer-lisp-variables t
+      password-cache t
+      password-cache-expiry 300)
 
 (require 'hyperbole)
 
@@ -301,6 +351,9 @@
 (setq org-directory "~/life/"
       qzdl/notes-directory (concat org-directory "roam/")
       qzdl/org-agenda-directory (concat org-directory "gtd/")
+      org-ref-notes-directory qzdl/notes-directory
+      bibtex-completion-notes-path qzdl/notes-directory
+      org-ref-bibliography-notes "~/life/bib.org"
       org-noter-notes-search-path (list qzdl/notes-directory)
       org-roam-directory qzdl/notes-directory)
 
@@ -501,15 +554,15 @@
   (map! "<f1>" #'qzdl/switch-to-agenda)
   (setq org-agenda-block-separator nil
         org-agenda-start-with-log-mode t
-        org-agenda-files (list org-roam-directory))
+        org-agenda-files (list qzdl/org-agenda-directory))
   (defun qzdl/switch-to-agenda ()
     (interactive)
-    (org-agenda nil " "))
+    (org-agenda nil "g"))
   :config
   (setq org-columns-default-format
         "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
   (setq org-agenda-custom-commands
-        `((" " "Agenda"
+        `(("g" "GTD"
            ((agenda ""
                     ((org-agenda-span 'week)
                      (org-deadline-warning-days 365)))
@@ -530,7 +583,23 @@
             (todo "TODO"
                   ((org-agenda-overriding-header "One-off Tasks")
                    (org-agenda-files '(,(concat qzdl/org-agenda-directory "next.org")))
-                   (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))))
+                   (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))))
+          ("h" "habit + tag search"
+           ((agenda ""))          
+           ((org-agenda-show-log t)
+            (org-agenda-ndays 7)
+            (org-agenda-log-mode-items '(state))))
+          ("hh" tags "+habit")
+          ("hd" tags "+habit+daily")
+          ("hw" tags "+habit+weekly"))))
+
+(defun qz/rg-get-files-with-tags ()
+  "Returns a LIST of files that contain TAGS (currently, just `TODO')"
+  (split-string
+   (shell-command-to-string "rg TODO ~/life/roam/ -c | awk -F '[,:]' '{print $1}'")))
+
+(setq org-agenda-files
+      (append org-agenda-files (qz/rg-get-files-with-tags)))
 
 (use-package org-journal
   :bind
@@ -543,7 +612,7 @@
   (org-journal-dir org-roam-directory)
   (org-journal-carryover-items nil)
   (org-journal-enable-agenda-integration nil)
-  (org-journal-date-format "[%Y-%m-%d]")
+  (org-journal-date-format "<%Y-%m-%d>")
   :config
   (defun org-journal-today ()
     (interactive)
@@ -552,3 +621,18 @@
 (require 'ox-reveal)
 
 (setq gnus-secondary-select-methods '((nntp "list.postgres.org")))
+
+(require 'orderless)
+(setq completion-styles '(orderless))
+(icomplete-mode) ; optional but recommended!
+
+(setq orderless-component-separator "[ &]")
+(setq company-idle-delay 0.1
+      company-minimum-prefix-length 1)
+
+; highlight matching parts
+(defun just-one-face (fn &rest args)
+  (let ((orderless-match-faces [completions-common-part]))
+    (apply fn args)))
+
+(advice-add 'company-capf--candidates :around #'just-one-face)

@@ -54,17 +54,23 @@
 ;;; Code:
 
 (package! exwm)
+(package! posframe)
 (package! ivy-posframe
   :recipe (:host github :repo "tumashu/ivy-posframe"))
+(package! which-key-posframe)
 (package! perfect-margin
   :recipe (:host github :repo "mpwang/perfect-margin"))
 
 (package! emacs-wallpaper
   :recipe (:host github :repo "farlado/emacs-wallpaper"))
-
+(package! modus-themes
+  :recipe (:host gitlab :repo "protesilaos/modus-themes"))
 (package! hyperbole)
 
 (package! speed-type)
+(package! orderless
+ :recipe (:host github :repo "oantolin/orderless"))
+
 
 ;;=============
 ;; ORG STUFF ;;
@@ -72,12 +78,11 @@
 (package! org-drill)
 (package! org-jira)
 (package! org-journal)
+(package! org-fragtog)
 
 ;;; ORG ROAM
 (package! org-roam
   :recipe (:host github :repo "org-roam/org-roam"))
-(package! company-org-roam
-  :recipe (:host github :repo "org-roam/company-org-roam"))
 (package! org-roam-server)
 (package! org-roam-bibtex)
 

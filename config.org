@@ -1,10 +1,10 @@
 #+title: Emacs Configuration
- 
+
 * Globals
 ** Global Bindings :kbd:
 These Key Binds Are focused around ergonomics more than mnemonics
 *** Mouse jumping
-ergonomic as fuck
+#ERGO
 <link-to-elisp-doc 'better-jumper-jump-backwards>
 #+begin_src emacs-lisp
   (map! "<mouse-8>" 'better-jumper-jump-backward)
@@ -58,6 +58,7 @@ This stellar advice came from [[https://www.emacswiki.org/emacs/DvorakKeyboard][
 *** Shell pop
 #+begin_src emacs-lisp
 (map! "C-x C-'" #'+eshell/toggle)
+
 #+end_src
 
 #+RESULTS:
@@ -73,6 +74,8 @@ incase the shell needs to be changed
 #+begin_src emacs-lisp
 (defun qzdl/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
+
+
 #+end_src
 
 #+RESULTS:
@@ -104,6 +107,16 @@ something that will toggle.
            (buffer-string))
          output-stream))
 #+end_src
+*** fix [[file:../../../life/roam/20201019T125728Z-bluetooth_headphones.org][bluetooth headphones]]
+#+begin_src emacs-lisp
+(defun qz/bt-a2dp ()
+  (interactive)
+  (shell-command "pactl set-card-profile bluez_card.2C_41_A1_87_20_BA a2dp_sink"))
+#+end_src
+
+#+RESULTS:
+: qz/bt-a2dp
+
 * Doom Tweaks
 ** ID & Email :vars:
 #+begin_src emacs-lisp
@@ -169,8 +182,8 @@ coerce non-numeric arguments into something that will toggle.
 
 ** [[file:../../../life/roam/20200623T110813Z-elegance_el.org][Elegance]] :init:
 #+begin_src emacs-lisp
-(load! "elegance/elegance.el")
-(load! "elegance/sanity.el")
+;(load! "elegance/elegance.el")
+;(load! "elegance/sanity.el")
 #+end_src
 ** Writeroom :vars:
 When centering, use all available width, and respond to resizing somethinh
@@ -204,12 +217,30 @@ somethingh som
 
 #+begin_src emacs-lisp :tangle no
 (require 'ivy-posframe)
-(setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-window-center)))
-(add-hook! 'exwm-init-hook
-  (after! ivy-posframe
-    (add-to-list 'ivy-posframe-parameters '(parent-frame . nil))))
-(ivy-posframe-mode 1)
+(require 'which-key-posframe)
+
+;; width / height
+(setq qz/posframe-min-width (/ 5120 4)
+      qz/posframe-min-height (/ 1440 2)
+      which-key-posframe-min-width qz/posframe-min-width
+      which-key-posframe-min-height qz/posframe-min-height
+      ivy-posframe-min-width qz/posframe-min-width
+      ivy-posframe-min-height qz/posframe-min-height)
+
+;; draw above x-windows
+(add-to-list 'ivy-posframe-parameters '(parent-frame . nil))
+(add-to-list 'which-key-posframe-parameters '(parent-frame . nil))
+
+(setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-point)))
+
+;; init
+(ivy-posframe-mode 0)
+(which-key-posframe-mode 1)
 #+end_src
+
+#+RESULTS:
+: t
+
 ** Transparency :func:
 Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
 #+begin_src emacs-lisp
@@ -261,6 +292,7 @@ To create a source image, run ~convert a.png a.xpm~
 ** [[file:../../../life/roam/20200722T143926Z-perfect_margin.org][perfect-margin]]
 #+begin_src emacs-lisp
 (perfect-margin-mode 1)
+(setq perfect-margin-ignore-regexps nil)
 #+end_src
 * [[file:../../../life/roam/20200615T124606Z-exwm.org][EXWM]]
 ** Initialisation :func:init:
@@ -273,6 +305,13 @@ To create a source image, run ~convert a.png a.xpm~
   (add-hook 'exwm-randr-screen-change-hook
             (lambda ()(start-process-shell-command "xrandr" nil
                                               "xrandr --output DP-1 --mode 5120x1440 --primary --output eDP-1 --off")))
+  (exwm-randr-enable))
+
+(defun qzdl/exwm-usbc-ultrawide ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
+  (add-hook 'exwm-randr-screen-change-hook
+            (lambda ()(start-process-shell-command "xrandr" nil
+  "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --off --output DP-2 --primary --mode 5120x1440 --pos 0x0 --rotate normal")))
   (exwm-randr-enable))
 
 (defun qzdl/exwm-tpb ()
@@ -292,7 +331,8 @@ To create a source image, run ~convert a.png a.xpm~
                                               "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --primary --mode 1920x1080 --pos 0x352 --rotate normal --output DP-2 --mode 1920x1080 --pos 1920x0 --rotate normal")))
   (exwm-randr-enable))
 
-(qzdl/exwm-ultrawide)
+(qzdl/exwm-usbc-ultrawide)
+;;(qzdl/exwm-tpb)
 (exwm-enable)
 #+end_src
 
@@ -332,12 +372,11 @@ To create a source image, run ~convert a.png a.xpm~
 
 ;; Make class name the buffer name
 (add-hook 'exwm-update-class-hook
-          (lambda ()
-            (exwm-workspace-rename-buffer exwm-class-name)))
+          (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
 
 ;; ensure doom recognises x-windows as 'real' per <link-to-elisp-doc
 ;; 'doom-real-buffer-p>
- (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
+(add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
 
 (defun qz/mark-this-buffer-as-real ()
   (interactive)
@@ -511,22 +550,80 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 #+end_src
 ***
 *** sly eval-overlay :func:
+
 Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https://www.reddit.com/r/emacs/comments/bi4xk1/evaluation_overlays_in_slime_for_common_lisp/][Evaluation overlays in slime for common lisp : emacs]]
 #+begin_src emacs-lisp
-(defun qzdl/slime-eval-last-expression-eros ()
-  (interactive)
-  (destructuring-bind (output value)
-      (sly-eval `(slynk:eval-and-grab-output ,(sly-last-expression)))
-    (eros--make-result-overlay (concat output value)
-      :where (point)
-      :duration eros-eval-result-duration)))
+(autoload 'cider--make-result-overlay "cider-overlays")
+
+
+(defun endless/eval-overlay (value point)
+  (cider--make-result-overlay (format "%S" value)
+    :where point
+    :duration 'command)
+  ;; Preserve the return value.
+  value)
+
+
+;; (define-key! 'sly-mode-map "C-x C-e" 'sly-eval-last-expression)
 #+end_src
+
+#+RESULTS:
+: endless/eval-overlay
 
 ** [[file:../../../life/roam/20200415T145703Z-emacs_lisp.org][Emacs Lisp]]
 *** eval-defun :kbd:
 #+begin_src emacs-lisp
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 #+end_src
+*** ingredients
+Some code wrapping [[file:../../../life/roam/20201014T121143Z-schollz_ingredients_extract_recipe_ingredients_from_any_recipe_website_on_the_internet.org][schollz/ingredients]], outputting some [[file:../../../life/roam/20200515T120103Z-org_mode.org][org-mode]] heading & body
+#+begin_src emacs-lisp
+(defun qz/read-property-mod-buffer ()
+ (interactive)
+ (let* ((command (completing-read "command: " qz/buffer-mod-commands))
+       (args (+org--get-property (completing-read "property: " qz/buffer-mod-props))))
+   (setq current-prefix-arg '(4))
+   (shell-command (concat command " " args " &"))))
+
+(defun qz/get-ingredients-mod-buffer ()
+  (interactive)
+  (let* ((c (current-buffer))
+         (pt (point))
+         (json-object-type 'hash-table)
+         (json-array-type 'list)
+         (json-key-type 'string)
+         (jsono (json-read-from-string
+                 (shell-command-to-string
+                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
+         (ingreds (gethash "ingredients" jsono)))
+    (insert "* Ingredients\n")
+    (insert
+     (apply
+      'concat
+      (mapcar (lambda (e)
+                (concat "- " (gethash "line" e)
+                        " [" (number-to-string (gethash "cups" (gethash "measure" e)))
+                        " cups]\n")) ingreds)))))
+#+end_src
+
+#+RESULTS:
+: qz/get-ingredients-mod-buffer
+
+**  eshell
+also, see [[~/.eshellrc][~/.eshellrc]]
+*** sudo
+#+begin_src emacs-lisp
+(require 'em-tramp)
+(setq eshell-prefer-lisp-functions t
+      eshell-prefer-lisp-variables t
+      password-cache t
+      password-cache-expiry 300) 
+
+#+end_src
+
+#+RESULTS:
+: 300
+
 * [[file:../../../life/roam/20200511T193645Z-gnu_hyperbole.org][Hyperbole]]
 ** Initialisation :init:
 #+begin_src emacs-lisp
@@ -595,8 +692,12 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 (setq org-directory "~/life/"
       qzdl/notes-directory (concat org-directory "roam/")
       qzdl/org-agenda-directory (concat org-directory "gtd/")
+      org-ref-notes-directory qzdl/notes-directory
+      bibtex-completion-notes-path qzdl/notes-directory
+      org-ref-bibliography-notes "~/life/bib.org"
       org-noter-notes-search-path (list qzdl/notes-directory)
       org-roam-directory qzdl/notes-directory)
+
 #+end_src
 
 #+RESULTS:
@@ -655,9 +756,6 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
     (flycheck-add-mode 'proselint 'org-mode)))
 
 #+end_src
-
-#+RESULTS:
-: ((\.odc\' . archive-mode) (\.odf\' . archive-mode) (\.odi\' . archive-mode) (\.otp\' . archive-mode) (\.odp\' . archive-mode) (\.otg\' . archive-mode) (\.odg\' . archive-mode) (\.ots\' . archive-mode) (\.ods\' . archive-mode) (\.odm\' . archive-mode) (\.ott\' . archive-mode) (\.odt\' . archive-mode) (\.kotl?\' . kotl-mode) (/bspwmrc\' . sh-mode) (\.\(?:zunit\|env\)\' . sh-mode) (/Pipfile\' . conf-mode) ([./]flake8\' . conf-mode) (/README\(?:\.md\)?\' . gfm-mode) (\.tex\' . LaTeX-mode) (\.jl\' . ess-julia-mode) (\.Cask\' . emacs-lisp-mode) (\.rss\' . nxml-mode) (\.xs\(?:d\|lt\)\' . nxml-mode) (\.p\(?:list\|om\)\' . nxml-mode) (\.[pP][dD][fF]\' . pdf-view-mode) (\.\(?:hex\|nes\)\' . hexl-mode) (rc\' . conf-mode) (\.log\' . text-mode) (/LICENSE\' . text-mode) (requirements\.in . pip-requirements-mode) (requirements[^z-a]*\.txt\' . pip-requirements-mode) (\.pip\' . pip-requirements-mode) (\.hva\' . latex-mode) (\.drv\' . latex-mode) (\.cpp[rR]\' . poly-c++r-mode) (\.[Rr]cpp\' . poly-r+c++-mode) (\.[rR]brew\' . poly-brew+r-mode) (\.[rR]html\' . poly-html+r-mode) (\.rapport\' . poly-rapport-mode) (\.[rR]md\' . poly-markdown+r-mode) (\.[rR]nw\' . poly-noweb+r-mode) (\.Snw\' . poly-noweb+r-mode) (\.nw\' . poly-noweb-mode) (\.md\' . poly-markdown-mode) (\.\(?:md\|markdown\|mkd\|mdown\|mkdn\|mdwn\)\' . markdown-mode) (\.ado\' . ess-stata-mode) (\.do\' . ess-stata-mode) (\.[Ss][Aa][Ss]\' . SAS-mode) (\.Sout . S-transcript-mode) (\.[Ss]t\' . S-transcript-mode) (\.Rd\' . Rd-mode) (DESCRIPTION$ . conf-colon-mode) (/Makevars\(\.win\)?$ . makefile-mode) (\.[Rr]out . ess-r-transcript-mode) (CITATION\' . ess-r-mode) (NAMESPACE\' . ess-r-mode) (\.[rR]profile\' . ess-r-mode) (\.[rR]\' . ess-r-mode) (/R/.*\.q\' . ess-r-mode) (\.[Jj][Aa][Gg]\' . ess-jags-mode) (\.[Bb][Mm][Dd]\' . ess-bugs-mode) (\.[Bb][Oo][Gg]\' . ess-bugs-mode) (\.[Bb][Uu][Gg]\' . ess-bugs-mode) (\.jl\' . julia-mode) (\.tsv\' . tsv-mode) (\.[Cc][Ss][Vv]\' . csv-mode) (\(?:build\|profile\)\.boot\' . clojure-mode) (\.cljs\' . clojurescript-mode) (\.cljc\' . clojurec-mode) (\.\(clj\|dtm\|edn\)\' . clojure-mode) (/git-rebase-todo\' . git-rebase-mode) (/git/ignore\' . gitignore-mode) (/info/exclude\' . gitignore-mode) (/\.gitignore\' . gitignore-mode) (/etc/gitconfig\' . gitconfig-mode) (/\.gitmodules\' . gitconfig-mode) (/git/config\' . gitconfig-mode) (/modules/.*/config\' . gitconfig-mode) (/\.git/config\' . gitconfig-mode) (/\.gitconfig\' . gitconfig-mode) (\.gpg\(~\|\.~[0-9]+~\)?\' nil epa-file) (\.\(?:3fr\|a\(?:rw\|vs\)\|bmp[23]?\|c\(?:als?\|myka?\|r[2w]\|u[rt]\)\|d\(?:c[mrx]\|ds\|jvu\|ng\|px\)\|exr\|f\(?:ax\|its\)\|gif\(?:87\)?\|hrz\|ic\(?:on\|[bo]\)\|j\(?:\(?:pe\|[np]\)g\)\|k\(?:25\|dc\)\|m\(?:iff\|ng\|rw\|s\(?:l\|vg\)\|tv\)\|nef\|o\(?:rf\|tb\)\|p\(?:bm\|c\(?:ds\|[dltx]\)\|db\|ef\|gm\|i\(?:ct\|x\)\|jpeg\|n\(?:g\(?:24\|32\|8\)\|[gm]\)\|pm\|sd\|tif\|wp\)\|r\(?:a[fs]\|gb[ao]?\|l[ae]\)\|s\(?:c[rt]\|fw\|gi\|r[2f]\|un\|vgz?\)\|t\(?:ga\|i\(?:ff\(?:64\)?\|le\|m\)\|tf\)\|uyvy\|v\(?:da\|i\(?:car\|d\|ff\)\|st\)\|w\(?:bmp\|pg\)\|x\(?:3f\|bm\|cf\|pm\|wd\|[cv]\)\|y\(?:cbcra?\|uv\)\)\' . image-mode) (\.elc\' . elisp-byte-code-mode) (\.zst\' nil jka-compr) (\.dz\' nil jka-compr) (\.xz\' nil jka-compr) (\.lzma\' nil jka-compr) (\.lz\' nil jka-compr) (\.g?z\' nil jka-compr) (\.bz2\' nil jka-compr) (\.Z\' nil jka-compr) (\.vr[hi]?\' . vera-mode) (\(?:\.\(?:rbw?\|ru\|rake\|thor\|jbuilder\|rabl\|gemspec\|podspec\)\|/\(?:Gem\|Rake\|Cap\|Thor\|Puppet\|Berks\|Vagrant\|Guard\|Pod\)file\)\' . ruby-mode) (\.re?st\' . rst-mode) (\.py[iw]?\' . python-mode) (\.m\' . octave-maybe-mode) (\.less\' . less-css-mode) (\.scss\' . scss-mode) (\.awk\' . awk-mode) (\.\(u?lpc\|pike\|pmod\(\.in\)?\)\' . pike-mode) (\.idl\' . idl-mode) (\.java\' . java-mode) (\.m\' . objc-mode) (\.ii\' . c++-mode) (\.i\' . c-mode) (\.lex\' . c-mode) (\.y\(acc\)?\' . c-mode) (\.h\' . c-or-c++-mode) (\.c\' . c-mode) (\.\(CC?\|HH?\)\' . c++-mode) (\.[ch]\(pp\|xx\|\+\+\)\' . c++-mode) (\.\(cc\|hh\)\' . c++-mode) (\.\(bat\|cmd\)\' . bat-mode) (\.[sx]?html?\(\.[a-zA-Z_]+\)?\' . mhtml-mode) (\.svgz?\' . image-mode) (\.svgz?\' . xml-mode) (\.x[bp]m\' . image-mode) (\.x[bp]m\' . c-mode) (\.p[bpgn]m\' . image-mode) (\.tiff?\' . image-mode) (\.gif\' . image-mode) (\.png\' . image-mode) (\.jpe?g\' . image-mode) (\.te?xt\' . text-mode) (\.[tT]e[xX]\' . tex-mode) (\.ins\' . tex-mode) (\.ltx\' . latex-mode) (\.dtx\' . doctex-mode) (\.org\' . org-mode) (\.el\' . emacs-lisp-mode) (Project\.ede\' . emacs-lisp-mode) (\.\(scm\|stk\|ss\|sch\)\' . scheme-mode) (\.l\' . lisp-mode) (\.li?sp\' . lisp-mode) (\.[fF]\' . fortran-mode) (\.for\' . fortran-mode) (\.p\' . pascal-mode) (\.pas\' . pascal-mode) (\.\(dpr\|DPR\)\' . delphi-mode) (\.ad[abs]\' . ada-mode) (\.ad[bs]\.dg\' . ada-mode) (\.\([pP]\([Llm]\|erl\|od\)\|al\)\' . perl-mode) (Imakefile\' . makefile-imake-mode) (Makeppfile\(?:\.mk\)?\' . makefile-makepp-mode) (\.makepp\' . makefile-makepp-mode) (\.mk\' . makefile-gmake-mode) (\.make\' . makefile-gmake-mode) ([Mm]akefile\' . makefile-gmake-mode) (\.am\' . makefile-automake-mode) (\.texinfo\' . texinfo-mode) (\.te?xi\' . texinfo-mode) (\.[sS]\' . asm-mode) (\.asm\' . asm-mode) (\.css\' . css-mode) (\.mixal\' . mixal-mode) (\.gcov\' . compilation-mode) (/\.[a-z0-9-]*gdbinit . gdb-script-mode) (-gdb\.gdb . gdb-script-mode) ([cC]hange\.?[lL]og?\' . change-log-mode) ([cC]hange[lL]og[-.][0-9]+\' . change-log-mode) (\$CHANGE_LOG\$\.TXT . change-log-mode) (\.scm\.[0-9]*\' . scheme-mode) (\.[ckz]?sh\'\|\.shar\'\|/\.z?profile\' . sh-mode) (\.bash\' . sh-mode) (\(/\|\`\)\.\(bash_\(profile\|history\|log\(in\|out\)\)\|z?log\(in\|out\)\)\' . sh-mode) (\(/\|\`\)\.\(shrc\|zshrc\|m?kshrc\|bashrc\|t?cshrc\|esrc\)\' . sh-mode) (\(/\|\`\)\.\([kz]shenv\|xinitrc\|startxrc\|xsession\)\' . sh-mode) (\.m?spec\' . sh-mode) (\.m[mes]\' . nroff-mode) (\.man\' . nroff-mode) (\.sty\' . latex-mode) (\.cl[so]\' . latex-mode) (\.bbl\' . latex-mode) (\.bib\' . bibtex-mode) (\.bst\' . bibtex-style-mode) (\.sql\' . sql-mode) (\(acinclude\|aclocal\|acsite\)\.m4\' . autoconf-mode) (\.m[4c]\' . m4-mode) (\.mf\' . metafont-mode) (\.mp\' . metapost-mode) (\.vhdl?\' . vhdl-mode) (\.article\' . text-mode) (\.letter\' . text-mode) (\.i?tcl\' . tcl-mode) (\.exp\' . tcl-mode) (\.itk\' . tcl-mode) (\.icn\' . icon-mode) (\.sim\' . simula-mode) (\.mss\' . scribe-mode) (\.f9[05]\' . f90-mode) (\.f0[38]\' . f90-mode) (\.indent\.pro\' . fundamental-mode) (\.\(pro\|PRO\)\' . idlwave-mode) (\.srt\' . srecode-template-mode) (\.prolog\' . prolog-mode) (\.tar\' . tar-mode) (\.\(arc\|zip\|lzh\|lha\|zoo\|[jew]ar\|xpi\|rar\|cbr\|7z\|ARC\|ZIP\|LZH\|LHA\|ZOO\|[JEW]AR\|XPI\|RAR\|CBR\|7Z\)\' . archive-mode) (\.oxt\' . archive-mode) (\.\(deb\|[oi]pk\)\' . archive-mode) (\`/tmp/Re . text-mode) (/Message[0-9]*\' . text-mode) (\`/tmp/fol/ . text-mode) (\.oak\' . scheme-mode) (\.sgml?\' . sgml-mode) (\.x[ms]l\' . xml-mode) (\.dbk\' . xml-mode) (\.dtd\' . sgml-mode) (\.ds\(ss\)?l\' . dsssl-mode) (\.js[mx]?\' . javascript-mode) (\.har\' . javascript-mode) (\.json\' . javascript-mode) (\.[ds]?va?h?\' . verilog-mode) (\.by\' . bovine-grammar-mode) (\.wy\' . wisent-grammar-mode) ([:/\]\..*\(emacs\|gnus\|viper\)\' . emacs-lisp-mode) (\`\..*emacs\' . emacs-lisp-mode) ([:/]_emacs\' . emacs-lisp-mode) (/crontab\.X*[0-9]+\' . shell-script-mode) (\.ml\' . lisp-mode) (\.ld[si]?\' . ld-script-mode) (ld\.?script\' . ld-script-mode) (\.xs\' . c-mode) (\.x[abdsru]?[cnw]?\' . ld-script-mode) (\.zone\' . dns-mode) (\.soa\' . dns-mode) (\.asd\' . lisp-mode) (\.\(asn\|mib\|smi\)\' . snmp-mode) (\.\(as\|mi\|sm\)2\' . snmpv2-mode) (\.\(diffs?\|patch\|rej\)\' . diff-mode) (\.\(dif\|pat\)\' . diff-mode) (\.[eE]?[pP][sS]\' . ps-mode) (\.\(?:PDF\|DVI\|OD[FGPST]\|DOCX\|XLSX?\|PPTX?\|pdf\|djvu\|dvi\|od[fgpst]\|docx\|xlsx?\|pptx?\)\' . doc-view-mode-maybe) (configure\.\(ac\|in\)\' . autoconf-mode) (\.s\(v\|iv\|ieve\)\' . sieve-mode) (BROWSE\' . ebrowse-tree-mode) (\.ebrowse\' . ebrowse-tree-mode) (#\*mail\* . mail-mode) (\.g\' . antlr-mode) (\.mod\' . m2-mode) (\.ses\' . ses-mode) (\.docbook\' . sgml-mode) (\.com\' . dcl-mode) (/config\.\(?:bat\|log\)\' . fundamental-mode) (/\.\(authinfo\|netrc\)\' . authinfo-mode) (\.\(?:[iI][nN][iI]\|[lL][sS][tT]\|[rR][eE][gG]\|[sS][yY][sS]\)\' . conf-mode) (\.la\' . conf-unix-mode) (\.ppd\' . conf-ppd-mode) (java.+\.conf\' . conf-javaprop-mode) (\.properties\(?:\.[a-zA-Z0-9._-]+\)?\' . conf-javaprop-mode) (\.toml\' . conf-toml-mode) (\.desktop\' . conf-desktop-mode) (/\.redshift\.conf\' . conf-windows-mode) (\`/etc/\(?:DIR_COLORS\|ethers\|.?fstab\|.*hosts\|lesskey\|login\.?de\(?:fs\|vperm\)\|magic\|mtab\|pam\.d/.*\|permissions\(?:\.d/.+\)?\|protocols\|rpc\|services\)\' . conf-space-mode) (\`/etc/\(?:acpid?/.+\|aliases\(?:\.d/.+\)?\|default/.+\|group-?\|hosts\..+\|inittab\|ksysguarddrc\|opera6rc\|passwd-?\|shadow-?\|sysconfig/.+\)\' . conf-mode) ([cC]hange[lL]og[-.][-0-9a-z]+\' . change-log-mode) (/\.?\(?:gitconfig\|gnokiirc\|hgrc\|kde.*rc\|mime\.types\|wgetrc\)\' . conf-mode) (/\.\(?:asound\|enigma\|fetchmail\|gltron\|gtk\|hxplayer\|mairix\|mbsync\|msmtp\|net\|neverball\|nvidia-settings-\|offlineimap\|qt/.+\|realplayer\|reportbug\|rtorrent\.\|screen\|scummvm\|sversion\|sylpheed/.+\|xmp\)rc\' . conf-mode) (/\.\(?:gdbtkinit\|grip\|mpdconf\|notmuch-config\|orbital/.+txt\|rhosts\|tuxracer/options\)\' . conf-mode) (/\.?X\(?:default\|resource\|re\)s\> . conf-xdefaults-mode) (/X11.+app-defaults/\|\.ad\' . conf-xdefaults-mode) (/X11.+locale/.+/Compose\' . conf-colon-mode) (/X11.+locale/compose\.dir\' . conf-javaprop-mode) (\.~?[0-9]+\.[0-9][-.0-9]*~?\' nil t) (\.\(?:orig\|in\|[bB][aA][kK]\)\' nil t) ([/.]c\(?:on\)?f\(?:i?g\)?\(?:\.[a-zA-Z0-9._-]+\)?\' . conf-mode-maybe) (\.[1-9]\' . nroff-mode) (\.art\' . image-mode) (\.avs\' . image-mode) (\.bmp\' . image-mode) (\.cmyk\' . image-mode) (\.cmyka\' . image-mode) (\.crw\' . image-mode) (\.dcr\' . image-mode) (\.dcx\' . image-mode) (\.dng\' . image-mode) (\.dpx\' . image-mode) (\.fax\' . image-mode) (\.hrz\' . image-mode) (\.icb\' . image-mode) (\.icc\' . image-mode) (\.icm\' . image-mode) (\.ico\' . image-mode) (\.icon\' . image-mode) (\.jbg\' . image-mode) (\.jbig\' . image-mode) (\.jng\' . image-mode) (\.jnx\' . image-mode) (\.miff\' . image-mode) (\.mng\' . image-mode) (\.mvg\' . image-mode) (\.otb\' . image-mode) (\.p7\' . image-mode) (\.pcx\' . image-mode) (\.pdb\' . image-mode) (\.pfa\' . image-mode) (\.pfb\' . image-mode) (\.picon\' . image-mode) (\.pict\' . image-mode) (\.rgb\' . image-mode) (\.rgba\' . image-mode) (\.tga\' . image-mode) (\.wbmp\' . image-mode) (\.webp\' . image-mode) (\.wmf\' . image-mode) (\.wpg\' . image-mode) (\.xcf\' . image-mode) (\.xmp\' . image-mode) (\.xwd\' . image-mode) (\.yuv\' . image-mode) (\.tgz\' . tar-mode) (\.tbz2?\' . tar-mode) (\.txz\' . tar-mode) (\.tzst\' . tar-mode))
 
 ** org-jira :vars:
 #+begin_src emacs-lisp
@@ -899,15 +997,15 @@ https://github.com/jkitchin/org-ref
   (map! "<f1>" #'qzdl/switch-to-agenda)
   (setq org-agenda-block-separator nil
         org-agenda-start-with-log-mode t
-        org-agenda-files (list org-roam-directory))
+        org-agenda-files (list qzdl/org-agenda-directory))
   (defun qzdl/switch-to-agenda ()
     (interactive)
-    (org-agenda nil " "))
+    (org-agenda nil "g"))
   :config
   (setq org-columns-default-format
         "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
   (setq org-agenda-custom-commands
-        `((" " "Agenda"
+        `(("g" "GTD"
            ((agenda ""
                     ((org-agenda-span 'week)
                      (org-deadline-warning-days 365)))
@@ -928,7 +1026,23 @@ https://github.com/jkitchin/org-ref
             (todo "TODO"
                   ((org-agenda-overriding-header "One-off Tasks")
                    (org-agenda-files '(,(concat qzdl/org-agenda-directory "next.org")))
-                   (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))))
+                   (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))))
+          ("h" "habit + tag search"
+           ((agenda ""))          
+           ((org-agenda-show-log t)
+            (org-agenda-ndays 7)
+            (org-agenda-log-mode-items '(state))))
+          ("hh" tags "+habit")
+          ("hd" tags "+habit+daily")
+          ("hw" tags "+habit+weekly"))))
+
+(defun qz/rg-get-files-with-tags ()
+  "Returns a LIST of files that contain TAGS (currently, just `TODO')"
+  (split-string
+   (shell-command-to-string "rg TODO ~/life/roam/ -c | awk -F '[,:]' '{print $1}'")))
+
+(setq org-agenda-files
+      (append org-agenda-files (qz/rg-get-files-with-tags)))
 #+end_src
 
 #+RESULTS:
@@ -947,7 +1061,7 @@ https://github.com/jkitchin/org-ref
   (org-journal-dir org-roam-directory)
   (org-journal-carryover-items nil)
   (org-journal-enable-agenda-integration nil)
-  (org-journal-date-format "[%Y-%m-%d]")
+  (org-journal-date-format "<%Y-%m-%d>")
   :config
   (defun org-journal-today ()
     (interactive)
@@ -971,3 +1085,26 @@ Following [[https://www.emacswiki.org/emacs/GnusTutorial][EmacsWiki: Gnus Tutori
 #+begin_src emacs-lisp
 (setq gnus-secondary-select-methods '((nntp "list.postgres.org")))
 #+end_src
+* Completion
+** orderless
+ideally the ordering should account ~match, last-used, degree~
+TODO find out about company component delimiters for inputting soaces and stuff
+#+begin_src emacs-lisp
+(require 'orderless)
+(setq completion-styles '(orderless))
+(icomplete-mode) ; optional but recommended!
+
+(setq orderless-component-separator "[ &]")
+(setq company-idle-delay 0.1
+      company-minimum-prefix-length 1)
+
+; highlight matching parts
+(defun just-one-face (fn &rest args)
+  (let ((orderless-match-faces [completions-common-part]))
+    (apply fn args)))
+
+(advice-add 'company-capf--candidates :around #'just-one-face)
+#+end_src
+
+#+RESULTS:
+: t
