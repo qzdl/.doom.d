@@ -77,7 +77,6 @@
 ;;=============
 (package! org-drill)
 (package! org-jira)
-(package! org-journal)
 (package! org-fragtog)
 
 ;;; ORG ROAM
@@ -99,6 +98,14 @@
 
 ;;; BABEL
 (package! ob-ipython)
+
+;;==========
+;; WINDOW ;;
+;;==========
+(package! window-go
+  :recipe (:host github :repo "akirak/emacs-window-go"))
+;(use-package exwm-window-go
+;  :straight window-go)
 
 ;;========
 ;; MISC ;;

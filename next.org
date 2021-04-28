@@ -1,0 +1,3 @@
+#+TITLE: Next
+
+An [[file:../../../life/roam/20200609T141445Z-index_page.org][index page]] for [[file:../../../life/roam/20200612T111528Z-org_agenda.org][org-agenda]] + stuff that I've got to do, coming from the inbox.
