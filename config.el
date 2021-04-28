@@ -253,7 +253,7 @@ start-process-shell-command' with COMMAND"
   "List of instance names of windows that should start in the floating mode.")
 
 (defun qz/exwm-float-window-on-specific-windows ()
-  (when (member exwm-instance-name akirak/exwm-floating-window-classes)
+  (when (member exwm-instance-name qz/exwm-floating-window-classes)
     (exwm-floating-toggle-floating)))
 (add-hook 'exwm-manage-finish-hook #'qz/exwm-float-window-on-specific-windows)
 
