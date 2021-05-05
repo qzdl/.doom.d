@@ -53,6 +53,22 @@
 
 (tooltip-mode 1)
 
+(setq qz/toggle-time-state t)
+(display-time-mode qz/toggle-time-state)
+
+(defun qz/toggle-time-in-modeline ()
+  (interactive)
+  (message
+   (concat "Time display in modeline is "
+           (if (display-time-mode
+                (setq qz/toggle-time-state
+                      (qz/toggle-1->0 qz/toggle-time-state)))
+               "on" "off"))))
+
+(map! :leader
+      (:prefix-map ("t" . "toggle")
+       :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
+
                                         ;(load! "elegance/elegance.el")
                                         ;(load! "elegance/sanity.el")
 
@@ -165,6 +181,7 @@
 (qz/run-startup-programs)
 
 (require 'exwm-input)
+
 (defmacro qz/exwm-bind-keys (&rest bindings)
   "Bind input keys in EXWM.
 INDINGS is a list of cons cells containing a key (string) and a command."
@@ -188,7 +205,8 @@ INDINGS is a list of cons cells containing a key (string) and a command."
  ("s-p" . switch-to-prev-buffer)
  ("s-0" . delete-window)
  ("s-+" . delete-other-windows)
- ("s-b" . qz/exwm-goto-browser))
+ ("s-b" . qz/exwm-goto-browser)
+ ("s-a" . qz/agenda))
 
 (defvar qz/default-simulation-keys
   '(;; movement
@@ -315,21 +333,12 @@ start-process-shell-command' with COMMAND"
             (upcase-word 1)
             (forward-char))))))
 
+(map! :mode paredit-mode
+      "M-p" #'paredit-forward-slurp-sexp
+      "M-n" #'paredit-backward-slurp-sexp)
+
 (if (symbolp 'cl-font-lock-built-in-mode)
     (cl-font-lock-built-in-mode 1))
-
-(autoload 'cider--make-result-overlay "cider-overlays")
-
-
-(defun endless/eval-overlay (value point)
-  (cider--make-result-overlay (format "%S" value)
-    :where point
-    :duration 'command)
-  ;; Preserve the return value.
-  value)
-
-
-;; (define-key! 'sly-mode-map "C-x C-e" 'sly-eval-last-expression)
 
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 
@@ -394,6 +403,8 @@ outputting the result in the buffer at-point"
 (setq org-directory "~/life/"
       qz/notes-directory (concat org-directory "roam/")
       qz/org-agenda-directory qz/notes-directory
+      qz/org-agenda-files (mapcar (lambda (f) (expand-file-name (concat qz/notes-directory f)))
+                                  '("calendar-home.org" "calendar-work.org" "schedule.org"))
       org-ref-notes-directory qz/notes-directory
       bibtex-completion-notes-path qz/notes-directory
       org-ref-bibliography-notes "~/life/bib.org"
@@ -411,7 +422,7 @@ outputting the result in the buffer at-point"
   :init
   (map! :leader
         :prefix "n"
-        "c" #'org-capture)
+        "l" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
         "M-p" #'outline-previous-visible-heading)
@@ -422,7 +433,7 @@ outputting the result in the buffer at-point"
                                    (python . t)
                                    (ipython . t)
                                    (R . t))
-        org-ellipses " ▼ "
+        org-ellipsis " ▼ "
         org-confirm-babel-evaluate nil
         org-use-speed-commands t
         org-catch-invisible-edits 'show
@@ -438,8 +449,6 @@ outputting the result in the buffer at-point"
                                        ("el" . "src emacs-lisp")))
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
-
-(setq jiralib-url "https://jira.thinkproject.com")
 
 (require 'org-recoll)
 
@@ -459,7 +468,7 @@ outputting the result in the buffer at-point"
 (setq org-capture-templates
       `(("i" "inbox" entry
          (file ,(concat qz/org-agenda-directory "inbox.org"))
-         "* TODO %?\nCREATED: %u")
+         "* TODO %? \nCREATED: %u\nFROM: %a")
         ;; capture link to live `org-roam' thing
         ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          (function qz/current-roam-link)
@@ -496,6 +505,13 @@ outputting the result in the buffer at-point"
   "Capture a task in agenda mode."
   (org-roam-capture nil "_"))
 
+(setq org-gcal-fetch-file-alist
+      `((qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
+        (qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
+        (qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
+
+(setq org-gcal-recurring-events-mode 'nested)
+
 (use-package! org-roam
   :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
   :hook
@@ -506,16 +522,15 @@ outputting the result in the buffer at-point"
   (map! :leader
         :prefix "n"
         :desc "org-roam" "l" #'org-roam
-        :desc "org-roam-insert" "i" #'org-roam-insert
         :desc "org-roam-switch-to-buffer" "b" #'org-roam-switch-to-buffer
         :desc "org-roam-find-file" "f" #'org-roam-find-file
         :desc "org-roam-insert" "i" #'qz/roam-insert
         :desc "org-agenda-todo" "t" #'qz/org-agenda-todo
-        :desc "org-agenda-today" "J" #'qz/org-agenda-today
-        :desc "org-roam-dailies-today" "j" #'org-roam-dailies-today
-        :desc "qz/org-roam-capture-todo" "_" #'qz/org-roam-capture-todo
+        :desc "org-roam-dailies-today" "J" #'org-roam-dailies-today
+        :desc "org-roam-dailies-capture-today" "j" #'org-roam-dailies-capture-today
         :desc "qz/org-roam-capture-current" "C" #'qz/org-roam-capture-current
         :desc "qz/org-roam-capture-current" "C-c" #'qz/org-roam-capture-current
+        :desc "qz/org-gcal--current" "C-c" #'qz/org-roam-capture-current
         :desc "org-roam-capture" "c" #'org-roam-capture)
   (setq org-roam-directory qz/notes-directory
         org-roam-dailies-directory qz/notes-directory
@@ -526,14 +541,6 @@ outputting the result in the buffer at-point"
 
   :config
   (require 'org-roam-protocol))
-
-(defun qz/org-agenda-todo ()
-  (interactive)
-  (org-agenda nil "t"))
-
-(defun qz/org-agenda-today ()
-  (interactive)
-  (org-agenda "d" "g"))
 
 (org-roam-mode +1)
 
@@ -573,7 +580,7 @@ outputting the result in the buffer at-point"
 
 (setq org-roam-dailies-capture-templates
       `(("d" "default" entry (function org-roam-capture--get-point)
-         "* %?"
+         "* %<%H:%m> %?\nCREATED: %u"
          :file-name  "private-%<%Y-%m-%d>"
          :head "#+title: <%<%Y-%m-%d>>\n")))
 
@@ -694,7 +701,11 @@ tasks.
 
 (defun vulpea-agenda-files-update (&rest _)
   "Update the value of `org-agenda-files'."
-  (setq org-agenda-files (vulpea-project-files)))
+  (setq org-agenda-files
+        (delete-duplicates
+          (append qz/org-agenda-files (vulpea-project-files))
+          :test #'string-equal)))
+
 
 (advice-add 'org-agenda :before #'vulpea-agenda-files-update)
 
@@ -711,15 +722,13 @@ tasks.
       (save-buffer))))
 
 (use-package! org-roam-server
-:config
-(setq org-roam-server-host "127.0.0.1"
-      org-roam-server-port 8080
-      org-roam-server-export-inline-images t
-      org-roam-server-authenticate nil
-      org-roam-server-network-label-truncate t
-      org-roam-server-network-label-truncate-length 60))
-
-
+  :config
+  (setq org-roam-server-host "127.0.0.1"
+        org-roam-server-port 8080
+        org-roam-server-export-inline-images t
+        org-roam-server-authenticate nil
+        org-roam-server-network-label-truncate t
+        org-roam-server-network-label-truncate-length 60))
 
 (require 'org-ref)
 (setq reftex-bib-path  '("~/life/tex.bib")
@@ -745,15 +754,9 @@ tasks.
             (org-deadline-warning-days 365)        ;; [1]
             (org-agenda-entry-types '(:deadline))  ;; [2]
             ))
-
-          ("h" "habit + tag search"
-           ((agenda ""))
-           ((org-agenda-show-log t)
-            (org-agenda-ndays 7)
-            (org-agenda-log-mode-items '(state))))
+          ("ww" "wip all" tags "wip")
+          ("wr" "wip reading" tags "wip+reading||wip+read|reading+next")
           ("hh" tags "+habit")
-          ("hd" tags "+habit+daily")
-          ("hw" tags "+habit+weekly")
           ("P" "Printed agenda"
            ((agenda "" ((org-agenda-span 7)                      ;; overview of appointments
                         (org-agenda-start-on-weekday nil)         ;; calendar begins today
@@ -786,10 +789,15 @@ tasks.
                                         ;(setq org-agenda-files
                                         ;      (append org-agenda-files (qz/rg-get-files-with-tags)))
 
+(defun qz/org-agenda-gtd ()
+  (interactive)
+  (org-agenda "d." "g")
+  (org-agenda-goto-today))
+
 (add-to-list
  'org-agenda-custom-commands
  `("g" "GTD"
-   ((agenda "" ((org-agenda-span 'week) (org-deadline-warning-days 60)))
+   ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
     (tags-todo "wip"
                ((org-agenda-overriding-header "wip")                        ))
     (todo "TODO"
@@ -811,6 +819,36 @@ tasks.
            (org-agenda-files '(,(concat qz/org-agenda-directory "next.org")))
            (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))
 
+(defun qz/org-agenda-todo ()
+  (interactive)
+  (org-agenda nil "t"))
+
+
+
+(map! :map org-agenda-mode-map
+      "J" #'qz/org-agenda-process-inbox
+      "C-j" #'qz/org-agenda-process-item
+      "R" #'org-agenda-refile)
+
+(setq org-agenda-bulk-custom-functions '((?b . #'qz/org-agenda-process-item)))
+
+(defun qz/org-process-inbox ()
+  "Called in org-agenda-mode, processes all inbox items."
+  (interactive)
+  (org-agenda-bulk-mark-regexp "inbox:")
+  (org-agenda-bulk-action ?b))
+
+
+(defun qz/org-agenda-process-item ()
+  "Process a single item in the org-agenda."
+  (interactive)
+  (org-with-wide-buffer
+   (org-agenda-set-tags)
+   (org-agenda-priority)
+   (org-agenda-refile nil nil t)))
+
+
+
 (setq org-tag-alist '(("@errand" . ?e)
                       ("@work" . ?w)
                       ("@home" . ?h)
@@ -826,16 +864,7 @@ tasks.
                       (:newline)
                       (:newline)
                       ("talk" . ?t)
-                      ("film" . ?f)
-                      ))
-
-(defun qz/org-agenda-process-inbox-item ()
-  "Process a single item in the org-agenda."
-  (interactive)
-  (org-with-wide-buffer
-   (org-agenda-set-tags)
-   (org-agenda-priority)
-   (org-agenda-refile nil nil t)))
+                      ("film" . ?f)))
 
 (require 'ox-reveal)
 
@@ -861,34 +890,17 @@ tasks.
   (after! ivy
     (setq ivy-re-builders-alist '((t . orderless-ivy-re-builder)))))
 
-(setq qz/toggle-time-state t)
-(display-time-mode qz/toggle-time-state)
-
-(defun qz/toggle-time-in-modeline ()
-  (interactive)
-  (message
-   (concat "Time display in modeline is "
-           (if (display-time-mode
-                (setq qz/toggle-time-state
-                      (qz/toggle-1->0 qz/toggle-time-state)))
-               "on" "off"))))
-
-(map! :leader
-      (:prefix-map ("t" . "toggle")
-       :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
-
 (setq qz/org-agenda-prefix-length 20
       org-agenda-prefix-format
       '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
         (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
         (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (search . " %i %(vaulpea-agenda-category qz/org-agenda-prefix-length) ")))
+        (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
 
 (defun vulpea-agenda-category (&optional len)
   "Get category of item at point for agenda.
 
 Category is defined by one of the following items:
-
 - CATEGORY property
 - TITLE keyword
 - TITLE property

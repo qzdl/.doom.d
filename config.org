@@ -7,6 +7,10 @@
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 #+end_src
+
+#+RESULTS:
+: samuel@samuelculpepper.com
+
 ** Global Bindings :kbd:
 These Key Binds Are focused around ergonomics more than mnemonics
 *** Mouse jumping
@@ -36,7 +40,6 @@ These Key Binds Are focused around ergonomics more than mnemonics
 #+end_src
 
 #+RESULTS:
-****
 *** Switch delete-blank-lines {C-x C-o} and other-window {C-x o}
 #+begin_src emacs-lisp
 (map! "C-x C-o" #'ace-window)
@@ -78,6 +81,10 @@ incase the shell needs to be changed
 #+begin_src emacs-lisp
 (map! "s-B" 'toggle-rot13-mode)
 #+end_src
+
+#+RESULTS:
+
+*** TODO bookmarks
 ** Functions :func:
 *** UTC Timestamp
 #+begin_src emacs-lisp
@@ -104,6 +111,10 @@ something that will toggle.
 (defun qz/toggle-on->off (n)
   (if (equal 1 n) "on" "off"))
 #+end_src
+
+#+RESULTS:
+: qz/toggle-on->off
+
 *** pprint with ~cl-prettyprint~
 [[https://stackoverflow.com/questions/3552106/pprint-in-emacs-lisp][elisp - PPRINT in Emacs Lisp? - Stack Overflow]]
 
@@ -114,6 +125,10 @@ something that will toggle.
            (buffer-string))
          output-stream))
 #+end_src
+
+#+RESULTS:
+: qz/pprint
+
 *** fix [[file:../../../life/roam/20201019T125728Z-bluetooth_headphones.org][bluetooth headphones]]
 #+begin_src emacs-lisp
 (defun qz/bt-a2dp ()
@@ -143,10 +158,14 @@ something that will toggle.
 #+begin_src emacs-lisp
 (tooltip-mode 1)
 #+end_src
+
+#+RESULTS:
+: t
+
 ** Time in the modeline :kbd:
 An example of this can be found in [[Time in the modeline]]. Equal is used here to
 coerce non-numeric arguments into something that will toggle.
-#+begin_src emacs-lispz
+#+begin_src emacs-lisp
 (setq qz/toggle-time-state t)
 (display-time-mode qz/toggle-time-state)
 
@@ -164,6 +183,9 @@ coerce non-numeric arguments into something that will toggle.
        :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
 #+end_src
 
+#+RESULTS:
+: qz/toggle-time-in-modeline
+
 ** [[file:../../../life/roam/20200623T110813Z-elegance_el.org][Elegance]] :init:
 #+begin_src emacs-lisp
                                         ;(load! "elegance/elegance.el")
@@ -171,7 +193,6 @@ coerce non-numeric arguments into something that will toggle.
 #+end_src
 
 #+RESULTS:
-: t
 
 ** Writeroom :vars:
 
@@ -182,6 +203,10 @@ coerce non-numeric arguments into something that will toggle.
              (lambda () (setq writeroom-border-width 50)))
 
 #+end_src
+
+#+RESULTS:
+| (lambda nil (setq writeroom-border-width 50)) | +zen-enable-mixed-pitch-mode-h |
+
 ** Theme :func:
 #+begin_src emacs-lisp
 (defun qz/load-tron-legacy ()
@@ -201,6 +226,10 @@ coerce non-numeric arguments into something that will toggle.
 ;; cba
 (load-theme 'modus-vivendi t)
 #+end_src
+
+#+RESULTS:
+: qz/load-pink-mountain
+
 ** [[file:../../../life/roam/20200722T142750Z-ivy_posframe.org][ivy-posframe]] :init:
 [[https://github.com/tumashu/ivy-posframe][GitHub - tumashu/ivy-posframe: ivy-posframe is a ivy extension, which let ivy...]]
 
@@ -228,7 +257,6 @@ coerce non-numeric arguments into something that will toggle.
 #+end_src
 
 #+RESULTS:
-: t
 
 ** Transparency :func:
 Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
@@ -260,8 +288,8 @@ Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWik
 ** [[file:../../../life/roam/20200613T123425Z-emacs_bgex.org][bgex]] :init:
 To create a source image, run ~convert a.png a.xpm~
 #+begin_src emacs-lisp :tangle no
-(load-file "~/.doom.d/snippets/bgex.el")
-(require 'bgex)
+;(load-file "~/.doom.d/snippets/bgex.el")
+;(require 'bgex)
 
 ;; Image on frame (dynamic color mode (SRC * DST / factor))
 ;; (bgex-set-image-default "~/.config/wall.xpm" t)
@@ -277,12 +305,14 @@ To create a source image, run ~convert a.png a.xpm~
 #+end_src
 
 #+RESULTS:
-: bgex
 ** [[file:../../../life/roam/20200722T143926Z-perfect_margin.org][perfect-margin]]
 #+begin_src emacs-lisp
 (perfect-margin-mode 1)
 (setq perfect-margin-ignore-regexps nil)
 #+end_src
+
+#+RESULTS:
+
 * [[file:../../../life/roam/20200615T124606Z-exwm.org][EXWM]]
 Big thanks to https://github.com/akirak/emacs.d
 
@@ -320,7 +350,7 @@ Big thanks to https://github.com/akirak/emacs.d
 #+end_src
 
 #+RESULTS:
-| org-roam-mode | hproperty:set-face-after-init | wallpaper-cycle-mode | (closure (t) (&rest _) (progn (if (featurep 'sly) (sly-setup) (eval-after-load 'sly #'(lambda nil (sly-setup)))))) | doom-modeline-mode | doom-init-fonts-h | doom-init-leader-keys-h | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-auto-revert-mode--init-kludge | magit-startup-asserts | magit-version | hyperb:init | table--make-cell-map |
+| org-roam-mode | hproperty:set-face-after-init | wallpaper-cycle-mode | (closure (t) (&rest _) (progn (eval-after-load 'sly #'(lambda nil (sly-setup))))) | doom-modeline-mode | doom-init-fonts-h | doom-init-leader-keys-h | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-maybe-define-global-key-bindings | magit-auto-revert-mode--init-kludge | magit-startup-asserts | magit-version | hyperb:init | table--make-cell-map |
 ** TODO startup programs :init:
 #+begin_src emacs-lisp
 (setq qz/startup-programs
@@ -348,6 +378,7 @@ Big thanks to https://github.com/akirak/emacs.d
 ** global bindings :kbd:
 #+begin_src emacs-lisp
 (require 'exwm-input)
+
 (defmacro qz/exwm-bind-keys (&rest bindings)
   "Bind input keys in EXWM.
 INDINGS is a list of cons cells containing a key (string) and a command."
@@ -371,7 +402,8 @@ INDINGS is a list of cons cells containing a key (string) and a command."
  ("s-p" . switch-to-prev-buffer)
  ("s-0" . delete-window)
  ("s-+" . delete-other-windows)
- ("s-b" . qz/exwm-goto-browser))
+ ("s-b" . qz/exwm-goto-browser)
+ ("s-a" . qz/agenda))
 #+end_src
 
 #+RESULTS:
@@ -431,9 +463,6 @@ INDINGS is a list of cons cells containing a key (string) and a command."
 ;; Make class name the buffer name
 (add-hook 'exwm-update-class-hook
           (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
-
-
-
 #+end_src
 
 #+RESULTS:
@@ -477,6 +506,7 @@ start-process-shell-command' with COMMAND"
 : qz/read-process-shell-command
 
 ** title as buffer naming hook :func:
+suspicious; acts as soon as eval'd
 #+begin_src emacs-lisp
 (add-hook 'exwm-update-title-hook
           (lambda () (exwm-workspace-rename-buffer exwm-title)))
@@ -498,7 +528,7 @@ start-process-shell-command' with COMMAND"
 #+end_src
 
 #+RESULTS:
-| akirak/exwm-float-window-on-specific-windows |
+| qz/exwm-float-window-on-specific-windows |
 
 ** goto :func:
 #+begin_src emacs-lisp
@@ -518,12 +548,19 @@ start-process-shell-command' with COMMAND"
       (exwm-goto--switch-to-buffer (car bs))
     (start-process-shell-command class nil command)))
 #+end_src
+
+#+RESULTS:
+: exwm-goto
+
 ** goto apps :func:
 #+begin_src emacs-lisp
 (defun qz/exwm-goto-browser ()
   (interactive)
   (exwm-goto "firefox" :class "Firefox"))
 #+end_src
+
+#+RESULTS:
+: qz/exwm-goto-browser
 
 * Emacs Server :init:
 #+begin_src emacs-lisp
@@ -532,7 +569,7 @@ start-process-shell-command' with COMMAND"
 
 #+RESULTS:
 
-* Hydra
+* TODO Hydra
 ** n :kbd:
 The =n= of {C-c n} denotes notes.
 
@@ -590,6 +627,19 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
             (forward-char))))))
 #+end_src
 
+#+RESULTS:
+: qz/upcase-sql-keywords
+
+** paredit
+*** paredit-forward/backward-slurp {M-n/p} :kbd:
+#+begin_src emacs-lisp
+(map! :mode paredit-mode
+      "M-p" #'paredit-forward-slurp-sexp
+      "M-n" #'paredit-backward-slurp-sexp)
+#+end_src
+
+#+RESULTS:
+
 ** [[file:../../../life/roam/20200402172258-common_lisp.org][Common Lisp]]
 *** cl-font-lock-built-in-mode :vars:
 "Highlight built-in functions, variables, and types in ‘lisp-mode’."
@@ -599,18 +649,20 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 (if (symbolp 'cl-font-lock-built-in-mode)
     (cl-font-lock-built-in-mode 1))
 #+end_src
-***
+
+#+RESULTS:
+: t
+
 *** sly eval-overlay :func:
 
 Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https://www.reddit.com/r/emacs/comments/bi4xk1/evaluation_overlays_in_slime_for_common_lisp/][Evaluation overlays in slime for common lisp : emacs]]
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
 (autoload 'cider--make-result-overlay "cider-overlays")
-
 
 (defun endless/eval-overlay (value point)
   (cider--make-result-overlay (format "%S" value)
-    :where point
-    :duration 'command)
+                              :where point
+                              :duration 'command)
   ;; Preserve the return value.
   value)
 
@@ -626,6 +678,9 @@ Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https:/
 #+begin_src emacs-lisp
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 #+end_src
+
+#+RESULTS:
+
 *** ingredients
 Some code wrapping [[file:../../../life/roam/20201014T121143Z-schollz_ingredients_extract_recipe_ingredients_from_any_recipe_website_on_the_internet.org][schollz/ingredients]], outputting some [[file:../../../life/roam/20200515T120103Z-org_mode.org][org-mode]] heading & body
 #+begin_src emacs-lisp
@@ -664,7 +719,7 @@ outputting the result in the buffer at-point"
 #+RESULTS:
 : qz/read-property-mod-buffer
 
-**  eshell
+** eshell
 also, see [[~/.eshellrc][~/.eshellrc]]
 *** sudo
 #+begin_src emacs-lisp
@@ -704,7 +759,7 @@ the view of the pdf as it's rendered by PDFTools.
 #+end_src
 
 #+RESULTS:
-| doom-modeline-set-pdf-modeline | pdf-view-midnight-minor-mode |
+| (closure (t) (&rest _) (add-hook 'kill-buffer-hook #'+pdf-cleanup-windows-h nil t)) | doom--setq-evil-normal-state-cursor-for-pdf-view-mode-h | pdf-tools-enable-minor-modes | doom-modeline-set-pdf-modeline | pdf-view-midnight-minor-mode |
 
 * [[file:../../../life/roam/20200722T143145Z-keyfreq.org][KeyFreq]] :init:
 A package that logs command usage; blessed be Xah Lee
@@ -716,7 +771,7 @@ A package that logs command usage; blessed be Xah Lee
 #+RESULTS:
 : t
 
-* rg
+* org
 ** tweaks :vars:
 *** File apps
 Handle opening with { C-c C-o } or { RET } or { mouse-1 }
@@ -754,6 +809,8 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 (setq org-directory "~/life/"
       qz/notes-directory (concat org-directory "roam/")
       qz/org-agenda-directory qz/notes-directory
+      qz/org-agenda-files (mapcar (lambda (f) (expand-file-name (concat qz/notes-directory f)))
+                                  '("calendar-home.org" "calendar-work.org" "schedule.org"))
       org-ref-notes-directory qz/notes-directory
       bibtex-completion-notes-path qz/notes-directory
       org-ref-bibliography-notes "~/life/bib.org"
@@ -774,7 +831,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+end_src
 
 #+RESULTS:
-: ((someday.org :level . 0) (reading.org :level . 0) (watching.org :level . 0) (learning.org :level . 0) (wip.org :level . 1))
+: ((next.org :level . 0) (reading.org :level . 0) (watching.org :level . 0) (learning.org :level . 0) (wip.org :level . 1))
 
 ** [[file:../../../life/roam/20200515T120103Z-org_mode.org][org-mode]] :init:vars:
 #+begin_src emacs-lisp :results none
@@ -783,7 +840,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
   :init
   (map! :leader
         :prefix "n"
-        "c" #'org-capture)
+        "l" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
         "M-p" #'outline-previous-visible-heading)
@@ -794,7 +851,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
                                    (python . t)
                                    (ipython . t)
                                    (R . t))
-        org-ellipses " ▼ "
+        org-ellipsis " ▼ "
         org-confirm-babel-evaluate nil
         org-use-speed-commands t
         org-catch-invisible-edits 'show
@@ -813,12 +870,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+end_src
 
 ** org-jira :vars:
-#+begin_src emacs-lisp
-(setq jiralib-url "https://jira.thinkproject.com")
-#+end_src
-
-#+RESULTS:
-: https://jira.thinkproject.com
+set in authinfo.el
 
 ** [[file:../../../life/roam/20200701T083326Z-org_recoll.org][org-recoll]]
 *** Initialisation :init:vars:
@@ -831,7 +883,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+end_src
 
 #+RESULTS:
-: org-recoll
+: 100
 
 *** Bindings :kbd:
 #+begin_src emacs-lisp
@@ -860,7 +912,7 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 (setq org-capture-templates
       `(("i" "inbox" entry
          (file ,(concat qz/org-agenda-directory "inbox.org"))
-         "* TODO %?\nCREATED: %u")
+         "* TODO %? \nCREATED: %u\nFROM: %a")
         ;; capture link to live `org-roam' thing
         ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          (function qz/current-roam-link)
@@ -907,6 +959,28 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 #+RESULTS:
 : qz/org-roam-capture-todo
+** org-gcal
+*** secret properties :vars:
+set in authinfo.el
+
+*** files :vars:
+#+begin_src emacs-lisp
+(setq org-gcal-fetch-file-alist
+      `((qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
+        (qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
+        (qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
+#+end_src
+
+#+RESULTS:
+: ((qz/calendar-home . ~/life/roam/calendar-home.org) (qz/calendar-work . ~/life/roam/calendar-work.org) (qz/calendar-shared . ~/life/roam/calendar-shared.org))
+
+*** recurring events headlines
+#+begin_src emacs-lisp
+(setq org-gcal-recurring-events-mode 'nested)
+#+end_src
+
+#+RESULTS:
+: nested
 
 ** [[file:../../../life/roam/20200401202402-org_roam.org][org-roam]]
 *** Initialisation :init:vars:
@@ -921,16 +995,15 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
   (map! :leader
         :prefix "n"
         :desc "org-roam" "l" #'org-roam
-        :desc "org-roam-insert" "i" #'org-roam-insert
         :desc "org-roam-switch-to-buffer" "b" #'org-roam-switch-to-buffer
         :desc "org-roam-find-file" "f" #'org-roam-find-file
         :desc "org-roam-insert" "i" #'qz/roam-insert
         :desc "org-agenda-todo" "t" #'qz/org-agenda-todo
-        :desc "org-agenda-today" "J" #'qz/org-agenda-today
-        :desc "org-roam-dailies-today" "j" #'org-roam-dailies-today
-        :desc "qz/org-roam-capture-todo" "_" #'qz/org-roam-capture-todo
+        :desc "org-roam-dailies-today" "J" #'org-roam-dailies-today
+        :desc "org-roam-dailies-capture-today" "j" #'org-roam-dailies-capture-today
         :desc "qz/org-roam-capture-current" "C" #'qz/org-roam-capture-current
         :desc "qz/org-roam-capture-current" "C-c" #'qz/org-roam-capture-current
+        :desc "qz/org-gcal--current" "C-c" #'qz/org-roam-capture-current
         :desc "org-roam-capture" "c" #'org-roam-capture)
   (setq org-roam-directory qz/notes-directory
         org-roam-dailies-directory qz/notes-directory
@@ -941,14 +1014,6 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
   :config
   (require 'org-roam-protocol))
-
-(defun qz/org-agenda-todo ()
-  (interactive)
-  (org-agenda nil "t"))
-
-(defun qz/org-agenda-today ()
-  (interactive)
-  (org-agenda "d" "g"))
 
 (org-roam-mode +1)
 #+end_src
@@ -982,6 +1047,9 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
          :unnarrowed t)))
 #+end_src
 
+#+RESULTS:
+| d | default | plain | #'org-roam--capture-get-point | %? | :file-name | %(qz/utc-timestamp)-${slug} | :head | #+setupfile:./hugo_setup.org |
+
 *** capture templates, protocol :vars:
 #+begin_src emacs-lisp
 (setq org-roam-capture-ref-templates
@@ -1003,15 +1071,15 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+begin_src emacs-lisp
 (setq org-roam-dailies-capture-templates
       `(("d" "default" entry (function org-roam-capture--get-point)
-         "* %?"
+         "* %<%H:%m> %?\nCREATED: %u"
          :file-name  "private-%<%Y-%m-%d>"
          :head "#+title: <%<%Y-%m-%d>>\n")))
 #+end_src
 
 #+RESULTS:
-| d | default | entry | #'org-roam-capture--get-point | * %? | :file-name | private-%<%Y-%m-%d> | :head | #+title: <%<%Y-%m-%d>> |
+| d | default | entry | #'org-roam-capture--get-point | * %<%H:%m> %? |
 
-*** Auto populate FILETAG
+*** auto populate FILETAG :func:
 https://d12frosted.io/posts/2020-06-25-task-management-with-roam-vol3.html
 #+begin_src emacs-lisp
 (defun vulpea-ensure-filetag ()
@@ -1131,13 +1199,18 @@ tasks.
 
 (defun vulpea-agenda-files-update (&rest _)
   "Update the value of `org-agenda-files'."
-  (setq org-agenda-files (vulpea-project-files)))
+  (setq org-agenda-files
+        (delete-duplicates
+          (append qz/org-agenda-files (vulpea-project-files))
+          :test #'string-equal)))
+
 
 (advice-add 'org-agenda :before #'vulpea-agenda-files-update)
 #+end_src
 
 #+RESULTS:
-*** Auto hooks
+
+*** auto hooks :func:
 #+begin_src emacs-lisp
 (add-hook 'find-file-hook #'vulpea-project-update-tag)
 (add-hook 'before-save-hook #'vulpea-project-update-tag)
@@ -1147,8 +1220,8 @@ tasks.
 #+RESULTS:
 | vulpea-ensure-filetag | vulpea-project-update-tag |
 
-*** Auto establish meta
-*** Migrate properties
+*** auto establish meta :func:
+*** migrate properties :func:
 #+begin_src emacs-lisp
 (defun qz/org-roam-migrate-jobs ()
   (dolist (file (org-roam--list-all-files))
@@ -1160,6 +1233,7 @@ tasks.
 #+end_src
 
 #+RESULTS:
+: qz/org-roam-migrate-jobs
 
 *** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
@@ -1169,20 +1243,21 @@ Run analysis from source file on org-roam DB
 [[https://github.com/org-roam/org-roam-server][GitHub - org-roam/org-roam-server]]
 #+begin_src emacs-lisp
 (use-package! org-roam-server
-:config
-(setq org-roam-server-host "127.0.0.1"
-      org-roam-server-port 8080
-      org-roam-server-export-inline-images t
-      org-roam-server-authenticate nil
-      org-roam-server-network-label-truncate t
-      org-roam-server-network-label-truncate-length 60))
+  :config
+  (setq org-roam-server-host "127.0.0.1"
+        org-roam-server-port 8080
+        org-roam-server-export-inline-images t
+        org-roam-server-authenticate nil
+        org-roam-server-network-label-truncate t
+        org-roam-server-network-label-truncate-length 60))
 #+end_src
+
+#+RESULTS:
+: t
 
 ** org-noter
 See [[Directories]] for <link-to-elisp-doc 'org-noter-notes-search-path>
-#+begin_src emacs-lisp
 
-#+end_src
 
 ** org-ref
 https://github.com/jkitchin/org-ref
@@ -1192,7 +1267,12 @@ https://github.com/jkitchin/org-ref
       reftex-default-bibliography reftex-bib-path
       org-ref-default-bibliography reftex-bib-path)
 #+end_src
+
+#+RESULTS:
+| ~/life/tex.bib |
+
 ** [[file:../../../life/roam/20200612T111528Z-org_agenda.org][org-agenda]]
+*** init :init:
 - refiling targets
   - read (book, article, paper, research)
   - watch (film, youtube, etc)
@@ -1207,7 +1287,6 @@ https://github.com/jkitchin/org-ref
   - work (people)
   - doing (book, paper, article, research, wip)
 
-*** init :init:
 #+begin_src emacs-lisp
 (use-package! org-agenda
   :init
@@ -1228,15 +1307,9 @@ https://github.com/jkitchin/org-ref
             (org-deadline-warning-days 365)        ;; [1]
             (org-agenda-entry-types '(:deadline))  ;; [2]
             ))
-
-          ("h" "habit + tag search"
-           ((agenda ""))
-           ((org-agenda-show-log t)
-            (org-agenda-ndays 7)
-            (org-agenda-log-mode-items '(state))))
+          ("ww" "wip all" tags "wip")
+          ("wr" "wip reading" tags "wip+reading||wip+read|reading+next")
           ("hh" tags "+habit")
-          ("hd" tags "+habit+daily")
-          ("hw" tags "+habit+weekly")
           ("P" "Printed agenda"
            ((agenda "" ((org-agenda-span 7)                      ;; overview of appointments
                         (org-agenda-start-on-weekday nil)         ;; calendar begins today
@@ -1272,6 +1345,7 @@ https://github.com/jkitchin/org-ref
 
 #+RESULTS:
 : t
+
 *** Vulpea's category agenda refinement :org:
 #+begin_src elisp
 (setq qz/org-agenda-prefix-length 20
@@ -1279,13 +1353,12 @@ https://github.com/jkitchin/org-ref
       '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
         (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
         (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (search . " %i %(vaulpea-agenda-category qz/org-agenda-prefix-length) ")))
+        (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
 
 (defun vulpea-agenda-category (&optional len)
   "Get category of item at point for agenda.
 
 Category is defined by one of the following items:
-
 - CATEGORY property
 - TITLE keyword
 - TITLE property
@@ -1320,12 +1393,17 @@ Refer to `org-agenda-prefix-format' for more information."
 
 #+RESULTS:
 : vulpea-agenda-category
-*** agenda view, gtd
-#+begin_src emacs-lisp
+*** agenda view, gtd :func:vars:
+#+begin_src emacs-lisp :results none
+(defun qz/org-agenda-gtd ()
+  (interactive)
+  (org-agenda "d." "g")
+  (org-agenda-goto-today))
+
 (add-to-list
  'org-agenda-custom-commands
  `("g" "GTD"
-   ((agenda "" ((org-agenda-span 'week) (org-deadline-warning-days 60)))
+   ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
     (tags-todo "wip"
                ((org-agenda-overriding-header "wip")                        ))
     (todo "TODO"
@@ -1347,18 +1425,30 @@ Refer to `org-agenda-prefix-format' for more information."
            (org-agenda-files '(,(concat qz/org-agenda-directory "next.org")))
            (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))
 #+end_src
+*** agenda view, TODO :func:
+#+begin_src emacs-lisp
+(defun qz/org-agenda-todo ()
+  (interactive)
+  (org-agenda nil "t"))
+#+end_src
+
+*** TODO agenda view, wip
+#+begin_src emacs-lisp 
+#+end_src
+
+*** TODO agenda view, calendar
+
+*** map :kbd:
+#+begin_src emacs-lisp
+(map! :map org-agenda-mode-map
+      "J" #'qz/org-agenda-process-inbox
+      "C-j" #'qz/org-agenda-process-item
+      "R" #'org-agenda-refile)
+#+end_src
 
 #+RESULTS:
-| g  | GTD                | ((agenda  ((org-agenda-span 'week) (org-deadline-warning-days 60))) (tags-todo wip ((org-agenda-overriding-header wip))) (todo TODO ((org-agenda-overriding-header To Refile) (org-agenda-files '(~/life/roam/inbox.org)))) (todo TODO ((org-agenda-overriding-header Emails) (org-agenda-files '(~/life/roam/emails.org)))) (todo NEXT ((org-agenda-overriding-header Silo) (org-agenda-files '(~/life/roam/someday.org ~/life/roam/projects.org ~/life/roam/next.org)))) (todo TODO ((org-agenda-overriding-header Projects) (org-agenda-files '(~/life/roam/projects.org)))) (todo TODO ((org-agenda-overriding-header One-off Tasks) (org-agenda-files '(~/life/roam/next.org)) (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))        |                                                                                     |                                                                                                    |
-| g  | GTD                | ((agenda  ((org-agenda-span 'week) (org-deadline-warning-days 60))) (tags-todo wip ((org-agenda-overriding-header wip))) (todo TODO ((org-agenda-overriding-header To Refile) (org-agenda-files '(~/life/roam/inbox.org)))) (todo TODO ((org-agenda-overriding-header Emails) (org-agenda-files '(~/life/roam/emails.org)))) (todo NEXT ((org-agenda-overriding-header In Progress) (org-agenda-files '(~/life/roam/someday.org ~/life/roam/projects.org ~/life/roam/next.org)))) (todo TODO ((org-agenda-overriding-header Projects) (org-agenda-files '(~/life/roam/projects.org)))) (todo TODO ((org-agenda-overriding-header One-off Tasks) (org-agenda-files '(~/life/roam/next.org)) (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))) |                                                                                     |                                                                                                    |
-| d  | Upcoming deadlines | agenda                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |                                                                                     | ((org-agenda-time-grid nil) (org-deadline-warning-days 365) (org-agenda-entry-types '(:deadline))) |
-| h  | habit + tag search | ((agenda ))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | ((org-agenda-show-log t) (org-agenda-ndays 7) (org-agenda-log-mode-items '(state))) |                                                                                                    |
-| hh | tags               | +habit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |                                                                                     |                                                                                                    |
-| hd | tags               | +habit+daily                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |                                                                                     |                                                                                                    |
-| hw | tags               | +habit+weekly                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |                                                                                     |                                                                                                    |
-| P  | Printed agenda     | ((agenda  ((org-agenda-span 7) (org-agenda-start-on-weekday nil) (org-agenda-repeating-timestamp-show-all t) (org-agenda-entry-types '(:timestamp :sexp)))) (agenda  ((org-agenda-span 1) (org-deadline-warning-days 7) (org-agenda-todo-keyword-format [ ]) (org-agenda-scheduled-leaders '( )) (org-agenda-prefix-format %t%s))) (todo TODO ((org-agenda-prefix-format [ ] %T: ) (org-agenda-sorting-strategy '(tag-up priority-down)) (org-agenda-todo-keyword-format ) (org-agenda-overriding-header                                                                                                                                                                                                                                                                  |                                                                                     |                                                                                                    |
 
-*** Processing agenda
+*** process agenda item :func:
 - Give the task some location context. Tagging the task with tags @work and
   @home means I can work on this appropriately
 - Give the task a priority level, between A, B, and C. Here’s how I decide a
@@ -1370,7 +1460,41 @@ Refer to `org-agenda-prefix-format' for more information."
   estimated to take days, perhaps it needs to be broken down further.
 - Refile the item. Here my tasks get assigned to a selection from relevant
   refile targets.
+#+begin_src emacs-lisp
 
+(setq org-agenda-bulk-custom-functions '((?b . #'qz/org-agenda-process-item)))
+
+(defun qz/org-process-inbox ()
+  "Called in org-agenda-mode, processes all inbox items."
+  (interactive)
+  (org-agenda-bulk-mark-regexp "inbox:")
+  (org-agenda-bulk-action ?b))
+
+
+(defun qz/org-agenda-process-item ()
+  "Process a single item in the org-agenda."
+  (interactive)
+  (org-with-wide-buffer
+   (org-agenda-set-tags)
+   (org-agenda-priority)
+   (org-agenda-refile nil nil t)))
+#+end_src
+
+#+RESULTS:
+: qz/org-agenda-process-item
+
+
+
+*** TODO processing bulk agenda :func:
+#+begin_src emacs-lisp
+
+#+end_src
+
+#+RESULTS:
+: qz/org-process-inbox
+
+
+*** tags
 #+begin_src emacs-lisp
 (setq org-tag-alist '(("@errand" . ?e)
                       ("@work" . ?w)
@@ -1387,20 +1511,11 @@ Refer to `org-agenda-prefix-format' for more information."
                       (:newline)
                       (:newline)
                       ("talk" . ?t)
-                      ("film" . ?f)
-                      ))
-
-(defun qz/org-agenda-process-inbox-item ()
-  "Process a single item in the org-agenda."
-  (interactive)
-  (org-with-wide-buffer
-   (org-agenda-set-tags)
-   (org-agenda-priority)
-   (org-agenda-refile nil nil t)))
+                      ("film" . ?f)))
 #+end_src
 
 #+RESULTS:
-: qz/org-agenda-process-inbox-item
+: ((@errand . 101) (@work . 119) (@home . 104) (:newline) (emacs . 69) (wip . 87) (CANCELLED . 99) (:newline) (:newline) (book . 98) (article . 97) (paper . 112) (:newline) (:newline) (talk . 116) (film . 102))
 
 ** TODO [[file:../../../life/roam/20200722T143300Z-org_drill.org][org-drill]]
 ** ox (export)
@@ -1416,6 +1531,10 @@ Following [[https://www.emacswiki.org/emacs/GnusTutorial][EmacsWiki: Gnus Tutori
 #+begin_src emacs-lisp
 (setq gnus-secondary-select-methods '((nntp "list.postgres.org")))
 #+end_src
+
+#+RESULTS:
+| nntp | list.postgres.org |
+
 * TODO Completion
 ** orderless
 ideally the ordering should account ~match, last-used, degree~

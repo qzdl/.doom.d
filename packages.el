@@ -78,6 +78,7 @@
 (package! org-drill)
 (package! org-jira)
 (package! org-fragtog)
+(package! org-gcal)
 
 ;;; ORG ROAM
 (package! org-roam
