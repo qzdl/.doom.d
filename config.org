@@ -403,7 +403,7 @@ INDINGS is a list of cons cells containing a key (string) and a command."
  ("s-0" . delete-window)
  ("s-+" . delete-other-windows)
  ("s-b" . qz/exwm-goto-browser)
- ("s-a" . qz/agenda))
+ ("s-a" . qz/org-agenda-gtd))
 #+end_src
 
 #+RESULTS:
@@ -917,6 +917,8 @@ set in authinfo.el
         ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          (function qz/current-roam-link)
          :immediate-finish t)
+        ("n" "now, as in NOW" entry (file ,(concat qz/org-agenda-directory "wip.org"))
+         "* TODO [#A1] %? \nDEADLINE: %T\nCREATED: %u")
         ;; fire directly into inbox
         ("c" "org-protocol-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          "* TODO [[%:link][%:description]]\n\n %i"
@@ -930,7 +932,18 @@ set in authinfo.el
 
 #+RESULTS:
 | i | inbox | entry | (file ~/life/roam/inbox.org) | * TODO %? |
+*** FIXME doom half-loaded buffer hack
+https://github.com/hlissner/doom-emacs/issues/4832
 
+#+begin_src emacs-lisp
+(advice-add
+ #'org-capture :around
+ (lambda (fun &rest args)
+   (letf! ((#'+org--restart-mode-h #'ignore))
+     (apply fun args))))
+#+end_src
+
+#+RESULTS:
 *** TODO weekly review
 *** Convenience Functions :func:
 #+begin_src emacs-lisp
@@ -1073,14 +1086,33 @@ set in authinfo.el
       `(("d" "default" entry (function org-roam-capture--get-point)
          "* %<%H:%m> %?\nCREATED: %u"
          :file-name  "private-%<%Y-%m-%d>"
-         :head "#+title: <%<%Y-%m-%d>>\n")))
+         :head "#+title: <%<%Y-%m-%d>>\n#+roam_tags: daily private\n\n")))
 #+end_src
 
 #+RESULTS:
 | d | default | entry | #'org-roam-capture--get-point | * %<%H:%m> %? |
 
+*** migrate properties :func:
+#+begin_src emacs-lisp
+(defun qz/org-roam-migrate-jobs ()
+  (interactive )
+  (dolist (file (org-roam--list-all-files))
+                                        ;(message "processing %s" file)
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      ;; TODO = project
+      (vulpea-project-update-tag)
+      ;; making things private
+                                        ;      (when (qz/should-be-private-p file)
+                                        ;       (qz/org-roam-make-private))
+      (save-buffer))))
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-migrate-jobs
 *** auto populate FILETAG :func:
 https://d12frosted.io/posts/2020-06-25-task-management-with-roam-vol3.html
+
 #+begin_src emacs-lisp
 (defun vulpea-ensure-filetag ()
   "Add respective file tag if it's missing in the current note."
@@ -1093,14 +1125,7 @@ https://d12frosted.io/posts/2020-06-25-task-management-with-roam-vol3.html
                       '("filetags"))))
       (let ((tag (qz/title-to-tag (+org-get-global-property "title"))))
         (progn (message tag)
-               (org-roam--set-global-prop "filetags" tag)
-               (org-roam--set-global-prop "roam_alias" tag))))))
-
-(defun qz/title-to-tag (title)
-  "Convert TITLE to tag."
-  (if (equal "@" (subseq title 0 1))
-      title
-    (concat "@" (s-replace " " "" title))))
+               (qz/org-roam-add-tag tag t))))))
 
 (defun vulpea-tags-add ()
   "Add a tag to current note."
@@ -1109,6 +1134,7 @@ https://d12frosted.io/posts/2020-06-25-task-management-with-roam-vol3.html
     (vulpea-ensure-filetag)))
 
 (defun qz/roam-dispatch-person (title)
+  "add tag to headline for PERSON"
   (save-excursion
     (ignore-errors
       (org-back-to-heading)
@@ -1174,8 +1200,11 @@ tasks.
            (prop-tags (org-roam--extract-tags-prop file))
            (tags prop-tags))
       (if (vulpea-project-p)
-          (setq tags (cons "Project" tags))
-        (setq tags (remove "Project" tags)))
+          (setq tags (cons "project" tags))
+        (setq tags (remove "project" tags)))
+      (if (qz/private-p)
+          (setq tags (cons "private" tags))
+        (setq tags (remove "private" tags)))
       (unless (eq prop-tags tags)
         (org-roam--set-global-prop
          "ROAM_TAGS"
@@ -1183,6 +1212,7 @@ tasks.
 
 (defun vulpea-buffer-p ()
   "Return non-nil if the currently visited buffer is a note."
+  (interactive)
   (and buffer-file-name
        (string-prefix-p
         (expand-file-name (file-name-as-directory org-roam-directory))
@@ -1195,20 +1225,67 @@ tasks.
    (org-roam-db-query
     [:select file
      :from tags
-     :where (like tags (quote "%\"Project\"%"))])))
+     :where (like tags (quote "%\"project\"%"))])))
 
 (defun vulpea-agenda-files-update (&rest _)
   "Update the value of `org-agenda-files'."
   (setq org-agenda-files
-        (delete-duplicates
-          (append qz/org-agenda-files (vulpea-project-files))
-          :test #'string-equal)))
+        (seq-uniq
+         (append qz/org-agenda-files (vulpea-project-files))
+         :test #'string-equal)))
 
 
 (advice-add 'org-agenda :before #'vulpea-agenda-files-update)
 #+end_src
 
 #+RESULTS:
+*** testing
+#+begin_src emacs-lisp
+(qz/pprint    (append qz/org-agenda-files (vulpea-project-files)))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+
+("/home/qzdl/life/roam/calendar-home.org" "/home/qzdl/life/roam/calendar-work.org"
+ "/home/qzdl/life/roam/schedule.org"
+ "/home/qzdl/life/roam/20210422T104455Z-org_roam_database_machinations.org"
+ "/home/qzdl/life/roam/20210505T162454Z-interactive_network_visualization_with_r_r_bloggers.org"
+ "/home/qzdl/life/roam/20200701T153403Z-common_lisp_the_language.org"
+ "/home/qzdl/life/roam/20200619T215855Z-common_lisp_repl_diaries.org"
+ "/home/qzdl/life/roam/next.org"
+ "/home/qzdl/life/roam/learning.org"
+ "/home/qzdl/life/roam/20200701T103013Z-counsel_spotify.org"
+ "/home/qzdl/life/roam/20200606T175037Z-marvel_movie_timeline_the_best_order_to_watch_marvel_movies.org"
+ "/home/qzdl/life/roam/20200609T132052Z-projects.org"
+ "/home/qzdl/life/roam/20200405160940-meditation_apps_are_fueling_tech_addiction_not_easing_stress.org"
+ "/home/qzdl/life/roam/20210311T122210Z-tennet_hierarchical_lists.org"
+ "/home/qzdl/life/roam/20200403151517-a_beginner_s_guide_to_graph_visualization.org"
+ "/home/qzdl/life/roam/20210427T143800Z-disturbing_films.org"
+ "/home/qzdl/life/roam/20201117T102439Z-augmenting_human_intellect_a_conceptual_framework.org"
+ "/home/qzdl/life/roam/20200611T112619Z-autovacuum.org"
+ "/home/qzdl/life/roam/20200515T152023Z-pl_pgsql.org"
+ "/home/qzdl/life/roam/20210404T152634Z-learning_mathematics.org"
+ "/home/qzdl/life/roam/20201117T102439Z-augmenting_human_intellect.org"
+ "/home/qzdl/life/roam/20200611T115532Z-pg_stat_database.org"
+ "/home/qzdl/life/roam/20200623T081435Z-pg_deploy.org"
+ "/home/qzdl/life/roam/20201031T163512Z-jessealdridge_electric_toothbrush_simple_client_server_notetaking_tool_inspired_by_notational_velocity.org"
+ "/home/qzdl/life/roam/20200615T082229Z-moving_to_berlin.org"
+ "/home/qzdl/life/roam/jorge_luis_borges.org"
+ "/home/qzdl/life/roam/20200511T151311Z-information_and_the_universe.org"
+ "/home/qzdl/life/roam/schedule.org"
+ "/home/qzdl/life/roam/20200419T194507Z-microgreens.org"
+ "/home/qzdl/life/roam/20200903T080046Z-tpcde_728_monitor_filter_performance_thinkproject_jira.org"
+ "/home/qzdl/life/roam/20200609T150107Z-how_to_get_a_list_of_video_capture_devices_web_cameras_on_linux_ubuntu_c_c_stack_overflow.org"
+ "/home/qzdl/life/roam/wip.org"
+ "/home/qzdl/life/roam/watching.org"
+ "/home/qzdl/life/roam/20200515T113542Z-igraph.org"
+ "/home/qzdl/life/roam/private-2020-12-09.org"
+ "/home/qzdl/life/roam/20200605T122503Z-meeting_innovation_et_al_0.org"
+ "/home/qzdl/life/roam/reading.org"
+ "/home/qzdl/life/roam/inbox.org"
+ "/home/qzdl/life/roam/20200515T082816Z-org_roam_network_analysis.org")
+#+end_example
 
 *** auto hooks :func:
 #+begin_src emacs-lisp
@@ -1219,22 +1296,168 @@ tasks.
 
 #+RESULTS:
 | vulpea-ensure-filetag | vulpea-project-update-tag |
-
-*** auto establish meta :func:
-*** migrate properties :func:
+*** convert title into tag :func:
 #+begin_src emacs-lisp
-(defun qz/org-roam-migrate-jobs ()
-  (dolist (file (org-roam--list-all-files))
-    (message "processing %s" file)
-    (with-current-buffer (or (find-buffer-visiting file)
-                             (find-file-noselect file))
-      (vulpea-project-update-tag)
-      (save-buffer))))
+(defun qz/title-to-tag (title)
+  "Convert TITLE to tag."
+  (if (equal "@" (subseq title 0 1))
+      title
+    (concat "@" (s-replace " " "" title))))
 #+end_src
 
 #+RESULTS:
-: qz/org-roam-migrate-jobs
+: qz/title-to-tag
 
+*** determine if a file should-be-private-p :func:
+might be better to use the file prop, but maybe we keep the message in to deem
+
+#+begin_src emacs-lisp
+(defun qz/private-p ()
+  (interactive)
+  (let ((title (+org--get-property "title")))
+                                        ;(message (concat "...checking privateness of " title))
+    (if (not title)
+        (message "WARNING: unable to evaluate privateness; file [" file "] has no title")
+      (or (string-match-p ".?[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}.?" title)
+          (string-match-p "meeting" title)
+          (qz/org-roam-has-link-to-p title "thinkproject")))))
+
+(defun qz/should-be-private-p (file)
+  (with-current-buffer (or (find-buffer-visiting file)
+                           (find-file-noselect file))
+    (qz/private-p)))
+
+(defun qz/is-file-private ()
+  (interactive)
+  (message (concat "should " (f-this-file) " be private..? "
+                   (or (and (qz/should-be-private-p (f-this-file)) "yes") "no"))))
+#+end_src
+
+#+RESULTS:
+: qz/is-file-private
+*** get list of private notes
+#+begin_src emacs-lisp
+(defun qz/org-roam-private-files ()
+  "Return a list of note files containing tag =private="
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select file
+     :from tags
+     :where (like tags (quote "%\"private\"%"))])))
+
+;(qz/pprint (qz/org-roam-private-files))
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-private-files
+
+
+*** has link to
+good for restricting to work stuff
+
+#+begin_src emacs-lisp
+(defun qz/has-link-to (src dst)
+  (org-roam-db-query
+   [:select source
+    :from links
+    :where (and (= dest $r1)
+                (= source $r2))]
+   src dest))
+
+(defun qz/has-link (a b)
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select [source dest]
+     :from links
+     :where (or (and (= dest a) (= source b))
+                (and (= dest b) (= source a)))])))
+
+                                        ;(org-roam-db-query
+                                        ; [:select *
+                                        ;  :from links
+                                        ;  :where (and (= dest $r1)
+                                        ;              (= source $r2))]
+                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"
+                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org")
+                                        ;
+                                        ;(qz/has-link-to
+                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org"
+                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"))
+#+end_src
+
+#+RESULTS:
+
+*** a
+#+begin_src emacs-lisp
+(org-roam-db-query
+    [:select *
+     :from links
+     :limit 10])
+#+end_src
+
+#+RESULTS:
+| /home/qzdl/life/roam/20200402200035-what_is_hierarchy_in_this_sense_of_information_representation.org | /home/qzdl/life/roam/20200402200009-what_are_the_implications_of_thinking_in_hierarchies_with_regard_to_associating_and_understanding.org | file | (:outline nil :point 150)  |
+| /home/qzdl/life/roam/20200402200035-what_is_hierarchy_in_this_sense_of_information_representation.org | /home/qzdl/life/roam/20200410185030-focus_question.org                                                                                    | file | (:outline nil :point 78)   |
+| /home/qzdl/life/roam/20200403150915-der_zettelkasten_als_zweitgedachtnis_niklas_luhmanns.org          | /home/qzdl/life/roam/20200403151210-johannes_schmidt.org                                                                                  | file | (:outline nil :point 232)  |
+| /home/qzdl/life/roam/20200403150915-der_zettelkasten_als_zweitgedachtnis_niklas_luhmanns.org          | /home/qzdl/life/roam/20200403143144-zettlekasten.org                                                                                      | file | (:outline nil :point 166)  |
+| /home/qzdl/life/roam/20200403150915-der_zettelkasten_als_zweitgedachtnis_niklas_luhmanns.org          | /home/qzdl/life/roam/20200610T104431Z-german_language.org                                                                                 | file | (:outline nil :point 111)  |
+| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200511T151311Z-information_and_the_universe.org                                                                    | file | (:outline nil :point 1320) |
+| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200414200342-night_owl.org                                                                                         | file | (:outline nil :point 1194) |
+| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200515T160040Z-a_new_kind_of_science.org                                                                           | file | (:outline nil :point 967)  |
+| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200414193742-treadmill_desk.org                                                                                    | file | (:outline nil :point 885)  |
+| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200515T115551Z-quantified_self.org                                                                                 | file | (:outline nil :point 425)  |
+
+*** make private by tagging "private" :func:
+#+begin_src emacs-lisp
+(defun qz/org-roam-make-private ()
+  (interactive)
+  (qz/org-roam-add-tag "private" t))
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-make-private
+
+*** reset; clear automated roam_tags, filetags
+
+*** TODO check if file has links to given note :func:
+[[file:../../../life/roam/20210422T104455Z-org_roam_database_machinations.org][org-roam database machinations]]
+#+begin_src emacs-lisp
+(defun qz/org-roam-has-link-to-p (source dest)
+  """TODO implement; returns t/nil if source links to dest"
+  nil)
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-has-link-to-p
+
+*** add global prop, preserving existing :func:
+#+begin_src emacs-lisp
+(defun qz/org-roam-add-global-prop (prop val)
+  (org-roam--set-global-prop
+   prop
+   (combine-and-quote-strings
+    (seq-uniq
+     (cons val (split-string-and-unquote
+                (or (+org--get-property prop) "")))))))
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-add-global-prop
+
+*** add roam_tag, preserving existing :func:
+#+begin_src emacs-lisp
+(defun qz/org-roam-add-tag (tag &optional filetag_too)
+  (qz/org-roam-add-global-prop "roam_tags" tag)
+  (when filetag_too
+    (qz/org-roam-add-global-prop "filetags" tag)))
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-add-tag
+
+*** TODO auto establish meta :func:
 *** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
 - restrict graph (e.g. exclude sensitive information)
@@ -1257,7 +1480,6 @@ Run analysis from source file on org-roam DB
 
 ** org-noter
 See [[Directories]] for <link-to-elisp-doc 'org-noter-notes-search-path>
-
 
 ** org-ref
 https://github.com/jkitchin/org-ref
@@ -1425,6 +1647,22 @@ Refer to `org-agenda-prefix-format' for more information."
            (org-agenda-files '(,(concat qz/org-agenda-directory "next.org")))
            (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))
 #+end_src
+*** agenda view, shopping :func:vars:
+#+begin_src emacs-lisp
+(add-to-list
+ 'org-agenda-custom-commands
+ '("ms" "shopping" tags "buy"))
+#+end_src
+
+#+RESULTS:
+| ms | shopping           | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | buy         |                                                                                                    |          |              |
+| g  | GTD                | ((agenda  ((org-agenda-span 'day) (org-deadline-warning-days 60))) (tags-todo wip ((org-agenda-overriding-header wip))) (todo TODO ((org-agenda-overriding-header To Refile) (org-agenda-files '(~/life/roam/inbox.org)))) (todo TODO ((org-agenda-overriding-header Emails) (org-agenda-files '(~/life/roam/emails.org)))) (todo NEXT ((org-agenda-overriding-header Silo) (org-agenda-files '(~/life/roam/someday.org ~/life/roam/projects.org ~/life/roam/next.org)))) (todo TODO ((org-agenda-overriding-header Projects) (org-agenda-files '(~/life/roam/projects.org)))) (todo TODO ((org-agenda-overriding-header One-off Tasks) (org-agenda-files '(~/life/roam/next.org)) (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))) |             |                                                                                                    |          |              |
+| d  | Upcoming deadlines | agenda                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |             | ((org-agenda-time-grid nil) (org-deadline-warning-days 365) (org-agenda-entry-types '(:deadline))) |          |              |
+| ww | wip all            | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | wip         |                                                                                                    |          |              |
+| wr | wip reading        | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | wip+reading |                                                                                                    | wip+read | reading+next |
+| hh | tags               | +habit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |             |                                                                                                    |          |              |
+| P  | Printed agenda     | ((agenda  ((org-agenda-span 7) (org-agenda-start-on-weekday nil) (org-agenda-repeating-timestamp-show-all t) (org-agenda-entry-types '(:timestamp :sexp)))) (agenda  ((org-agenda-span 1) (org-deadline-warning-days 7) (org-agenda-todo-keyword-format [ ]) (org-agenda-scheduled-leaders '( )) (org-agenda-prefix-format %t%s))) (todo TODO ((org-agenda-prefix-format [ ] %T: ) (org-agenda-sorting-strategy '(tag-up priority-down)) (org-agenda-todo-keyword-format ) (org-agenda-overriding-header                                                                                                                                                                                                                                                          |             |                                                                                                    |          |              |
+
 *** agenda view, TODO :func:
 #+begin_src emacs-lisp
 (defun qz/org-agenda-todo ()
@@ -1484,7 +1722,6 @@ Refer to `org-agenda-prefix-format' for more information."
 : qz/org-agenda-process-item
 
 
-
 *** TODO processing bulk agenda :func:
 #+begin_src emacs-lisp
 
@@ -1496,26 +1733,31 @@ Refer to `org-agenda-prefix-format' for more information."
 
 *** tags
 #+begin_src emacs-lisp
-(setq org-tag-alist '(("@errand" . ?e)
-                      ("@work" . ?w)
-                      ("@home" . ?h)
-                      (:newline)
-                      ("emacs" . ?E)
-                      ("wip" . ?W)
-                      ("CANCELLED" . ?c)
-                      (:newline)
-                      (:newline)
-                      ("book" . ?b)
-                      ("article" . ?a)
-                      ("paper" . ?p)
-                      (:newline)
-                      (:newline)
-                      ("talk" . ?t)
-                      ("film" . ?f)))
+(setq org-tag-alist
+      '(("@errand" . ?e)
+        ("@work" . ?w)
+        ("@home" . ?h)
+        ("@blog" . ?B)
+        (:newline)
+        ("emacs" . ?E)
+        ("wip" . ?W)
+        ("CANCELLED" . ?c)
+        (:newline)
+        ("learning" . ?l)
+        ("research" . ?r)
+        (:newline)
+        (:newline)
+        ("book" . ?b)
+        ("article" . ?a)
+        ("paper" . ?p)
+        (:newline)
+        (:newline)
+        ("talk" . ?t)
+        ("film" . ?f)))
 #+end_src
 
 #+RESULTS:
-: ((@errand . 101) (@work . 119) (@home . 104) (:newline) (emacs . 69) (wip . 87) (CANCELLED . 99) (:newline) (:newline) (book . 98) (article . 97) (paper . 112) (:newline) (:newline) (talk . 116) (film . 102))
+: ((@errand . 101) (@work . 119) (@home . 104) (@blog . 66) (:newline) (emacs . 69) (wip . 87) (CANCELLED . 99) (:newline) (learning . 108) (research . 114) (:newline) (:newline) (book . 98) (article . 97) (paper . 112) (:newline) (:newline) (talk . 116) (film . 102))
 
 ** TODO [[file:../../../life/roam/20200722T143300Z-org_drill.org][org-drill]]
 ** ox (export)
@@ -1528,17 +1770,11 @@ Refer to `org-agenda-prefix-format' for more information."
 
 * TODO GNUs
 Following [[https://www.emacswiki.org/emacs/GnusTutorial][EmacsWiki: Gnus Tutorial]]
-#+begin_src emacs-lisp
-(setq gnus-secondary-select-methods '((nntp "list.postgres.org")))
-#+end_src
-
-#+RESULTS:
-| nntp | list.postgres.org |
 
 * TODO Completion
 ** orderless
 ideally the ordering should account ~match, last-used, degree~
-TODO find out about company component delimiters for inputting soaces and stuff
+* TODO find out about company component delimiters for inputting spaces and stuff
 #+begin_src emacs-lisp
                                         ;(require 'orderless)
                                         ;(setq completion-styles '(orderless))

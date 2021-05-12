@@ -94,6 +94,8 @@
 (package! org-recoll
   :recipe (:host github :repo "alraban/org-recoll"))
 
+(package! ox-hugo)
+
 ;;; OX
 (package! ox-reveal)
 

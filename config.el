@@ -206,7 +206,7 @@ INDINGS is a list of cons cells containing a key (string) and a command."
  ("s-0" . delete-window)
  ("s-+" . delete-other-windows)
  ("s-b" . qz/exwm-goto-browser)
- ("s-a" . qz/agenda))
+ ("s-a" . qz/org-agenda-gtd))
 
 (defvar qz/default-simulation-keys
   '(;; movement
@@ -473,6 +473,8 @@ outputting the result in the buffer at-point"
         ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          (function qz/current-roam-link)
          :immediate-finish t)
+        ("n" "now, as in NOW" entry (file ,(concat qz/org-agenda-directory "wip.org"))
+         "* TODO [#A1] %? \nDEADLINE: %T\nCREATED: %u")
         ;; fire directly into inbox
         ("c" "org-protocol-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          "* TODO [[%:link][%:description]]\n\n %i"
@@ -482,6 +484,12 @@ outputting the result in the buffer at-point"
          (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))
         ("r" "Reading" todo ""
          ((org-agenda-files '(,(concat qz/org-agenda-directory "reading.org")))))))
+
+(advice-add
+ #'org-capture :around
+ (lambda (fun &rest args)
+   (letf! ((#'+org--restart-mode-h #'ignore))
+     (apply fun args))))
 
 ;; helper capture function for `org-roam' for `agenda-mode'
 (defun qz/current-roam-link ()
@@ -582,7 +590,20 @@ outputting the result in the buffer at-point"
       `(("d" "default" entry (function org-roam-capture--get-point)
          "* %<%H:%m> %?\nCREATED: %u"
          :file-name  "private-%<%Y-%m-%d>"
-         :head "#+title: <%<%Y-%m-%d>>\n")))
+         :head "#+title: <%<%Y-%m-%d>>\n#+roam_tags: daily private\n\n")))
+
+(defun qz/org-roam-migrate-jobs ()
+  (interactive )
+  (dolist (file (org-roam--list-all-files))
+                                        ;(message "processing %s" file)
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      ;; TODO = project
+      (vulpea-project-update-tag)
+      ;; making things private
+                                        ;      (when (qz/should-be-private-p file)
+                                        ;       (qz/org-roam-make-private))
+      (save-buffer))))
 
 (defun vulpea-ensure-filetag ()
   "Add respective file tag if it's missing in the current note."
@@ -595,14 +616,7 @@ outputting the result in the buffer at-point"
                       '("filetags"))))
       (let ((tag (qz/title-to-tag (+org-get-global-property "title"))))
         (progn (message tag)
-               (org-roam--set-global-prop "filetags" tag)
-               (org-roam--set-global-prop "roam_alias" tag))))))
-
-(defun qz/title-to-tag (title)
-  "Convert TITLE to tag."
-  (if (equal "@" (subseq title 0 1))
-      title
-    (concat "@" (s-replace " " "" title))))
+               (qz/org-roam-add-tag tag t))))))
 
 (defun vulpea-tags-add ()
   "Add a tag to current note."
@@ -611,6 +625,7 @@ outputting the result in the buffer at-point"
     (vulpea-ensure-filetag)))
 
 (defun qz/roam-dispatch-person (title)
+  "add tag to headline for PERSON"
   (save-excursion
     (ignore-errors
       (org-back-to-heading)
@@ -676,8 +691,11 @@ tasks.
            (prop-tags (org-roam--extract-tags-prop file))
            (tags prop-tags))
       (if (vulpea-project-p)
-          (setq tags (cons "Project" tags))
-        (setq tags (remove "Project" tags)))
+          (setq tags (cons "project" tags))
+        (setq tags (remove "project" tags)))
+      (if (qz/private-p)
+          (setq tags (cons "private" tags))
+        (setq tags (remove "private" tags)))
       (unless (eq prop-tags tags)
         (org-roam--set-global-prop
          "ROAM_TAGS"
@@ -685,6 +703,7 @@ tasks.
 
 (defun vulpea-buffer-p ()
   "Return non-nil if the currently visited buffer is a note."
+  (interactive)
   (and buffer-file-name
        (string-prefix-p
         (expand-file-name (file-name-as-directory org-roam-directory))
@@ -697,29 +716,115 @@ tasks.
    (org-roam-db-query
     [:select file
      :from tags
-     :where (like tags (quote "%\"Project\"%"))])))
+     :where (like tags (quote "%\"project\"%"))])))
 
 (defun vulpea-agenda-files-update (&rest _)
   "Update the value of `org-agenda-files'."
   (setq org-agenda-files
-        (delete-duplicates
-          (append qz/org-agenda-files (vulpea-project-files))
-          :test #'string-equal)))
+        (seq-uniq
+         (append qz/org-agenda-files (vulpea-project-files))
+         :test #'string-equal)))
 
 
 (advice-add 'org-agenda :before #'vulpea-agenda-files-update)
+
+(qz/pprint    (append qz/org-agenda-files (vulpea-project-files)))
 
 (add-hook 'find-file-hook #'vulpea-project-update-tag)
 (add-hook 'before-save-hook #'vulpea-project-update-tag)
 (add-hook 'before-save-hook #'vulpea-ensure-filetag)
 
-(defun qz/org-roam-migrate-jobs ()
-  (dolist (file (org-roam--list-all-files))
-    (message "processing %s" file)
-    (with-current-buffer (or (find-buffer-visiting file)
-                             (find-file-noselect file))
-      (vulpea-project-update-tag)
-      (save-buffer))))
+(defun qz/title-to-tag (title)
+  "Convert TITLE to tag."
+  (if (equal "@" (subseq title 0 1))
+      title
+    (concat "@" (s-replace " " "" title))))
+
+(defun qz/private-p ()
+  (interactive)
+  (let ((title (+org--get-property "title")))
+                                        ;(message (concat "...checking privateness of " title))
+    (if (not title)
+        (message "WARNING: unable to evaluate privateness; file [" file "] has no title")
+      (or (string-match-p ".?[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}.?" title)
+          (string-match-p "meeting" title)
+          (qz/org-roam-has-link-to-p title "thinkproject")))))
+
+(defun qz/should-be-private-p (file)
+  (with-current-buffer (or (find-buffer-visiting file)
+                           (find-file-noselect file))
+    (qz/private-p)))
+
+(defun qz/is-file-private ()
+  (interactive)
+  (message (concat "should " (f-this-file) " be private..? "
+                   (or (and (qz/should-be-private-p (f-this-file)) "yes") "no"))))
+
+(defun qz/org-roam-private-files ()
+  "Return a list of note files containing tag =private="
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select file
+     :from tags
+     :where (like tags (quote "%\"private\"%"))])))
+
+;(qz/pprint (qz/org-roam-private-files))
+
+(defun qz/has-link-to (src dst)
+  (org-roam-db-query
+   [:select source
+    :from links
+    :where (and (= dest $r1)
+                (= source $r2))]
+   src dest))
+
+(defun qz/has-link (a b)
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select [source dest]
+     :from links
+     :where (or (and (= dest a) (= source b))
+                (and (= dest b) (= source a)))])))
+
+                                        ;(org-roam-db-query
+                                        ; [:select *
+                                        ;  :from links
+                                        ;  :where (and (= dest $r1)
+                                        ;              (= source $r2))]
+                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"
+                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org")
+                                        ;
+                                        ;(qz/has-link-to
+                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org"
+                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"))
+
+(org-roam-db-query
+    [:select *
+     :from links
+     :limit 10])
+
+(defun qz/org-roam-make-private ()
+  (interactive)
+  (qz/org-roam-add-tag "private" t))
+
+(defun qz/org-roam-has-link-to-p (source dest)
+  """TODO implement; returns t/nil if source links to dest"
+  nil)
+
+(defun qz/org-roam-add-global-prop (prop val)
+  (org-roam--set-global-prop
+   prop
+   (combine-and-quote-strings
+    (seq-uniq
+     (cons val (split-string-and-unquote
+                (or (+org--get-property prop) "")))))))
+
+(defun qz/org-roam-add-tag (tag &optional filetag_too)
+  (qz/org-roam-add-global-prop "roam_tags" tag)
+  (when filetag_too
+    (qz/org-roam-add-global-prop "filetags" tag)))
 
 (use-package! org-roam-server
   :config
@@ -819,6 +924,10 @@ tasks.
            (org-agenda-files '(,(concat qz/org-agenda-directory "next.org")))
            (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))
 
+(add-to-list
+ 'org-agenda-custom-commands
+ '("ms" "shopping" tags "buy"))
+
 (defun qz/org-agenda-todo ()
   (interactive)
   (org-agenda nil "t"))
@@ -849,26 +958,29 @@ tasks.
 
 
 
-(setq org-tag-alist '(("@errand" . ?e)
-                      ("@work" . ?w)
-                      ("@home" . ?h)
-                      (:newline)
-                      ("emacs" . ?E)
-                      ("wip" . ?W)
-                      ("CANCELLED" . ?c)
-                      (:newline)
-                      (:newline)
-                      ("book" . ?b)
-                      ("article" . ?a)
-                      ("paper" . ?p)
-                      (:newline)
-                      (:newline)
-                      ("talk" . ?t)
-                      ("film" . ?f)))
+(setq org-tag-alist
+      '(("@errand" . ?e)
+        ("@work" . ?w)
+        ("@home" . ?h)
+        ("@blog" . ?B)
+        (:newline)
+        ("emacs" . ?E)
+        ("wip" . ?W)
+        ("CANCELLED" . ?c)
+        (:newline)
+        ("learning" . ?l)
+        ("research" . ?r)
+        (:newline)
+        (:newline)
+        ("book" . ?b)
+        ("article" . ?a)
+        ("paper" . ?p)
+        (:newline)
+        (:newline)
+        ("talk" . ?t)
+        ("film" . ?f)))
 
 (require 'ox-reveal)
-
-(setq gnus-secondary-select-methods '((nntp "list.postgres.org")))
 
                                         ;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
