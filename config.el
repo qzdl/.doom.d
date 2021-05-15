@@ -1,6 +1,10 @@
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
 
+(cond
+  ((string-equal system-name "qzdl") (setq qz/font-default 32))
+  (t (setq qz/font-default 16)))
+
   (map! "<mouse-8>" 'better-jumper-jump-backward)
   (map! "<mouse-9>" 'better-jumper-jump-forward)
 
@@ -44,7 +48,7 @@
   (interactive)
   (shell-command "pactl set-card-profile bluez_card.2C_41_A1_87_20_BA a2dp_sink"))
 
-(setq doom-font (font-spec :family "monospace" :size 16))
+(setq doom-font (font-spec :family "monospace" :size qz/font-default))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
 (setq display-line-numbers-type nil)
