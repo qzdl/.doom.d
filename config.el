@@ -8,6 +8,8 @@
   (map! "<mouse-8>" 'better-jumper-jump-backward)
   (map! "<mouse-9>" 'better-jumper-jump-forward)
 
+(map! "C-?" 'winner-redo)
+
 (map! "C-x C-k" #'kill-this-buffer)
 (map! "C-x k" #'kmacro-keymap)
 
@@ -429,7 +431,9 @@ outputting the result in the buffer at-point"
         "l" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
-        "M-p" #'outline-previous-visible-heading)
+        "M-p" #'outline-previous-visible-heading
+        "C->" #'org-do-demote
+        "C-<" #'org-do-promote)
   (setq org-src-window-setup 'current-window
         org-return-follows-link t
         org-babel-load-languages '((emacs-lisp . t)
@@ -726,8 +730,8 @@ tasks.
   "Update the value of `org-agenda-files'."
   (setq org-agenda-files
         (seq-uniq
-         (append qz/org-agenda-files (vulpea-project-files))
-         :test #'string-equal)))
+         (append qz/org-agenda-files (vulpea-project-files)))))
+
 
 
 (advice-add 'org-agenda :before #'vulpea-agenda-files-update)

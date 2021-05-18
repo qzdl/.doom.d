@@ -28,6 +28,10 @@ These Key Binds Are focused around ergonomics more than mnemonics
 #+end_src
 
 #+RESULTS:
+*** winner redo {C-?}
+#+begin_src emacs-lisp
+(map! "C-?" 'winner-redo)
+#+end_src
 
 *** Switch macro {C-x C-k} and kill-buffer {C-x k}
 #+begin_src emacs-lisp
@@ -849,7 +853,9 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
         "l" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
-        "M-p" #'outline-previous-visible-heading)
+        "M-p" #'outline-previous-visible-heading
+        "C->" #'org-do-demote
+        "C-<" #'org-do-promote)
   (setq org-src-window-setup 'current-window
         org-return-follows-link t
         org-babel-load-languages '((emacs-lisp . t)
@@ -1237,8 +1243,8 @@ tasks.
   "Update the value of `org-agenda-files'."
   (setq org-agenda-files
         (seq-uniq
-         (append qz/org-agenda-files (vulpea-project-files))
-         :test #'string-equal)))
+         (append qz/org-agenda-files (vulpea-project-files)))))
+
 
 
 (advice-add 'org-agenda :before #'vulpea-agenda-files-update)
