@@ -340,7 +340,18 @@ Big thanks to https://github.com/akirak/emacs.d
       "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --off --output DP-2 --primary --mode 5120x1440 --pos 0x0 --rotate normal")))
   (exwm-randr-enable))
 
-(qz/exwm-usbc-ultrawide)
+(defun qz/exwm-hdmi-ultrawide ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
+  (exwm-randr-enable))
+
+        
+(qz/exwm-hdmi-ultrawide)
 (exwm-enable)
 #+end_src
 
@@ -747,7 +758,7 @@ also, see [[~/.eshellrc][~/.eshellrc]]
 * [[file:../../../life/roam/20200511T193645Z-gnu_hyperbole.org][Hyperbole]]
 ** Initialisation :init:
 #+begin_src emacs-lisp
-(require 'hyperbole)
+;(require 'hyperbole)
 #+end_src
 
 #+RESULTS:
@@ -755,7 +766,7 @@ also, see [[~/.eshellrc][~/.eshellrc]]
 
 ** Action-Key with mouse buttons :kbd:
 #+begin_src emacs-lisp
-(map! "C-<mouse-2>" #'hkey-either)
+;(map! "C-<mouse-2>" #'hkey-either)
 #+end_src
 
 #+RESULTS:
