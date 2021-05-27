@@ -75,10 +75,14 @@
 ;;=============
 ;; ORG STUFF ;;
 ;;=============
+(package! mathpix
+ :recipe (:host github :repo "jethrokuan/mathpix.el"))
 (package! org-drill)
 (package! org-jira)
 (package! org-fragtog)
 (package! org-gcal)
+(package! org-auto-tangle)
+;;https://github.com/yilkalargaw/org-auto-tangle
 
 ;;; ORG ROAM
 (package! org-roam

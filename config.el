@@ -8,7 +8,7 @@
   (map! "<mouse-8>" 'better-jumper-jump-backward)
   (map! "<mouse-9>" 'better-jumper-jump-forward)
 
-(map! "C-?" 'winner-redo)
+(map! "C-?" #'undo-redo)
 
 (map! "C-x C-k" #'kill-this-buffer)
 (map! "C-x k" #'kmacro-keymap)
@@ -34,6 +34,81 @@
 (defun qz/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
 
+(defvar qz/buffer-popup-minor-mode-map
+  (let ((kmap (make-sparse-keymap)))
+    (set-keymap-parent kmap text-mode-map)
+    (define-key kmap (kbd "C-c C-c") #'qz/buffer-popup-commit)
+    (define-key kmap (kbd "C-c C-k") #'qz/buffer-popup-abort)
+    kmap))
+
+(defcustom qz/buffer-popup-window-config
+  '(+popup-display-buffer-stacked-side-window-fn)
+  ;;  '((display-buffer-reuse-window display-buffer-split-below-and-attach)    (inhibit-same-window . t) (window-height . 0.25))
+  "adjust the behaiour of the popup window
+
+totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-action>'")
+
+(define-minor-mode qz/buffer-popup-minor-mode
+  "Active when editing the contents of qz/buffer-popup."
+  nil nil nil
+  (when qz/buffer-popup-minor-mode
+    (message "%s"
+             (substitute-command-keys
+              "Press \\[qz/buffer-popup-commit] to commit your changes, \\[qz/buffer-popup-abort] to abandon them."))))
+
+(put 'qz/buffer-popup-minor-mode 'permanent-local t)
+
+
+
+;; FIXME make this better for general shit
+(defun qz/buffer-popup-finalize (save? &optional kill backfill)
+  (setq qz/buffer-popup-last-value
+        (cond
+         ((and kill backfill) backfill)
+         (t (with-current-buffer qz/buffer-popup-current-or-last (buffer-string)))))
+  (dolist (win (get-buffer-window-list))
+    (quit-window t win))
+  (if qz/buffer-popup-final
+      (funcall qz/buffer-popup-final))
+  (message "%s" qz/buffer-popup-last-value))
+
+(defun qz/buffer-popup-commit ()
+  (interactive)
+  (qz/buffer-popup-finalize t))
+
+(defun qz/buffer-popup-abort ()
+  (interactive)
+  (qz/buffer-popup-finalize nil t))
+
+
+(defun qz/buffer-popup-create ()
+  (interactive)
+  (select-window
+   (display-buffer
+    (with-current-buffer (get-buffer-create
+                          (format "*Edit stuff %s*"
+                                  (buffer-name)))
+      (qz/buffer-popup-minor-mode 1)
+      (org-mode)
+      (setq qz/buffer-popup-current-or-last (current-buffer)))
+    qz/buffer-popup-window-config))
+  qz/buffer-popup-current-or-last)
+
+(defun qz/insert-var ()
+  (interactive)
+  (completing-read
+   (format-prompt "Describe variable" (and (symbolp (variable-at-point) (variable-at-point)))
+                  #'help--symbol-completion-table
+                  (lambda (vv)
+                    ;; In case the variable only exists in the buffer
+                    ;; the command we switch back to that buffer before
+                    ;; we examine the variable.
+                    (with-current-buffer orig-buffer
+                      (or (get vv 'variable-documentation)
+                          (and (boundp vv) (not (keywordp vv))))))
+                  t nil nil
+                  (if (symbolp v) (symbol-name v)))))
+
 (defun qz/toggle-1->0 (n)
   (if (equal 1 n) 0 1))
 
@@ -49,6 +124,67 @@
 (defun qz/bt-a2dp ()
   (interactive)
   (shell-command "pactl set-card-profile bluez_card.2C_41_A1_87_20_BA a2dp_sink"))
+
+;;  (org-noter-insert-note (org-noter--get-precise-info))
+;; ~read-event~ is cool -> org-noter--get-precise-info
+
+(defun qz/event-line-offset ()
+  "testing click at point functions'"
+  (interactive)
+  (message (number-to-string (cdr (posn-col-row  (event-start  (read-event "Click!")))))))
+
+(defun qz/thing-at-point ()
+  (interactive)
+    (cdr (posn-col-row
+      (let* ((m (mouse-pixel-position))
+             (xy (cdr m)))
+        (posn-at-x-y (car xy) (cdr xy) (car m))))))
+
+;;(message (number-to-string (car (posn-col-row (posn-at-point (point)))))))
+
+;;(map! "C-<down-mouse-1>" #'qz/thing-at-point)
+
+;;'(#<window 832 on config.org> ; window
+;;  5080        ; area-or-pos
+;;  (413 . 966) ; (x . y)
+;;  0           ; timestamp
+;;  nil         ; object
+;;  5080        ; pos
+;;  (41 . 50)   ; (col . row)
+;;  nil         ; image
+;;  (333 . 16)  ; (dx . dy)
+;;  (10 . 19))  ; (width . height)
+
+(defun qz/org-noter--get-precise-info ()
+                                        ;(org-noter--with-valid-session
+  (let ((window (org-noter--get-doc-window))
+        (mode (org-noter--session-doc-mode session))
+        event)
+    (with-selected-window window
+      (while (not (and (eq 'mouse-1 (car event))
+                       (eq window (posn-window (event-start event)))))
+        (setq event (read-event "Click where you want the start of the note to be!")))
+      (cond
+       ((run-hook-with-args-until-success 'org-noter--get-precise-info-hook mode))
+
+       ((eq mode 'pdf-view-mode)
+        (if (pdf-view-active-region-p)
+            (cadar (pdf-view-active-region))
+          (org-noter--conv-page-scroll-percentage
+           (+ (window-vscroll)
+              (cdr (posn-col-row (event-start event)))))))
+
+       ((eq mode 'doc-view-mode)
+        (org-noter--conv-page-scroll-percentage
+         (+ (window-vscroll)
+            (cdr (posn-col-row (event-start event))))))
+
+       ((eq mode 'nov-mode)
+        (if (region-active-p)
+            (min (mark) (point))
+          (posn-point (event-start event))))))));)
+
+;;(qz/org-noter--get-precise-info)
 
 (setq doom-font (font-spec :family "monospace" :size qz/font-default))
 (setq doom-theme nil)
@@ -402,6 +538,41 @@ outputting the result in the buffer at-point"
 
 (add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
 
+(defun qz/noter-create-precise ()
+  (interactive)
+  (org-noter-insert-note (qz/get-precise)))
+
+
+(defun qz/noter-create-precise-buffer-popup ()
+  (interactive)
+  (setq qz/org-noter-buffer (current-buffer)
+        qz/precise-pos (qz/get-precise)
+        qz/buffer-popup-final
+        (lambda ()
+          (message "yeet")
+          (with-current-buffer qz/org-noter-buffer
+            (qz/org-noter-insert-note qz/buffer-popup-last-value
+                                      qz/precise-pos))))
+  (qz/buffer-popup-create))
+
+(defun qz/get-precise ()
+  (interactive)
+  (let ((v   (org-noter--conv-page-scroll-percentage
+      (+ (window-vscroll)
+         (qz/thing-at-point))))
+)
+(message "%s" v)
+v))
+
+
+(map! :mode pdf-sync-minor-mode
+      "C-<mouse-1>" #'qz/noter-create-precise-buffer-popup)
+(map!
+      "C-<mouse-1>" #'qz/noter-create-precise-buffer-popup)
+
+(map! :mode pdf-view-mode
+      "h" #'pdf-annot-add-highlight-markup-annotation)
+
 (keyfreq-mode 1)
 (keyfreq-autosave-mode 1)
 
@@ -468,6 +639,8 @@ outputting the result in the buffer at-point"
                                        ("el" . "src emacs-lisp")))
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
+
+(add-hook 'org-mode-hook 'org-fragtog-mode)
 
 (require 'org-recoll)
 
@@ -845,6 +1018,35 @@ tasks.
   (when filetag_too
     (qz/org-roam-add-global-prop "filetags" tag)))
 
+(defun qz/get-headline-path (&optional self? reverse? sepf)
+  (interactive)
+  (let* ((s (or sepf
+                (lambda (i)
+                  (if (< 0 i) " -> " ""))))
+         (c (org-get-outline-path self?)))
+    (insert "\n")
+    (cl-loop
+     for e in (if reverse? (reverse c) c)
+     for i = 0 then (1+ i)
+     do (insert (funcall s i) e))))
+
+(defun qz/headline-mm (i)
+  (if (< 0 i)
+      (concat "\n" (make-string i ?	)) ""))
+
+;; example, for https://tobloef.com/text2mindmap/ + [[file:../../../life/roam/20210521T102710Z-the_great_ideas_vol_ii.org][The Great Ideas, Vol II]]
+;;(qz/get-headline-path t t 'qz/headline-mm)
+
+
+;; (progn
+;;   (qz/get-headline-path)
+;;   (qz/get-headline-path nil t)
+;;   (qz/get-headline-path t)
+;;   (qz/get-headline-path t t)
+;;   (qz/get-headline-path t t 'qz/headline-mm)
+;;   (qz/get-headline-path t nil 'qz/headline-mm)
+;;   (qz/get-headline-path nil nil 'qz/headline-mm))
+
 (use-package! org-roam-server
   :config
   (setq org-roam-server-host "127.0.0.1"
@@ -1000,6 +1202,32 @@ tasks.
         ("film" . ?f)))
 
 (require 'ox-reveal)
+
+(require 'mathpix)
+(setq mathpix-screenshot-method "scrot -s %s")
+
+(map! "C-c o m" #'qz/mathpix-screenshot)
+;; add var capture
+(defun qz/mathpix-screenshot ()
+  "Capture screenshot and send result to Mathpix API."
+  (interactive)
+  (let
+      ((default-directory "~"))
+    (make-directory
+     (file-name-directory mathpix-screenshot-file)
+     t)
+    (if
+        (functionp mathpix-screenshot-method)
+        (funcall mathpix-screenshot-method mathpix-screenshot-file)
+      (shell-command-to-string
+       (format mathpix-screenshot-method mathpix-screenshot-file)))
+    (if
+        (file-exists-p mathpix-screenshot-file)
+        (progn
+          (insert
+           (setq mathpix-last-result
+                 (mathpix-get-result mathpix-screenshot-file)))
+          (delete-file mathpix-screenshot-file)))))
 
                                         ;(require 'orderless)
                                         ;(setq completion-styles '(orderless))

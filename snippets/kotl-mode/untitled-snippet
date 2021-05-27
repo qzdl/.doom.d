@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: kotl link
+# uuid: kotlink
+# key: C-c l l
+# condition: t
+# --
+<@ %>

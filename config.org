@@ -17,6 +17,9 @@
   (t (setq qz/font-default 16)))
 #+end_src
 
+#+RESULTS:
+: 16
+
 ** Global Bindings :kbd:
 These Key Binds Are focused around ergonomics more than mnemonics
 *** Mouse jumping
@@ -28,10 +31,12 @@ These Key Binds Are focused around ergonomics more than mnemonics
 #+end_src
 
 #+RESULTS:
-*** winner redo {C-?}
+*** redo {C-?}
 #+begin_src emacs-lisp
-(map! "C-?" 'winner-redo)
+(map! "C-?" #'undo-redo)
 #+end_src
+
+#+RESULTS:
 
 *** Switch macro {C-x C-k} and kill-buffer {C-x k}
 #+begin_src emacs-lisp
@@ -80,7 +85,6 @@ keyboard layout. This stellar advice came from [[https://www.emacswiki.org/emacs
 *** Shell pop
 #+begin_src emacs-lisp
 (map! "C-x C-'" #'+eshell/toggle)
-
 #+end_src
 
 #+RESULTS:
@@ -104,6 +108,90 @@ incase the shell needs to be changed
 
 #+RESULTS:
 : qz/utc-timestamp
+*** custom popup qz/buffer-popup
+#+begin_src emacs-lisp
+(defvar qz/buffer-popup-minor-mode-map
+  (let ((kmap (make-sparse-keymap)))
+    (set-keymap-parent kmap text-mode-map)
+    (define-key kmap (kbd "C-c C-c") #'qz/buffer-popup-commit)
+    (define-key kmap (kbd "C-c C-k") #'qz/buffer-popup-abort)
+    kmap))
+
+(defcustom qz/buffer-popup-window-config
+  '(+popup-display-buffer-stacked-side-window-fn)
+  ;;  '((display-buffer-reuse-window display-buffer-split-below-and-attach)    (inhibit-same-window . t) (window-height . 0.25))
+  "adjust the behaiour of the popup window
+
+totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-action>'")
+
+(define-minor-mode qz/buffer-popup-minor-mode
+  "Active when editing the contents of qz/buffer-popup."
+  nil nil nil
+  (when qz/buffer-popup-minor-mode
+    (message "%s"
+             (substitute-command-keys
+              "Press \\[qz/buffer-popup-commit] to commit your changes, \\[qz/buffer-popup-abort] to abandon them."))))
+
+(put 'qz/buffer-popup-minor-mode 'permanent-local t)
+
+
+
+;; FIXME make this better for general shit
+(defun qz/buffer-popup-finalize (save? &optional kill backfill)
+  (setq qz/buffer-popup-last-value
+        (cond
+         ((and kill backfill) backfill)
+         (t (with-current-buffer qz/buffer-popup-current-or-last (buffer-string)))))
+  (dolist (win (get-buffer-window-list))
+    (quit-window t win))
+  (if qz/buffer-popup-final
+      (funcall qz/buffer-popup-final))
+  (message "%s" qz/buffer-popup-last-value))
+
+(defun qz/buffer-popup-commit ()
+  (interactive)
+  (qz/buffer-popup-finalize t))
+
+(defun qz/buffer-popup-abort ()
+  (interactive)
+  (qz/buffer-popup-finalize nil t))
+
+
+(defun qz/buffer-popup-create ()
+  (interactive)
+  (select-window
+   (display-buffer
+    (with-current-buffer (get-buffer-create
+                          (format "*Edit stuff %s*"
+                                  (buffer-name)))
+      (qz/buffer-popup-minor-mode 1)
+      (org-mode)
+      (setq qz/buffer-popup-current-or-last (current-buffer)))
+    qz/buffer-popup-window-config))
+  qz/buffer-popup-current-or-last)
+#+end_src
+
+#+RESULTS:
+: qz/buffer-popup-create
+
+*** TODO insert var
+stealing from 'describe-variable -> cool to insert the value of named var, from completing read
+#+begin_src emacs-lisp
+(defun qz/insert-var ()
+  (interactive)
+  (completing-read
+   (format-prompt "Describe variable" (and (symbolp (variable-at-point) (variable-at-point)))
+                  #'help--symbol-completion-table
+                  (lambda (vv)
+                    ;; In case the variable only exists in the buffer
+                    ;; the command we switch back to that buffer before
+                    ;; we examine the variable.
+                    (with-current-buffer orig-buffer
+                      (or (get vv 'variable-documentation)
+                          (and (boundp vv) (not (keywordp vv))))))
+                  t nil nil
+                  (if (symbolp v) (symbol-name v)))))
+#+end_src
 *** toggle between non-nil -> [ 0 | 1 ], [ on | off ]
 This function is used for quality of life in ensuring correct bottom values are
 used when toggling modes; the set of activation values are not necessarily using
@@ -148,6 +236,89 @@ something that will toggle.
 
 #+RESULTS:
 : qz/bt-a2dp
+*** mouse button fuckery
+found some rabbit hole when playing with org-noter
+- #'read-event
+  + #'org-noter--get-precise-info
+  + reads the row of the posn from the event, sums offset, maps to pdf position.
+    good job org-noter developer
+- #'event-start
+- #'posn
+- #'mouse-pixel-position
+
+what's strange to me is that #'qz/event-line-offset, which triggers
+#'read-event, will report a consistent range numbers, but #'thing-at-point will
+often start sending out lower numbers.
+- this might be because of posn information around headings, taking some number
+  relative to an org heading?
+#+begin_src emacs-lisp
+
+;;  (org-noter-insert-note (org-noter--get-precise-info))
+;; ~read-event~ is cool -> org-noter--get-precise-info
+
+(defun qz/event-line-offset ()
+  "testing click at point functions'"
+  (interactive)
+  (message (number-to-string (cdr (posn-col-row  (event-start  (read-event "Click!")))))))
+
+(defun qz/thing-at-point ()
+  (interactive)
+    (cdr (posn-col-row
+      (let* ((m (mouse-pixel-position))
+             (xy (cdr m)))
+        (posn-at-x-y (car xy) (cdr xy) (car m))))))
+
+;;(message (number-to-string (car (posn-col-row (posn-at-point (point)))))))
+
+;;(map! "C-<down-mouse-1>" #'qz/thing-at-point)
+
+;;'(#<window 832 on config.org> ; window
+;;  5080        ; area-or-pos
+;;  (413 . 966) ; (x . y)
+;;  0           ; timestamp
+;;  nil         ; object
+;;  5080        ; pos
+;;  (41 . 50)   ; (col . row)
+;;  nil         ; image
+;;  (333 . 16)  ; (dx . dy)
+;;  (10 . 19))  ; (width . height)
+#+end_src
+
+#+begin_src emacs-lisp
+(defun qz/org-noter--get-precise-info ()
+                                        ;(org-noter--with-valid-session
+  (let ((window (org-noter--get-doc-window))
+        (mode (org-noter--session-doc-mode session))
+        event)
+    (with-selected-window window
+      (while (not (and (eq 'mouse-1 (car event))
+                       (eq window (posn-window (event-start event)))))
+        (setq event (read-event "Click where you want the start of the note to be!")))
+      (cond
+       ((run-hook-with-args-until-success 'org-noter--get-precise-info-hook mode))
+
+       ((eq mode 'pdf-view-mode)
+        (if (pdf-view-active-region-p)
+            (cadar (pdf-view-active-region))
+          (org-noter--conv-page-scroll-percentage
+           (+ (window-vscroll)
+              (cdr (posn-col-row (event-start event)))))))
+
+       ((eq mode 'doc-view-mode)
+        (org-noter--conv-page-scroll-percentage
+         (+ (window-vscroll)
+            (cdr (posn-col-row (event-start event))))))
+
+       ((eq mode 'nov-mode)
+        (if (region-active-p)
+            (min (mark) (point))
+          (posn-point (event-start event))))))));)
+
+;;(qz/org-noter--get-precise-info)
+#+end_src
+
+#+RESULTS:
+: qz/org-noter--get-precise-info
 
 * Visual
 ** Fonts & Text :vars:
@@ -781,7 +952,46 @@ the view of the pdf as it's rendered by PDFTools.
 
 #+RESULTS:
 | (closure (t) (&rest _) (add-hook 'kill-buffer-hook #'+pdf-cleanup-windows-h nil t)) | doom--setq-evil-normal-state-cursor-for-pdf-view-mode-h | pdf-tools-enable-minor-modes | doom-modeline-set-pdf-modeline | pdf-view-midnight-minor-mode |
+** mouse precise note insert {C-<mouse-1>}
+also, for mouse fuckery, see [[mouse button fuckery]]
+#+begin_src emacs-lisp
+(defun qz/noter-create-precise ()
+  (interactive)
+  (org-noter-insert-note (qz/get-precise)))
 
+
+(defun qz/noter-create-precise-buffer-popup ()
+  (interactive)
+  (setq qz/org-noter-buffer (current-buffer)
+        qz/precise-pos (qz/get-precise)
+        qz/buffer-popup-final
+        (lambda ()
+          (message "yeet")
+          (with-current-buffer qz/org-noter-buffer
+            (qz/org-noter-insert-note qz/buffer-popup-last-value
+                                      qz/precise-pos))))
+  (qz/buffer-popup-create))
+
+(defun qz/get-precise ()
+  (interactive)
+  (let ((v   (org-noter--conv-page-scroll-percentage
+      (+ (window-vscroll)
+         (qz/thing-at-point))))
+)
+(message "%s" v)
+v))
+
+
+(map! :mode pdf-sync-minor-mode
+      "C-<mouse-1>" #'qz/noter-create-precise-buffer-popup)
+(map!
+      "C-<mouse-1>" #'qz/noter-create-precise-buffer-popup)
+#+end_src
+** highlight region in pdf with {h}
+#+begin_src emacs-lisp
+(map! :mode pdf-view-mode
+      "h" #'pdf-annot-add-highlight-markup-annotation)
+#+end_src
 * [[file:../../../life/roam/20200722T143145Z-keyfreq.org][KeyFreq]] :init:
 A package that logs command usage; blessed be Xah Lee
 #+begin_src emacs-lisp
@@ -891,6 +1101,14 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
 #+end_src
+
+*** org-mode-hook -> org-fragtog
+#+begin_src emacs-lisp
+(add-hook 'org-mode-hook 'org-fragtog-mode)
+#+end_src
+
+#+RESULTS:
+| org-fragtog-mode | er/add-org-mode-expansions | +lookup--init-org-mode-handlers-h | (closure (t) (&rest _) (add-hook 'before-save-hook 'org-encrypt-entries nil t)) | #[0 \301\211\207 [imenu-create-index-function org-imenu-get-tree] 2] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-show-all append local] 5] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-babel-show-result-all append local] 5] | org-babel-result-hide-spec | org-babel-hide-all-hashes | doom-disable-show-paren-mode-h | doom-disable-show-trailing-whitespace-h | +org-enable-auto-reformat-tables-h | +org-enable-auto-update-cookies-h | +org-make-last-point-visible-h | toc-org-enable | org-eldoc-load | +literate-enable-recompile-h |
 
 ** org-jira :vars:
 set in authinfo.el
@@ -1484,6 +1702,45 @@ good for restricting to work stuff
 *** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
 - restrict graph (e.g. exclude sensitive information)
+*** headline parsing function
+#+begin_src emacs-lisp
+(defun qz/get-headline-path (&optional self? reverse? sepf)
+  (interactive)
+  (let* ((s (or sepf
+                (lambda (i)
+                  (if (< 0 i) " -> " ""))))
+         (c (org-get-outline-path self?)))
+    (insert "\n")
+    (cl-loop
+     for e in (if reverse? (reverse c) c)
+     for i = 0 then (1+ i)
+     do (insert (funcall s i) e))))
+
+(defun qz/headline-mm (i)
+  (if (< 0 i)
+      (concat "\n" (make-string i ?	)) ""))
+
+;; example, for https://tobloef.com/text2mindmap/ + [[file:../../../life/roam/20210521T102710Z-the_great_ideas_vol_ii.org][The Great Ideas, Vol II]]
+;;(qz/get-headline-path t t 'qz/headline-mm)
+
+
+;; (progn
+;;   (qz/get-headline-path)
+;;   (qz/get-headline-path nil t)
+;;   (qz/get-headline-path t)
+;;   (qz/get-headline-path t t)
+;;   (qz/get-headline-path t t 'qz/headline-mm)
+;;   (qz/get-headline-path t nil 'qz/headline-mm)
+;;   (qz/get-headline-path nil nil 'qz/headline-mm))
+#+end_src
+
+#+RESULTS:
+: qz/headline-mm
+*** TODO transform an org subtree, into mindmap for ttmm :ttmm:
+tab delimit
+given a subtree (at point)
+
+*** TODO query slice of headlines, containing REGEXP, build path with [[headline parsing function]]
 
 *** org-roam-server :init:vars:
 [[https://github.com/org-roam/org-roam-server][GitHub - org-roam/org-roam-server]]
@@ -1502,7 +1759,7 @@ Run analysis from source file on org-roam DB
 : t
 
 ** org-noter
-See [[Directories]] for <link-to-elisp-doc 'org-noter-notes-search-path>
+See <link-to-elisp-doc 'org-noter-notes-search-path>
 
 ** org-ref
 https://github.com/jkitchin/org-ref
@@ -1670,13 +1927,13 @@ Refer to `org-agenda-prefix-format' for more information."
            (org-agenda-files '(,(concat qz/org-agenda-directory "next.org")))
            (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))
 #+end_src
+
 *** agenda view, shopping :func:vars:
 #+begin_src emacs-lisp
 (add-to-list
  'org-agenda-custom-commands
  '("ms" "shopping" tags "buy"))
 #+end_src
-
 #+RESULTS:
 | ms | shopping           | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | buy         |                                                                                                    |          |              |
 | g  | GTD                | ((agenda  ((org-agenda-span 'day) (org-deadline-warning-days 60))) (tags-todo wip ((org-agenda-overriding-header wip))) (todo TODO ((org-agenda-overriding-header To Refile) (org-agenda-files '(~/life/roam/inbox.org)))) (todo TODO ((org-agenda-overriding-header Emails) (org-agenda-files '(~/life/roam/emails.org)))) (todo NEXT ((org-agenda-overriding-header Silo) (org-agenda-files '(~/life/roam/someday.org ~/life/roam/projects.org ~/life/roam/next.org)))) (todo TODO ((org-agenda-overriding-header Projects) (org-agenda-files '(~/life/roam/projects.org)))) (todo TODO ((org-agenda-overriding-header One-off Tasks) (org-agenda-files '(~/life/roam/next.org)) (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))) |             |                                                                                                    |          |              |
@@ -1790,6 +2047,37 @@ Refer to `org-agenda-prefix-format' for more information."
 
 #+RESULTS:
 : ox-reveal
+* mathpix
+#+begin_src emacs-lisp
+(require 'mathpix)
+(setq mathpix-screenshot-method "scrot -s %s")
+
+(map! "C-c o m" #'qz/mathpix-screenshot)
+;; add var capture
+(defun qz/mathpix-screenshot ()
+  "Capture screenshot and send result to Mathpix API."
+  (interactive)
+  (let
+      ((default-directory "~"))
+    (make-directory
+     (file-name-directory mathpix-screenshot-file)
+     t)
+    (if
+        (functionp mathpix-screenshot-method)
+        (funcall mathpix-screenshot-method mathpix-screenshot-file)
+      (shell-command-to-string
+       (format mathpix-screenshot-method mathpix-screenshot-file)))
+    (if
+        (file-exists-p mathpix-screenshot-file)
+        (progn
+          (insert
+           (setq mathpix-last-result
+                 (mathpix-get-result mathpix-screenshot-file)))
+          (delete-file mathpix-screenshot-file)))))
+#+end_src
+
+#+RESULTS:
+: qz/mathpix-screenshot
 
 * TODO GNUs
 Following [[https://www.emacswiki.org/emacs/GnusTutorial][EmacsWiki: Gnus Tutorial]]
