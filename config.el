@@ -65,7 +65,8 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
   (setq qz/buffer-popup-last-value
         (cond
          ((and kill backfill) backfill)
-         (t (with-current-buffer qz/buffer-popup-current-or-last (buffer-string)))))
+         (t (with-current-buffer qz/buffer-popup-current-or-last
+              (buffer-substring-no-properties (point-min) (point-max))))))
   (dolist (win (get-buffer-window-list))
     (quit-window t win))
   (if qz/buffer-popup-final
@@ -124,6 +125,14 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 (defun qz/bt-a2dp ()
   (interactive)
   (shell-command "pactl set-card-profile bluez_card.2C_41_A1_87_20_BA a2dp_sink"))
+
+(defun qz/bt-headphone-off ()
+  (interactive)
+  (async-shell-command "bluetoothctl disconnect 2C:41:A1:87:20:BA"))
+
+(defun qz/bt-headphone-on ()
+  (interactive)
+  (async-shell-command "bluetoothctl connect 2C:41:A1:87:20:BA"))
 
 ;;  (org-noter-insert-note (org-noter--get-precise-info))
 ;; ~read-event~ is cool -> org-noter--get-precise-info
@@ -301,8 +310,7 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
       "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
   (exwm-randr-enable))
 
-        
-(qz/exwm-hdmi-ultrawide)
+(qz/exwm-usbc-ultrawide)
 (exwm-enable)
 
 (setq wallpaper-cycle-interval 900)
@@ -474,17 +482,17 @@ start-process-shell-command' with COMMAND"
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-(defun qz/upcase-sql-keywords ()
-  (interactive)
-  (save-excursion
-    (dolist (keywords sql-mode-postgres-font-lock-keywords)
-      (goto-char (point-min))
-      (while (re-search-forward (car keywords) nil t)
-        (goto-char (+ 1 (match-beginning 0)))
-        (when (eql font-lock-keyword-face (face-at-point))
-          (backward-char)
-          (upcase-word 1)
-          (forward-char))))))
+  (defun qz/upcase-sql-keywords ()
+    (interactive)
+    (save-excursion
+      (dolist (keywords sql-mode-postgres-font-lock-keywords)
+        (goto-char (point-min))
+        (while (re-search-forward (car keywords) nil t)
+          (goto-char (+ 1 (match-beginning 0)))
+          (when (eql font-lock-keyword-face (face-at-point))
+            (backward-char)
+            (upcase-word 1)
+            (forward-char))))))
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -532,9 +540,9 @@ outputting the result in the buffer at-point"
       password-cache t
       password-cache-expiry 300)
 
-(require 'hyperbole)
+;(require 'hyperbole)
 
-(map! "C-<mouse-2>" #'hkey-either)
+;(map! "C-<mouse-2>" #'hkey-either)
 
 (add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
 
@@ -586,7 +594,42 @@ v))
 (eval-after-load nil
   (remove-hook 'org-mode-hook #'ob-ipython-auto-configure-kernels))
 
-(set-face-attribute 'org-headline-done nil :strike-through t)
+(if (boundp 'org-headline-done) (set-face-attribute 'org-headline-done nil :strike-through t))
+
+(defun qz/definer-headliner (s) "civiliser 85er" (concat "<<<.*-" s ">>>.*:" s ":"))
+
+(defun qz/get-radio-naked (r)
+  (car (split-string (cadr (split-string r "<<<")) ">>>")))
+
+;;(qz/get-radio-naked "<<<data>>>")
+
+(defun qz/insert-radio-children ()
+  "fucking awesome"
+  (interactive)
+  (org-with-wide-buffer
+   (org-back-to-heading t)
+   (let* ((case-fold-search nil)
+          (pt (point)))
+     (when (looking-at org-complex-heading-regexp)
+       (let ((relate (qz/get-radio-naked (match-string-no-properties 4))))
+         (message "relating: %s" relate)
+         (mapc (lambda (s) (save-excursion (message "inserting subheading %s" s) (org-insert-subheading nil) (insert s) s))
+               (mapcar #'qz/get-radio-naked
+                       (qz/matches-in-buffer (message (qz/definer-headliner relate))))))))))
+
+(defun qz/matches-in-buffer (regexp &optional buffer with-point?)
+  "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
+  (let ((matches))
+    (save-match-data
+      (save-excursion
+        (with-current-buffer (or buffer (current-buffer))
+          (save-restriction
+            (widen)
+            (goto-char 1)
+            (while (search-forward-regexp regexp nil t 1)
+              (let ((s (match-string-no-properties 0))
+                    (push (if with-point? (cons s (point)) s) matches)))))))
+      matches)))
 
 (setq org-directory "~/life/"
       qz/notes-directory (concat org-directory "roam/")
@@ -641,6 +684,9 @@ v))
     (flycheck-add-mode 'proselint 'org-mode)))
 
 (add-hook 'org-mode-hook 'org-fragtog-mode)
+
+(require 'org-auto-tangle)
+(add-hook 'org-mode-hook 'org-auto-tangle-mode)
 
 (require 'org-recoll)
 
@@ -792,9 +838,7 @@ v))
                              (find-file-noselect file))
       ;; TODO = project
       (vulpea-project-update-tag)
-      ;; making things private
-                                        ;      (when (qz/should-be-private-p file)
-                                        ;       (qz/org-roam-make-private))
+
       (save-buffer))))
 
 (defun vulpea-ensure-filetag ()
@@ -885,7 +929,7 @@ tasks.
       (if (vulpea-project-p)
           (setq tags (cons "project" tags))
         (setq tags (remove "project" tags)))
-      (if (qz/private-p)
+      (if (and (vulpea-buffer-p) (qz/private-p))
           (setq tags (cons "private" tags))
         (setq tags (remove "private" tags)))
       (unless (eq prop-tags tags)
@@ -934,6 +978,7 @@ tasks.
 
 (defun qz/private-p ()
   (interactive)
+
   (let ((title (+org--get-property "title")))
                                         ;(message (concat "...checking privateness of " title))
     (if (not title)

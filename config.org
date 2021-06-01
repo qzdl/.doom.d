@@ -141,7 +141,8 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
   (setq qz/buffer-popup-last-value
         (cond
          ((and kill backfill) backfill)
-         (t (with-current-buffer qz/buffer-popup-current-or-last (buffer-string)))))
+         (t (with-current-buffer qz/buffer-popup-current-or-last
+              (buffer-substring-no-properties (point-min) (point-max))))))
   (dolist (win (get-buffer-window-list))
     (quit-window t win))
   (if qz/buffer-popup-final
@@ -232,10 +233,18 @@ something that will toggle.
 (defun qz/bt-a2dp ()
   (interactive)
   (shell-command "pactl set-card-profile bluez_card.2C_41_A1_87_20_BA a2dp_sink"))
+
+(defun qz/bt-headphone-off ()
+  (interactive)
+  (async-shell-command "bluetoothctl disconnect 2C:41:A1:87:20:BA"))
+
+(defun qz/bt-headphone-on ()
+  (interactive)
+  (async-shell-command "bluetoothctl connect 2C:41:A1:87:20:BA"))
 #+end_src
 
 #+RESULTS:
-: qz/bt-a2dp
+: qz/bt-headphone-on
 *** mouse button fuckery
 found some rabbit hole when playing with org-noter
 - #'read-event
@@ -521,8 +530,7 @@ Big thanks to https://github.com/akirak/emacs.d
       "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
   (exwm-randr-enable))
 
-        
-(qz/exwm-hdmi-ultrawide)
+(qz/exwm-usbc-ultrawide)
 (exwm-enable)
 #+end_src
 
@@ -542,7 +550,7 @@ Big thanks to https://github.com/akirak/emacs.d
 #+end_src
 
 #+RESULTS:
-| org-roam-mode | hproperty:set-face-after-init | wallpaper-cycle-mode | (closure (t) (&rest _) (progn (eval-after-load 'sly #'(lambda nil (sly-setup))))) | doom-modeline-mode | doom-init-fonts-h | doom-init-leader-keys-h | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-maybe-define-global-key-bindings | magit-auto-revert-mode--init-kludge | magit-startup-asserts | magit-version | hyperb:init | table--make-cell-map |
+| org-roam-mode | wallpaper-cycle-mode | (closure (t) (&rest _) (progn (eval-after-load 'sly #'(lambda nil (sly-setup))))) | doom-modeline-mode | doom-init-fonts-h | doom-init-theme-h | doom-init-leader-keys-h | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-maybe-define-global-key-bindings | magit-auto-revert-mode--init-kludge | magit-startup-asserts | magit-version | table--make-cell-map |
 ** TODO startup programs :init:
 #+begin_src emacs-lisp
 (setq qz/startup-programs
@@ -1029,12 +1037,53 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 *** Strikethough DONE headings
 #+begin_src emacs-lisp
-(set-face-attribute 'org-headline-done nil :strike-through t)
+(if (boundp 'org-headline-done) (set-face-attribute 'org-headline-done nil :strike-through t))
 #+end_src
 
 #+RESULTS:
 
 **** DONE YEAH BOY HAHAHAHAHAHAHAAHAHAHAHAHAHAHAHAHAHAHAHAHAHA
+*** auto insert headings that match radio text + tagging
+#+begin_src emacs-lisp
+(defun qz/definer-headliner (s) "civiliser 85er" (concat "<<<.*-" s ">>>.*:" s ":"))
+
+(defun qz/get-radio-naked (r)
+  (car (split-string (cadr (split-string r "<<<")) ">>>")))
+
+;;(qz/get-radio-naked "<<<data>>>")
+
+(defun qz/insert-radio-children ()
+  "fucking awesome"
+  (interactive)
+  (org-with-wide-buffer
+   (org-back-to-heading t)
+   (let* ((case-fold-search nil)
+          (pt (point)))
+     (when (looking-at org-complex-heading-regexp)
+       (let ((relate (qz/get-radio-naked (match-string-no-properties 4))))
+         (message "relating: %s" relate)
+         (mapc (lambda (s) (save-excursion (message "inserting subheading %s" s) (org-insert-subheading nil) (insert s) s))
+               (mapcar #'qz/get-radio-naked
+                       (qz/matches-in-buffer (message (qz/definer-headliner relate))))))))))
+
+(defun qz/matches-in-buffer (regexp &optional buffer with-point?)
+  "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
+  (let ((matches))
+    (save-match-data
+      (save-excursion
+        (with-current-buffer (or buffer (current-buffer))
+          (save-restriction
+            (widen)
+            (goto-char 1)
+            (while (search-forward-regexp regexp nil t 1)
+              (let ((s (match-string-no-properties 0))
+                    (push (if with-point? (cons s (point)) s) matches)))))))
+      matches)))
+#+end_src
+
+#+RESULTS:
+: qz/matches-in-buffer
+
 ** directories :vars:
 #+begin_src emacs-lisp
 (setq org-directory "~/life/"
@@ -1112,6 +1161,14 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 ** org-jira :vars:
 set in authinfo.el
+** org-auto-tangle :init:
+#+begin_src emacs-lisp
+(require 'org-auto-tangle)
+(add-hook 'org-mode-hook 'org-auto-tangle-mode)
+#+end_src
+
+#+RESULTS:
+| org-auto-tangle-mode | org-fragtog-mode | er/add-org-mode-expansions | +lookup--init-org-mode-handlers-h | (closure (t) (&rest _) (add-hook 'before-save-hook 'org-encrypt-entries nil t)) | #[0 \301\211\207 [imenu-create-index-function org-imenu-get-tree] 2] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-show-all append local] 5] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-babel-show-result-all append local] 5] | org-babel-result-hide-spec | org-babel-hide-all-hashes | doom-disable-show-paren-mode-h | doom-disable-show-trailing-whitespace-h | +org-enable-auto-reformat-tables-h | +org-enable-auto-update-cookies-h | +org-make-last-point-visible-h | toc-org-enable | org-eldoc-load | +literate-enable-recompile-h |
 
 ** [[file:../../../life/roam/20200701T083326Z-org_recoll.org][org-recoll]]
 *** Initialisation :init:vars:
@@ -1343,9 +1400,7 @@ set in authinfo.el
                              (find-file-noselect file))
       ;; TODO = project
       (vulpea-project-update-tag)
-      ;; making things private
-                                        ;      (when (qz/should-be-private-p file)
-                                        ;       (qz/org-roam-make-private))
+
       (save-buffer))))
 #+end_src
 
@@ -1443,7 +1498,7 @@ tasks.
       (if (vulpea-project-p)
           (setq tags (cons "project" tags))
         (setq tags (remove "project" tags)))
-      (if (qz/private-p)
+      (if (and (vulpea-buffer-p) (qz/private-p))
           (setq tags (cons "private" tags))
         (setq tags (remove "private" tags)))
       (unless (eq prop-tags tags)
@@ -1490,42 +1545,51 @@ tasks.
 
 ("/home/qzdl/life/roam/calendar-home.org" "/home/qzdl/life/roam/calendar-work.org"
  "/home/qzdl/life/roam/schedule.org"
- "/home/qzdl/life/roam/20210422T104455Z-org_roam_database_machinations.org"
  "/home/qzdl/life/roam/20210505T162454Z-interactive_network_visualization_with_r_r_bloggers.org"
+ "/home/qzdl/life/roam/private-2020-12-09.org"
  "/home/qzdl/life/roam/20200701T153403Z-common_lisp_the_language.org"
  "/home/qzdl/life/roam/20200619T215855Z-common_lisp_repl_diaries.org"
- "/home/qzdl/life/roam/next.org"
- "/home/qzdl/life/roam/learning.org"
+ "/home/qzdl/life/roam/20200605T122503Z-meeting_innovation_et_al_0.org"
+ "/home/qzdl/life/roam/20210518T124941Z-building_living.org"
  "/home/qzdl/life/roam/20200701T103013Z-counsel_spotify.org"
  "/home/qzdl/life/roam/20200606T175037Z-marvel_movie_timeline_the_best_order_to_watch_marvel_movies.org"
- "/home/qzdl/life/roam/20200609T132052Z-projects.org"
  "/home/qzdl/life/roam/20200405160940-meditation_apps_are_fueling_tech_addiction_not_easing_stress.org"
  "/home/qzdl/life/roam/20210311T122210Z-tennet_hierarchical_lists.org"
  "/home/qzdl/life/roam/20200403151517-a_beginner_s_guide_to_graph_visualization.org"
+ "/home/qzdl/life/roam/next.org"
  "/home/qzdl/life/roam/20210427T143800Z-disturbing_films.org"
  "/home/qzdl/life/roam/20201117T102439Z-augmenting_human_intellect_a_conceptual_framework.org"
+ "/home/qzdl/life/roam/20200515T113542Z-igraph.org"
  "/home/qzdl/life/roam/20200611T112619Z-autovacuum.org"
  "/home/qzdl/life/roam/20200515T152023Z-pl_pgsql.org"
+ "/home/qzdl/life/roam/private-2020-08-30.org"
  "/home/qzdl/life/roam/20210404T152634Z-learning_mathematics.org"
  "/home/qzdl/life/roam/20201117T102439Z-augmenting_human_intellect.org"
  "/home/qzdl/life/roam/20200611T115532Z-pg_stat_database.org"
  "/home/qzdl/life/roam/20200623T081435Z-pg_deploy.org"
+ "/home/qzdl/life/roam/20210422T104455Z-org_roam_database_machinations.org"
+ "/home/qzdl/life/roam/private-2020-10-20.org"
  "/home/qzdl/life/roam/20201031T163512Z-jessealdridge_electric_toothbrush_simple_client_server_notetaking_tool_inspired_by_notational_velocity.org"
  "/home/qzdl/life/roam/20200615T082229Z-moving_to_berlin.org"
+ "/home/qzdl/life/roam/watching.org"
  "/home/qzdl/life/roam/jorge_luis_borges.org"
+ "/home/qzdl/life/roam/private-2020-06-02.org"
  "/home/qzdl/life/roam/20200511T151311Z-information_and_the_universe.org"
+ "/home/qzdl/life/roam/private-2020-12-10.org"
+ "/home/qzdl/life/roam/private-2021-04-04.org"
  "/home/qzdl/life/roam/schedule.org"
  "/home/qzdl/life/roam/20200419T194507Z-microgreens.org"
  "/home/qzdl/life/roam/20200903T080046Z-tpcde_728_monitor_filter_performance_thinkproject_jira.org"
- "/home/qzdl/life/roam/20200609T150107Z-how_to_get_a_list_of_video_capture_devices_web_cameras_on_linux_ubuntu_c_c_stack_overflow.org"
  "/home/qzdl/life/roam/wip.org"
- "/home/qzdl/life/roam/watching.org"
- "/home/qzdl/life/roam/20200515T113542Z-igraph.org"
- "/home/qzdl/life/roam/private-2020-12-09.org"
- "/home/qzdl/life/roam/20200605T122503Z-meeting_innovation_et_al_0.org"
+ "/home/qzdl/life/roam/20200609T150107Z-how_to_get_a_list_of_video_capture_devices_web_cameras_on_linux_ubuntu_c_c_stack_overflow.org"
+ "/home/qzdl/life/roam/private-2021-04-20.org"
+ "/home/qzdl/life/roam/private-2021-05-23.org"
+ "/home/qzdl/life/roam/learning.org"
+ "/home/qzdl/life/roam/20210524T190500Z-static_equilibrium_constraint.org"
+ "/home/qzdl/life/roam/20200515T082816Z-org_roam_network_analysis.org"
  "/home/qzdl/life/roam/reading.org"
  "/home/qzdl/life/roam/inbox.org"
- "/home/qzdl/life/roam/20200515T082816Z-org_roam_network_analysis.org")
+ "/home/qzdl/life/roam/20200609T132052Z-projects.org")
 #+end_example
 
 *** auto hooks :func:
@@ -1555,6 +1619,7 @@ might be better to use the file prop, but maybe we keep the message in to deem
 #+begin_src emacs-lisp
 (defun qz/private-p ()
   (interactive)
+
   (let ((title (+org--get-property "title")))
                                         ;(message (concat "...checking privateness of " title))
     (if (not title)
