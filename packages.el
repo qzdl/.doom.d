@@ -1,4 +1,3 @@
-
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
 
@@ -72,6 +71,7 @@
  :recipe (:host github :repo "oantolin/orderless"))
 (package! ovpn-mode)
 
+
 ;;=============
 ;; ORG STUFF ;;
 ;;=============
@@ -83,10 +83,13 @@
 (package! org-gcal)
 (package! org-download)
 (package! org-auto-tangle) ; https://github.com/yilkalargaw/org-auto-tangle
+(package! org-super-agenda)
 
 ;;; ORG ROAM
 (package! org-roam
-  :recipe (:host github :repo "org-roam/org-roam"))
+  :recipe (:host github :repo "org-roam/org-roam" :branch "v2"))
+
+
 (package! org-roam-server)
 (package! org-roam-bibtex)
 
@@ -104,7 +107,7 @@
 (package! ox-reveal)
 
 ;;; BABEL
-(package! ob-ipython)
+;;(package! ob-ipython)
 
 ;;==========
 ;; WINDOW ;;

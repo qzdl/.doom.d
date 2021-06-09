@@ -7,8 +7,12 @@
 
 (setq epg-gpg-program "gpg")
 
+(load-file "~/.doom.d/private/authinfo.el")
+
   (map! "<mouse-8>" 'better-jumper-jump-backward)
   (map! "<mouse-9>" 'better-jumper-jump-forward)
+
+(map! "C-z" #'+default/newline-above)
 
 (map! "C-?" #'undo-redo)
 
@@ -32,6 +36,8 @@
 (map! "C-x C-'" #'+eshell/toggle)
 
 (map! "s-B" 'toggle-rot13-mode)
+
+(map! "s-i" #'qz/roam-insert)
 
 (defun qz/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
@@ -297,7 +303,7 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 (require 'exwm-randr)
 
 (defun qz/exwm-usbc-ultrawide ()
-  (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
+   (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
   (add-hook
    'exwm-randr-screen-change-hook
    (lambda ()
@@ -604,7 +610,8 @@ v))
   (setq org-src-window-setup 'current-window
         org-return-follows-link t
         org-babel-load-languages '((emacs-lisp . t)
-                                   ;; (common-lisp . t)
+                                   (lisp . t)
+                                   (jupyter . t)
                                    (python . t)
                                    (ipython . t)
                                    (R . t))
@@ -620,6 +627,8 @@ v))
                                        ("sb" . "src bash")
                                        ("se" . "src emacs-lisp")
                                        ("sp" . "src psql")
+                                       ("jp" . "src jupyter-python")
+                                       ("jr" . "src jupyter-R")
                                        ("sr" . "src R")
                                        ("el" . "src emacs-lisp")))
   (with-eval-after-load 'flycheck
@@ -687,7 +696,13 @@ v))
                            ("reading.org" :level . 0)
                            ("watching.org" :level . 0)
                            ("learning.org" :level . 0)
+                           ("inbox.org" :level . 0)
                            ("wip.org" :level . 1 )))
+
+(require 'org-habit)
+
+(require 'org-fragtog)
+(add-hook 'org-mode-hook 'org-fragtog-mode)
 
 (require 'org-auto-tangle)
 (add-hook 'org-mode-hook 'org-auto-tangle-mode)
@@ -721,6 +736,10 @@ v))
         ("c" "org-protocol-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          "* TODO [[%:link][%:description]]\n\n %i"
          :immediate-finish t)
+        ;; spanish language capturing
+        ("v" "vocab; spanish" entry
+         (file+headline ,(concat qz/notes-directory "spanish_language.org") "vocab, phrases")
+         "** \"%?\" :es:\nFROM: %a\n\n*** :en:\n")
         ("w" "Weekly Review" entry
          (file+olp+datetree ,(concat qz/org-agenda-directory "reviews.org"))
          (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))
@@ -756,9 +775,10 @@ v))
           (car (org-roam--extract-titles)) "]]"))
 
 (setq org-gcal-fetch-file-alist
-      `((qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
-        (qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
-        (qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
+      `((,qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
+        (,qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
+        (,qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
+(qz/pprint org-gcal-fetch-file-alist)
 
 (setq org-gcal-recurring-events-mode 'nested)
 
@@ -1135,6 +1155,145 @@ tasks.
         org-roam-server-network-label-truncate t
         org-roam-server-network-label-truncate-length 60))
 
+(defun qz/org-noter-insert-note (notetext &optional precise-info)
+  "Insert note associated with the current location.
+
+This command will prompt for a title of the note and then insert
+it in the notes buffer. When the input is empty, a title based on
+`org-noter-default-heading-title' will be generated.
+
+If there are other notes related to the current location, the
+prompt will also suggest them. Depending on the value of the
+variable `org-noter-closest-tipping-point', it may also suggest
+the closest previous note.
+
+PRECISE-INFO makes the new note associated with a more
+specific location (see `org-noter-insert-precise-note' for more
+info).
+
+When you insert into an existing note and have text selected on
+the document buffer, the variable `org-noter-insert-selected-text-inside-note'
+defines if the text should be inserted inside the note."
+  (interactive)
+  (org-noter--with-valid-session
+   (message "double yeet")
+   (let* ((ast (org-noter--parse-root)) (contents (org-element-contents ast))
+          (window (org-noter--get-notes-window 'force))
+          (selected-text
+           (cond
+            ((eq (org-noter--session-doc-mode session) 'pdf-view-mode)
+             (when (pdf-view-active-region-p)
+               (mapconcat 'identity (pdf-view-active-region-text) ? )))
+
+            ((eq (org-noter--session-doc-mode session) 'nov-mode)
+             (when (region-active-p)
+               (buffer-substring-no-properties (mark) (point))))))
+          force-new
+          (location (org-noter--doc-approx-location (or precise-info 'interactive) (gv-ref force-new)))
+          (view-info (org-noter--get-view-info (org-noter--get-current-view) location)))
+
+     (let ((inhibit-quit t))
+       (with-local-quit
+         (select-frame-set-input-focus (window-frame window))
+         (select-window window)
+
+         ;; IMPORTANT(nox): Need to be careful changing the next part, it is a bit
+         ;; complicated to get it right...
+
+         (let ((point (point))
+               (minibuffer-local-completion-map org-noter--completing-read-keymap)
+               collection default default-begin title selection
+               (empty-lines-number (if org-noter-separate-notes-from-heading 2 1)))
+
+           (cond
+            ;; NOTE(nox): Both precise and without questions will create new notes
+            ((or precise-info force-new)
+             (setq default (and selected-text (replace-regexp-in-string "\n" " " selected-text))))
+            (org-noter-insert-note-no-questions)
+            (t
+             (dolist (note-cons (org-noter--view-info-notes view-info))
+               (let ((display (org-element-property :raw-value (car note-cons)))
+                     (begin (org-element-property :begin (car note-cons))))
+                 (push (cons display note-cons) collection)
+                 (when (and (>= point begin) (> begin (or default-begin 0)))
+                   (setq default display
+                         default-begin begin))))))
+
+           (setq collection (nreverse collection)
+                 title (if org-noter-insert-note-no-questions
+                           default
+                         notetext)
+                 selection (unless org-noter-insert-note-no-questions (cdr (assoc title collection))))
+
+           (if selection
+               ;; NOTE(nox): Inserting on an existing note
+               (let* ((note (car selection))
+                      (insert-before-element (cdr selection))
+                      (has-content
+                       (eq (org-element-map (org-element-contents note) org-element-all-elements
+                             (lambda (element)
+                               (if (org-noter--check-location-property element)
+                                   'stop
+                                 (not (memq (org-element-type element) '(section property-drawer)))))
+                             nil t)
+                           t)))
+                 (when has-content (setq empty-lines-number 2))
+                 (if insert-before-element
+                     (goto-char (org-element-property :begin insert-before-element))
+                   (goto-char (org-element-property :end note)))
+
+
+                 (if (org-at-heading-p)
+                     (progn
+                       (org-N-empty-lines-before-current empty-lines-number)
+                       (forward-line -1))
+                   (unless (bolp) (insert "\n"))
+                   (org-N-empty-lines-before-current (1- empty-lines-number)))
+
+                 (when (and org-noter-insert-selected-text-inside-note selected-text) (insert selected-text)))
+
+             ;; NOTE(nox): Inserting a new note
+             (let ((reference-element-cons (org-noter--view-info-reference-for-insertion view-info))
+                   level)
+               (when (zerop (length title))
+                 (setq title (replace-regexp-in-string (regexp-quote "$p$") (number-to-string (car location))
+                                                       org-noter-default-heading-title)))
+
+               (if reference-element-cons
+                   (progn
+                     (cond
+                      ((eq (car reference-element-cons) 'before)
+                       (goto-char (org-element-property :begin (cdr reference-element-cons))))
+                      ((eq (car reference-element-cons) 'after)
+                       (goto-char (org-element-property :end (cdr reference-element-cons)))))
+
+                     ;; NOTE(nox): This is here to make the automatic "should insert blank" work better.
+                     (when (org-at-heading-p) (backward-char))
+
+                     (setq level (org-element-property :level (cdr reference-element-cons))))
+
+                 (goto-char (org-element-map contents 'section
+                              (lambda (section) (org-element-property :end section))
+                              nil t org-element-all-elements))
+                 (setq level (1+ (org-element-property :level ast))))
+
+               ;; NOTE(nox): This is needed to insert in the right place
+               (outline-show-entry)
+               (org-noter--insert-heading level title empty-lines-number location)
+               (when (org-noter--session-hide-other session) (org-overview))
+
+               (setf (org-noter--session-num-notes-in-view session)
+                     (1+ (org-noter--session-num-notes-in-view session)))))
+
+           (org-show-set-visibility t)
+           (org-cycle-hide-drawers 'all)
+           (org-cycle-show-empty-lines t)))
+       (when quit-flag
+         ;; NOTE(nox): If this runs, it means the user quitted while creating a note, so
+         ;; revert to the previous window.
+         (select-frame-set-input-focus (org-noter--session-frame session))
+         (select-window (get-buffer-window (org-noter--session-doc-buffer session))))))))
+
 (require 'org-ref)
 (setq reftex-bib-path  '("~/life/tex.bib")
       reftex-default-bibliography reftex-bib-path
@@ -1199,6 +1358,7 @@ tasks.
   (org-agenda nil "g")
   (org-agenda-goto-today))
 
+(setq org-agenda-custom-commands nil)
 (add-to-list
  'org-agenda-custom-commands
  `("g" "GTD"
@@ -1211,18 +1371,25 @@ tasks.
     (todo "TODO"
           ((org-agenda-overriding-header "Emails")
            (org-agenda-files '(,(concat qz/org-agenda-directory "emails.org")))))
-    (todo "NEXT"
-          ((org-agenda-overriding-header "Silo")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "someday.org")
-                               ,(concat qz/org-agenda-directory "projects.org")
-                               ,(concat qz/org-agenda-directory "next.org")))))
-    (todo "TODO"
-          ((org-agenda-overriding-header "Projects")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "projects.org")))))
     (todo "TODO"
           ((org-agenda-overriding-header "One-off Tasks")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "next.org")))
-           (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled)))))))
+           (org-agenda-files '(,(concat qz/org-agenda-directory "next.org"))))))))
+    ;;        (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))
+
+(qz/pprint org-agenda-custom-commands)
+
+ (defun +org-defer-mode-in-agenda-buffers-h ()
+      "`org-agenda' opens temporary, incomplete org-mode buffers.
+I've disabled a lot of org-mode's startup processes for these invisible buffers
+to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
+the user tries to visit one of these buffers they'll see a gimped, half-broken
+org buffer. To avoid that, restart `org-mode' when they're switched to so they
+can grow up to be fully-fledged org-mode buffers."
+      (dolist (buffer org-agenda-new-buffers)
+        (when (buffer-live-p buffer)
+          (with-current-buffer buffer
+            (add-hook 'doom-switch-buffer-hook #'+org--restart-mode-h
+                      nil 'local)))))
 
 (add-to-list
  'org-agenda-custom-commands
@@ -1279,6 +1446,8 @@ tasks.
         (:newline)
         ("talk" . ?t)
         ("film" . ?f)))
+
+(require 'org-super-agenda)
 
 (require 'ox-reveal)
 

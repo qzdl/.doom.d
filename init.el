@@ -65,7 +65,7 @@
        :emacs
        dired             ; making dired pretty [functional]
        electric          ; smarter, keyword-based electric-indent
-       ;;ibuffer         ; interactive buffer management
+       ibuffer         ; interactive buffer management
        vc                ; version-control and Emacs, sitting in a tree
 
        :term
@@ -137,7 +137,7 @@
        ;;nim               ; python + lisp at the speed of c
        ;;nix               ; I hereby declare "nix geht mehr!"
        ;;ocaml             ; an objective camel
-       (org +roam +R +ipython)         ; organize your plain life in plain text
+       (org +pretty +noter +present +gnuplot +dragndrop +roam +jupyter)         ; organize your plain life in plain text
        ;;perl              ; write code no one else can comprehend
        ;;php               ; perl's insecure younger brother
        plantuml          ; diagrams for confusing people more
