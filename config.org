@@ -1,16 +1,80 @@
+:PROPERTIES:
+:ID:       362f5822-9b91-47ad-989c-68a5489303d5
+:END:
 #+title: Emacs Configuration
-#+filetags: emacs
+#+property: header-args :tangle yes
+#+filetags: project
 
-* Globals
-** Vars :vars:
+
+* about this configuration
+#+property: header-args :tangle no
+** metaprogramming
+*** dice function
+#+begin_src emacs-lisp
+(defun dice ()
+  (interactive)
+  (let ((n (1+ (random* 6))))
+    (message "%s" n)
+     n))
+#+end_src
+
+#+RESULTS:
+: dice
+
+*** meta-eval (funcall '(message "a"))
+
+would be nice to have this, but hey
+#+begin_src emacs-lisp
+(funcall '(message "a"))
+#+end_src
+
+not valid, use
+#+begin_src emacs-lisp
+(funcall #`(message "a"))
+#+end_src
+or
+*** meta-eval splice funcall
+*** basic
+*** insert ,value
+*** splice ,@values
+*** alternative
+*** concrete usage, anonymous macro kwargs splicing
+#+begin_src emacs-lisp
+(defun dice ()
+  (1+ (random* 6)))
+
+(funcall 'list
+         :title "const value"
+         (when (= 1 (dice)) :shoo)
+         (when (= 1 (dice)) 'doo))
+
+(cl-loop for i from 1 to 6
+         for d = (dice)
+         for f = `(lambda () (list :title "const value"
+                              ,@(when (= 1 d) '(:id "yaaa"))))
+         collect (message "%s | %s | %s | %s |\n" i d f (funcall f)))
+#+end_src
+
+#+RESULTS:
+| 1 | 2 | (lambda nil (list :title const value))          | (:title const value)          |
+| 2 | 4 | (lambda nil (list :title const value))          | (:title const value)          |
+| 3 | 1 | (lambda nil (list :title const value :id yaaa)) | (:title const value :id yaaa) |
+| 4 | 6 | (lambda nil (list :title const value))          | (:title const value)          |
+| 5 | 2 | (lambda nil (list :title const value))          | (:title const value)          |
+| 6 | 4 | (lambda nil (list :title const value))          | (:title const value)          |
+***
+
+* globals
+** vars :vars:
 *** doom id
 #+begin_src emacs-lisp
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
+(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
 #+end_src
 
 #+RESULTS:
-: samuel@samuelculpepper.com
+: %(qz/utc-timestamp)-${slug}.org
 *** hostname specific
 #+begin_src emacs-lisp
 (cond
@@ -30,13 +94,12 @@
 *** authinfo
 #+begin_src emacs-lisp
 (load-file "~/.doom.d/private/authinfo.el")
-
 #+end_src
 
 #+RESULTS:
-: /home/qzdl/dotfiles/emacs/.doom.d/private/
+: t
 
-** Global Bindings :kbd:
+** global bindings :kbd:
 These Key Binds Are focused around ergonomics more than mnemonics
 *** Mouse jumping
 #ERGO
@@ -51,6 +114,13 @@ These Key Binds Are focused around ergonomics more than mnemonics
 this bind is a DOOM emacs function, lilke )
 #+begin_src emacs-lisp
 (map! "C-z" #'+default/newline-above)
+#+end_src
+
+#+RESULTS:
+*** zap-up-to-char on {M-z} and {C-x C-z}
+#+begin_src emacs-lisp
+(map! "M-z" #'zap-up-to-char) ;; like dt<CHAR> in vim
+(map! "C-x C-z" #'zap-up-to-char)
 #+end_src
 
 #+RESULTS:
@@ -121,16 +191,20 @@ incase the shell needs to be changed
 #+end_src
 
 #+RESULTS:
-*** roam insert on {s-i}
+*** roam insert todo on {s-i}
 can just be easier this way
 #+begin_src emacs-lisp
-(map! "s-i" #'qz/roam-insert)
+(map! "s-i" #'qz/roam-capture-todo)
 #+end_src
 
 #+RESULTS:
+*** expand-regiojn on {s-=}
+#+begin_src emacs-lisp
+(map! "s-=" #'er/expand-region)
+#+end_src
 
 *** TODO bookmarks
-** Functions :func:
+** functions :func:
 *** UTC Timestamp
 #+begin_src emacs-lisp
 (defun qz/utc-timestamp ()
@@ -273,7 +347,7 @@ something that will toggle.
 #+RESULTS:
 : qz/pprint
 
-*** fix [[file:../../../life/roam/20201019T125728Z-bluetooth_headphones.org][bluetooth headphones]]
+*** fix [[id:1192b891-d866-458b-a99d-a56d01d8cee1][bluetooth headphones]]
 #+begin_src emacs-lisp
 (defun qz/bt-a2dp ()
   (interactive)
@@ -373,9 +447,14 @@ often start sending out lower numbers.
 
 #+RESULTS:
 : qz/org-noter--get-precise-info
+** emacs server :init:
+#+begin_src emacs-lisp
+(server-start)
+#+end_src
 
-* Visual
-** Fonts & Text :vars:
+
+* visual
+** fonts & text :vars:
 
 #+begin_src emacs-lisp
 (setq doom-font (font-spec :family "monospace" :size qz/font-default))
@@ -389,7 +468,7 @@ often start sending out lower numbers.
 #+RESULTS:
 : (utf-8-unix . utf-8-unix)
 
-** Tooltips :init:
+** use tooltips :init:
 #+begin_src emacs-lisp
 (tooltip-mode 1)
 #+end_src
@@ -397,7 +476,7 @@ often start sending out lower numbers.
 #+RESULTS:
 : t
 
-** Time in the modeline :kbd:
+** toggling time in the modeline :kbd:
 An example of this can be found in [[Time in the modeline]]. Equal is used here to
 coerce non-numeric arguments into something that will toggle.
 #+begin_src emacs-lisp
@@ -421,7 +500,7 @@ coerce non-numeric arguments into something that will toggle.
 #+RESULTS:
 : qz/toggle-time-in-modeline
 
-** [[file:../../../life/roam/20200623T110813Z-elegance_el.org][Elegance]] :init:
+** [[id:641642da-5402-4e2f-8e59-fcb1ccec2756][elegance]] :init:
 #+begin_src emacs-lisp
                                         ;(load! "elegance/elegance.el")
                                         ;(load! "elegance/sanity.el")
@@ -429,20 +508,19 @@ coerce non-numeric arguments into something that will toggle.
 
 #+RESULTS:
 
-** Writeroom :vars:
+** writeroom settings :vars:
 
 #+begin_src emacs-lisp
 (setq writeroom-width 80)
 
 (add-to-list 'writeroom-mode-hook
              (lambda () (setq writeroom-border-width 50)))
-
 #+end_src
 
 #+RESULTS:
 | (lambda nil (setq writeroom-border-width 50)) | +zen-enable-mixed-pitch-mode-h |
 
-** Theme :func:
+** theme :func:
 #+begin_src emacs-lisp
 (defun qz/load-tron-legacy ()
   (interactive)
@@ -465,9 +543,10 @@ coerce non-numeric arguments into something that will toggle.
 #+RESULTS:
 : qz/load-pink-mountain
 
-** [[file:../../../life/roam/20200722T142750Z-ivy_posframe.org][ivy-posframe]] :init:
+** TODO [[id:956fe315-004c-49e6-958c-c4791eb83357][ivy-posframe]] :init:
 [[https://github.com/tumashu/ivy-posframe][GitHub - tumashu/ivy-posframe: ivy-posframe is a ivy extension, which let ivy...]]
 
+this fucking sucks with [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]], just jumps about the place with each poll of the window
 
 #+begin_src emacs-lisp
 ;(require 'ivy-posframe)
@@ -493,8 +572,10 @@ coerce non-numeric arguments into something that will toggle.
 
 #+RESULTS:
 
-** Transparency :func:
-Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
+** transparency :func:
+totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
+
+remember to flick on compton to complete the rice
 #+begin_src emacs-lisp
 (setq qz/preferred-transparency-alpha '(80 . 70))
 
@@ -520,8 +601,12 @@ Totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWik
 #+RESULTS:
 : qz/toggle-transparency
 
-** [[file:../../../life/roam/20200613T123425Z-emacs_bgex.org][bgex]] :init:
+** [[id:cdc9ba5e-137a-4a28-82ab-2b4c53e5b087][bgex]] :init:
+a patched build of emacs, for crazy bitmap ricing. I found this on r/unixporn
+
 To create a source image, run ~convert a.png a.xpm~
+
+
 #+begin_src emacs-lisp :tangle no
 ;(load-file "~/.doom.d/snippets/bgex.el")
 ;(require 'bgex)
@@ -540,7 +625,8 @@ To create a source image, run ~convert a.png a.xpm~
 #+end_src
 
 #+RESULTS:
-** [[file:../../../life/roam/20200722T143926Z-perfect_margin.org][perfect-margin]]
+** [[id:c6490b3a-4dc3-4f9a-bb21-81bb6abc6beb][perfect-margin]] :init:
+the absolute GOAT for ultrawide monitors. {C-x 1} is your friend
 #+begin_src emacs-lisp
 (perfect-margin-mode 1)
 (setq perfect-margin-ignore-regexps nil)
@@ -548,15 +634,15 @@ To create a source image, run ~convert a.png a.xpm~
 
 #+RESULTS:
 
-* [[file:../../../life/roam/20200615T124606Z-exwm.org][EXWM]]
-Big thanks to https://github.com/akirak/emacs.d
+* [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]]
+big thanks to https://github.com/akirak/emacs.d
 
 ** randr, for display :func:init:
 #+begin_src emacs-lisp
 (require 'exwm-randr)
 
 (defun qz/exwm-usbc-ultrawide ()
-   (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
   (add-hook
    'exwm-randr-screen-change-hook
    (lambda ()
@@ -575,8 +661,12 @@ Big thanks to https://github.com/akirak/emacs.d
       "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
   (exwm-randr-enable))
 
-(qz/exwm-usbc-ultrawide)
+
+(cond
+  ((string-equal system-name "qzdl") nil)
+  (t (qz/exwm-usbc-ultrawide)))
 (exwm-enable)
+(exwm-init)
 #+end_src
 
 #+RESULTS:
@@ -764,7 +854,7 @@ suspicious; acts as soon as eval'd
 ** TODO screenshotting with selection / window from dmenu script :func:
 ** automatically float windows :func:
 #+begin_src emacs-lisp
-(defcustom qz/exwm-floating-window-classes '("keybase")
+(defcustom qz/exwm-floating-window-classes '("keybase" "mpv")
   "List of instance names of windows that should start in the floating mode.")
 
 (defun qz/exwm-float-window-on-specific-windows ()
@@ -798,7 +888,9 @@ suspicious; acts as soon as eval'd
 #+RESULTS:
 : exwm-goto
 
-** goto apps :func:
+** TODO goto apps :func:
+this doesn't work on my XPS
+
 #+begin_src emacs-lisp
 (defun qz/exwm-goto-browser ()
   (interactive)
@@ -808,14 +900,7 @@ suspicious; acts as soon as eval'd
 #+RESULTS:
 : qz/exwm-goto-browser
 
-* Emacs Server :init:
-#+begin_src emacs-lisp
-(server-start)
-#+end_src
-
-#+RESULTS:
-
-* TODO Hydra
+* TODO hydra
 ** n :kbd:
 The =n= of {C-c n} denotes notes.
 
@@ -827,15 +912,15 @@ The =n= of {C-c n} denotes notes.
           :desc "Today"          "t" #'org-roam-dailies-today
           :desc "Tomorrow"       "m" #'org-roam-dailies-tomorrow
           :desc "Yesterday"      "y" #'org-roam-dailies-yesterday)
-       "f" #'org-roam-find-file
+       "C-c" #'org-capture
        "F" #'find-file-in-notes))
 #+end_src
 
 #+RESULTS:
 : find-file-in-notes
 
-* [[file:../../../life/roam/20200412130848-programming.org][Programming]]
-** [[file:../../../life/roam/20200623T110142Z-sql.org][SQL]]
+* [[id:5f896cd4-d7b8-44d2-a40d-ccdae1b80c33][programming]]
+** [[id:eae3ee00-be74-4f59-8a4d-b638baebc9f8][SQL]]
 For reference: [[https://www.emacswiki.org/emacs/SqlMode][EmacsWiki: Sql Mode]]
 *** Toggle ERROR_ROLLBACK :psql:func:
 #+begin_src emacs-lisp
@@ -876,8 +961,9 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 #+RESULTS:
 : qz/upcase-sql-keywords
 
-** paredit
+** paredit ([[id:2c3dfd8a-9a85-4531-842f-e688235f4136][lisp]])
 *** paredit-forward/backward-slurp {M-n/p} :kbd:
+so useful it's unreal
 #+begin_src emacs-lisp
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -886,7 +972,7 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 
 #+RESULTS:
 
-** [[file:../../../life/roam/20200402172258-common_lisp.org][Common Lisp]]
+** [[id:5ea2fb1b-3638-41ea-94e2-9da57f5cacbc][common lisp]]
 *** cl-font-lock-built-in-mode :vars:
 "Highlight built-in functions, variables, and types in ‘lisp-mode’."
 - Enable feature from 28.1 if exists
@@ -899,7 +985,8 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 #+RESULTS:
 : t
 
-*** sly eval-overlay :func:
+*** TODO sly eval-overlay :func:
+this doesn't actually work. kinda jealous of CIDER ngl
 
 Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https://www.reddit.com/r/emacs/comments/bi4xk1/evaluation_overlays_in_slime_for_common_lisp/][Evaluation overlays in slime for common lisp : emacs]]
 #+begin_src emacs-lisp :tangle no
@@ -919,55 +1006,17 @@ Using the handy [[https://github.com/xiongtx/eros][eros]], advice from [[https:/
 #+RESULTS:
 : endless/eval-overlay
 
-** [[file:../../../life/roam/20200415T145703Z-emacs_lisp.org][Emacs Lisp]]
+** [[id:4ce144c6-7264-4936-8cc5-a3b33be8be00][emacs lisp]]
 *** eval-defun :kbd:
+yep, [[id:c20edb0c-16a1-4b6a-ac73-8b98782740cd][SLIME]] conventions please
 #+begin_src emacs-lisp
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 #+end_src
 
 #+RESULTS:
 
-*** ingredients
-Some code wrapping [[file:../../../life/roam/20201014T121143Z-schollz_ingredients_extract_recipe_ingredients_from_any_recipe_website_on_the_internet.org][schollz/ingredients]], outputting some [[file:../../../life/roam/20200515T120103Z-org_mode.org][org-mode]] heading & body
-#+begin_src emacs-lisp
-(setq qz/buffer-mod-commands '(qz/get-ingredients-mod-buffer))
-
-(defun qz/get-ingredients-mod-buffer ()
-  "scrape the website found in ROAM_KEY for ingredients,
-outputting the result in the buffer at-point"
-  (interactive)
-  (let* ((c (current-buffer))
-         (pt (point))
-         (json-object-type 'hash-table)
-         (json-array-type 'list)
-         (json-key-type 'string)
-         (jsono (json-read-from-string
-                 (shell-command-to-string
-                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
-         (ingreds (gethash "ingredients" jsono)))
-    (insert "* Ingredients\n")
-    (insert
-     (apply
-      'concat
-      (mapcar (lambda (e)
-                (concat "- " (gethash "line" e)
-                        " [" (number-to-string (gethash "cups" (gethash "measure" e)))
-                        " cups]\n")) ingreds)))))
-
-(defun qz/read-property-mod-buffer ()
- (interactive)
- (let* ((command (completing-read "command: " qz/buffer-mod-commands))
-       (args (+org--get-property (completing-read "property: " org-default-properties))))
-   (setq current-prefix-arg '(4))
-   (shell-command (concat command " " args " &"))))
-#+end_src
-
-#+RESULTS:
-: qz/read-property-mod-buffer
-
 ** eshell
-also, see [[~/.eshellrc][~/.eshellrc]]
-*** sudo
+*** sudo, password caching :vars:
 #+begin_src emacs-lisp
 (require 'em-tramp)
 (setq eshell-prefer-lisp-functions nil
@@ -979,8 +1028,9 @@ also, see [[~/.eshellrc][~/.eshellrc]]
 
 #+RESULTS:
 : 300
+**
 
-* [[file:../../../life/roam/20200511T193645Z-gnu_hyperbole.org][Hyperbole]]
+* [[id:d342065d-2042-4e8b-938d-ed121debc179][hyperbole]]
 ** Initialisation :init:
 #+begin_src emacs-lisp
 (require 'hyperbole)
@@ -1046,7 +1096,7 @@ v))
 (map! :mode pdf-view-mode
       "h" #'pdf-annot-add-highlight-markup-annotation)
 #+end_src
-* [[file:../../../life/roam/20200722T143145Z-keyfreq.org][KeyFreq]] :init:
+* [[id:68ebe469-0a04-4a0c-ba46-0efc9a868351][KeyFreq]] :init:
 A package that logs command usage; blessed be Xah Lee
 #+begin_src emacs-lisp
 (keyfreq-mode 1)
@@ -1097,7 +1147,6 @@ A package that logs command usage; blessed be Xah Lee
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
 #+end_src
-
 
 
 ** tweaks :vars:
@@ -1190,6 +1239,320 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ~/life/roam/
 
+** org-fragtog :init:func:
+#+begin_src emacs-lisp
+(require 'org-fragtog)
+(add-hook 'org-mode-hook 'org-fragtog-mode)
+#+end_src
+
+** org-auto-tangle :init:
+#+begin_src emacs-lisp
+(require 'org-auto-tangle)
+(add-hook 'org-mode-hook 'org-auto-tangle-mode)
+#+end_src
+** org-jira :vars:
+set in authinfo.el
+** org-habit
+** [[id:d904ace6-a941-49fc-a6d4-7fe3797b0d8e][org-agenda]]
+*** init :init:
+- refiling targets
+  - read (book, article, paper, research)
+  - watch (film, youtube, etc)
+  - wip (any)
+  - views
+  - overview
+    - scheduled, deadlines, time-based
+    - top of the list
+    - processing
+
+  - work (people)
+  - doing (book, paper, article, research, wip)
+
+#+begin_src emacs-lisp
+(defvar qz/agenda-daily-files nil)
+
+(use-package! org-agenda
+  :init
+  (map! "<f1>" #'qz/switch-to-agenda)
+  (setq org-agenda-block-separator nil
+        org-agenda-start-with-log-mode t
+        org-agenda-files (list qz/org-agenda-directory))
+  (defun qz/switch-to-agenda ()
+    (interactive)
+    (org-agenda nil "g"))
+  :config
+  (setq org-columns-default-format
+        "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
+  (setq org-agenda-custom-commands
+        `(
+          ("d" "Upcoming deadlines" agenda ""
+           ((org-agenda-time-grid nil)
+            (org-deadline-warning-days 365)        ;; [1]
+            (org-agenda-entry-types '(:deadline))  ;; [2]
+            ))
+          ("ww" "wip all" tags "wip")
+          ("wr" "wip reading" tags "wip+reading||wip+read|reading+next")
+          ("hh" tags "+habit")
+          ("P" "Printed agenda"
+           ((agenda "" ((org-agenda-span 7)                      ;; overview of appointments
+                        (org-agenda-start-on-weekday nil)         ;; calendar begins today
+                        (org-agenda-repeating-timestamp-show-all t)
+                        (org-agenda-entry-types '(:timestamp :sexp))))
+            (agenda "" ((org-agenda-span 1)                      ; daily agenda
+                        (org-deadline-warning-days 7)            ; 7 day advanced warning for deadlines
+                        (org-agenda-todo-keyword-format "[ ]")
+                        (org-agenda-scheduled-leaders '("" ""))
+                        (org-agenda-prefix-format "%t%s")))
+            (todo "TODO"                                          ;; todos sorted by context
+                  ((org-agenda-prefix-format "[ ] %T: ")
+                   (org-agenda-sorting-strategy '(tag-up priority-down))
+                   (org-agenda-todo-keyword-format "")
+                   (org-agenda-overriding-header "\nTasks by Context\n------------------\n"))))
+           ((org-agenda-with-colors nil)
+            (org-agenda-compact-blocks t)
+            (org-agenda-remove-tags t)
+            (ps-number-of-columns 2)
+            (ps-landscape-mode t))
+           ("~/agenda.ps"))
+          ;; other commands go here
+          )))
+
+                                        ;(defun qz/rg-get-files-with-tags ()
+                                        ;  "Returns a LIST of files that contain TAGS (currently, just `TODO')"
+                                        ;  (split-string
+                                        ;   (shell-command-to-string "rg TODO ~/life/roam/ -c | awk -F '[,:]' '{print $1}'")))
+                                        ;
+                                        ;(setq org-agenda-files
+                                        ;      (append org-agenda-files (qz/rg-get-files-with-tags)))
+
+#+end_src
+
+#+RESULTS:
+: t
+
+*** Vulpea's category agenda refinement :org:
+#+begin_src elisp
+(setq qz/org-agenda-prefix-length 20
+      org-agenda-prefix-format
+      '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
+        (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
+        (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
+        (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
+
+(defun vulpea-agenda-category (&optional len)
+  "Get category of item at point for agenda.
+
+Category is defined by one of the following items:
+- CATEGORY property
+- TITLE keyword
+- TITLE property
+- filename without directory and extension
+
+When LEN is a number, resulting string is padded right with
+spaces and then truncated with ... on the right if result is
+longer than LEN.
+
+Usage example:
+
+  (setq org-agenda-prefix-format
+        '((agenda . \" %(vulpea-agenda-category) %?-12t %12s\")))
+
+Refer to `org-agenda-prefix-format' for more information."
+  (let* ((file-name (when buffer-file-name
+                      (file-name-sans-extension
+                       (file-name-nondirectory buffer-file-name))))
+         (title (qz/node-title))
+         (category (org-get-category))
+         (result
+          (or (if (and
+                   title
+                   (string-equal category file-name))
+                  title
+                category)
+              "")))
+    (if (numberp len)
+        (s-truncate len (s-pad-right len " " result))
+      result)))
+#+end_src
+
+#+RESULTS:
+: vulpea-agenda-category
+*** agenda view, gtd :func:vars:
+#+begin_src emacs-lisp
+(defun qz/org-agenda-gtd ()
+  (interactive)
+  (org-agenda nil "g")
+  (goto-char (point-min))
+  (org-agenda-goto-today))
+
+(setq org-agenda-custom-commands nil)
+(add-to-list
+ 'org-agenda-custom-commands
+ `("g" "GTD"
+   ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
+    (tags-todo "wip"
+               ((org-agenda-overriding-header "wip")))
+    (todo "TODO"
+          ((org-agenda-overriding-header "to process")
+           (org-agenda-files '(,(concat qz/org-agenda-directory "inbox.org")))))
+    (todo "TODO"
+          ((org-agenda-overriding-header "daily inbox")
+           (org-agenda-files qz/agenda-daily-files)))
+    (todo "TODO"
+          ((org-agenda-overriding-header "emails")
+           (org-agenda-files '(,(concat qz/org-agenda-directory "emails.org")))))
+    (todo "TODO"
+          ((org-agenda-overriding-header "one-off Tasks")
+           (org-agenda-files '(,(concat qz/org-agenda-directory "next.org"))))))))
+    ;;        (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))
+
+(qz/pprint org-agenda-custom-commands)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+
+(("g" "GTD"
+  ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
+   (tags-todo "wip" ((org-agenda-overriding-header "wip")))
+   (todo "TODO"
+         ((org-agenda-overriding-header "to process")
+          (org-agenda-files '("~/life/roam/inbox.org"))))
+   (todo "TODO"
+         ((org-agenda-overriding-header "daily inbox")
+          (org-agenda-files qz/agenda-daily-files)))
+   (todo "TODO"
+         ((org-agenda-overriding-header "emails")
+          (org-agenda-files '("~/life/roam/emails.org"))))
+   (todo "TODO"
+         ((org-agenda-overriding-header "one-off Tasks")
+          (org-agenda-files '("~/life/roam/next.org")))))))
+#+end_example
+
+*** safer org defer whaever
+
+#+begin_src emacs-lisp
+ (defun +org-defer-mode-in-agenda-buffers-h ()
+      "`org-agenda' opens temporary, incomplete org-mode buffers.
+I've disabled a lot of org-mode's startup processes for these invisible buffers
+to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
+the user tries to visit one of these buffers they'll see a gimped, half-broken
+org buffer. To avoid that, restart `org-mode' when they're switched to so they
+can grow up to be fully-fledged org-mode buffers."
+      (dolist (buffer org-agenda-new-buffers)
+        (when (buffer-live-p buffer)
+          (with-current-buffer buffer
+            (add-hook 'doom-switch-buffer-hook #'+org--restart-mode-h
+                      nil 'local)))))
+#+end_src
+
+#+RESULTS:
+: +org-defer-mode-in-agenda-buffers-h
+
+*** agenda view, shopping :func:vars:
+#+begin_src emacs-lisp
+(add-to-list
+ 'org-agenda-custom-commands
+ '("ms" "shopping" tags "buy"))
+#+end_src
+#+RESULTS:
+| ms | shopping | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | buy |
+| g  | GTD      | ((agenda  ((org-agenda-span 'day) (org-deadline-warning-days 60))) (tags-todo wip ((org-agenda-overriding-header wip))) (todo TODO ((org-agenda-overriding-header to process) (org-agenda-files '(~/life/roam/inbox.org)))) (todo TODO ((org-agenda-overriding-header daily inbox) (org-agenda-files qz/agenda-daily-files))) (todo TODO ((org-agenda-overriding-header emails) (org-agenda-files '(~/life/roam/emails.org)))) (todo TODO ((org-agenda-overriding-header one-off Tasks) (org-agenda-files '(~/life/roam/next.org))))) |     |
+
+*** agenda view, TODO :func:
+#+begin_src emacs-lisp
+(defun qz/org-agenda-todo ()
+  (interactive)
+  (org-agenda nil "t"))
+#+end_src
+
+#+RESULTS:
+: qz/org-agenda-todo
+
+*** TODO agenda view, wip
+*** TODO agenda view, calendar
+*** org-agenda-mode-map :kbd:
+#+begin_src emacs-lisp
+(map! :map org-agenda-mode-map
+      "J" #'qz/org-agenda-process-inbox
+      "C-j" #'qz/org-agenda-process-item
+      "R" #'org-agenda-refile)
+#+end_src
+
+#+RESULTS:
+*** process agenda item :func:
+- Give the task some location context. Tagging the task with tags @work and
+  @home means I can work on this appropriately
+- Give the task a priority level, between A, B, and C. Here’s how I decide a
+  priority. It’s a pretty loose dichotomy, but works for me.
+  - A: Tasks that must get done regardless.
+  - B: Tasks that should get done, but only after Priority A tasks.
+  - C: Tasks that are good to get done, but not compulsory.
+- Give the task an effort estimate. This is in the format HH:MM, if the task is
+  estimated to take days, perhaps it needs to be broken down further.
+- Refile the item. Here my tasks get assigned to a selection from relevant
+  refile targets.
+
+#+begin_src emacs-lisp
+(setq org-agenda-bulk-custom-functions '((?b . #'qz/org-agenda-process-item)))
+
+(defun qz/org-agenda-process-item ()
+  "Process a single item in the org-agenda."
+  (interactive)
+  (org-with-wide-buffer
+   (org-agenda-set-tags)
+   (org-agenda-priority)
+   (org-agenda-refile nil nil t)))
+#+end_src
+
+#+RESULTS:
+: qz/org-agenda-process-item
+
+*** TODO processing bulk agenda :func:
+#+begin_src emacs-lisp
+(defun qz/org-process-inbox ()
+  "Called in org-agenda-mode, processes all inbox items."
+  (interactive)
+  (org-agenda-bulk-mark-regexp "inbox:")
+  (org-agenda-bulk-action ?b))
+#+end_src
+
+#+RESULTS:
+: qz/org-process-inbox
+*** tags
+#+begin_src emacs-lisp
+(setq org-tag-alist
+      '(("@errand" . ?e)
+        ("@work" . ?w)
+        ("@home" . ?h)
+        ("@blog" . ?B)
+        (:newline)
+        ("emacs" . ?E)
+        ("wip" . ?W)
+        ("CANCELLED" . ?c)
+        (:newline)
+        ("learning" . ?l)
+        ("research" . ?r)
+        (:newline)
+        (:newline)
+        ("book" . ?b)
+        ("article" . ?a)
+        ("paper" . ?p)
+        (:newline)
+        (:newline)
+        ("talk" . ?t)
+        ("film" . ?f)))
+#+end_src
+
+#+RESULTS:
+: ((@errand . 101) (@work . 119) (@home . 104) (@blog . 66) (:newline) (emacs . 69) (wip . 87) (CANCELLED . 99) (:newline) (learning . 108) (research . 114) (:newline) (:newline) (book . 98) (article . 97) (paper . 112) (:newline) (:newline) (talk . 116) (film . 102))
+
+
+** org-gcal
+*** secret properties :vars:
+set in authinfo.el
+
+
 ** refile :vars:
 #+begin_src emacs-lisp
 (setq org-refile-targets '(("next.org" :level . 0)
@@ -1203,12 +1566,53 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ((next.org :level . 0) (reading.org :level . 0) (watching.org :level . 0) (learning.org :level . 0) (wip.org :level . 1))
 
+** [[id:6baf4bff-d5fe-4ce0-a130-0464e49de67d][org-mode]] :init:vars:
+#+begin_src emacs-lisp :results none
+(use-package! org
+  :mode ("\\.org\\'" . org-mode)
+  :init
+  (map! :leader
+        :prefix "n"
+        "l" #'org-capture)
+  (map! :map org-mode-map
+        "M-n" #'outline-next-visible-heading
+        "M-p" #'outline-previous-visible-heading
+        "C->" #'org-do-demote
+        "C-<" #'org-do-promote)
+  (setq org-src-window-setup 'current-window
+        org-return-follows-link t
+        org-babel-load-languages '((emacs-lisp . t)
+                                   (jupyter . t)
+                                   (lisp . t)
+                                   (python . t)
+                                   (R . t))
+        org-ellipsis " ▼ "
+        org-confirm-babel-evaluate nil
+        org-use-speed-commands t
+        org-catch-invisible-edits 'show
+        org-preview-latex-image-directory "/tmp/ltximg/"
+        ;; ORG SRC BLOCKS {C-c C-,}
+        org-structure-template-alist '(("q" . "quote")
+                                       ("d" . "definition")
+                                       ("s" . "src")
+                                       ("sb" . "src bash")
+                                       ("sp" . "src psql")
+                                       ("sr" . "src R")
+                                       ("ss" . "src ")
+                                       ("jp" . "src jupyter-python")
+                                       ("jr" . "src jupyter-R")
+                                       ("el" . "src emacs-lisp")))
+  (with-eval-after-load 'flycheck
+    (flycheck-add-mode 'proselint 'org-mode)))
+#+end_src
 
 
+*** org-mode-hook -> org-fragtog
+#+begin_src emacs-lisp
+(add-hook 'org-mode-hook 'org-fragtog-mode)
+#+end_src
 
 
-** org-jira :vars:
-set in authinfo.el
 ** org-habit
 #+begin_src emacs-lisp
 (require 'org-habit)
@@ -1217,12 +1621,8 @@ set in authinfo.el
 #+RESULTS:
 : org-habit
 
-** org-fragtog :init:func:
-#+begin_src emacs-lisp
-(require 'org-fragtog)
-(add-hook 'org-mode-hook 'org-fragtog-mode)
-#+end_src
-
+** org-jira :vars:
+set in authinfo.el
 ** org-auto-tangle :init:
 #+begin_src emacs-lisp
 (require 'org-auto-tangle)
@@ -1232,7 +1632,7 @@ set in authinfo.el
 #+RESULTS:
 | org-auto-tangle-mode | org-fragtog-mode | er/add-org-mode-expansions | +lookup--init-org-mode-handlers-h | (closure (t) (&rest _) (add-hook 'before-save-hook 'org-encrypt-entries nil t)) | #[0 \301\211\207 [imenu-create-index-function org-imenu-get-tree] 2] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-show-all append local] 5] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-babel-show-result-all append local] 5] | org-babel-result-hide-spec | org-babel-hide-all-hashes | doom-disable-show-paren-mode-h | doom-disable-show-trailing-whitespace-h | +org-enable-auto-reformat-tables-h | +org-enable-auto-update-cookies-h | +org-make-last-point-visible-h | toc-org-enable | org-eldoc-load | +literate-enable-recompile-h |
 
-** [[file:../../../life/roam/20200701T083326Z-org_recoll.org][org-recoll]]
+** [[id:1c286bfc-c63b-48dc-a18c-61a1c139feaf][org-recoll]]
 *** Initialisation :init:vars:
 
 #+begin_src emacs-lisp
@@ -1263,39 +1663,77 @@ set in authinfo.el
 : org-protocol
 
 ** org-capture
+*** browser boy
+#+begin_src javascript :tangle no
+javascript:location.href =
+    'org-protocol://capture?template=c'
+    + '&url='   + encodeURIComponent(location.href)
+    + '&title=' + encodeURIComponent(document.title)
+    + '&body='  + encodeURIComponent(window.getSelection());
+#+end_src
 *** TODO templates :init:vars:
 #+begin_src emacs-lisp
 (require 'org-capture)
 
 (setq qz/capture-title-timestamp "%(qz/utc-timestamp)-${slug}")
 
+;; ORG ROAM BREAKS COMPAT WITH ORG CATURE BY REQUIRING '.ORG' IN FILE
+
 (setq org-capture-templates
       `(("i" "inbox" entry
          (file ,(concat qz/org-agenda-directory "inbox.org"))
          "* TODO %? \nCREATED: %u\nFROM: %a")
-        ;; capture link to live `org-roam' thing
-        ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
-         (function qz/current-roam-link)
-         :immediate-finish t)
-        ("n" "now, as in NOW" entry (file ,(concat qz/org-agenda-directory "wip.org"))
-         "* TODO [#A1] %? \nDEADLINE: %T\nCREATED: %u")
-        ;; fire directly into inbox
-        ("c" "org-protocol-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
-         "* TODO [[%:link][%:description]]\n\n %i"
-         :immediate-finish t)
         ;; spanish language capturing
         ("v" "vocab; spanish" entry
          (file+headline ,(concat qz/notes-directory "spanish_language.org") "vocab, phrases")
          "** \"%?\" :es:\nFROM: %a\n\n*** :en:\n")
+        ;; capture link to live `org-roam' thing
+        ("n" "now, as in NOW" entry (file ,(concat qz/org-agenda-directory "wip.org"))
+         "* TODO [#A1] %? \nDEADLINE: %T\nCREATED: %u")
+        ;; fire directly into inbox
+        ("c" "org-protocol-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
+         "* TODO [[%:link][%:description]]\nCREATED: %u\n\n#+begin_quote\n\n%i\n\n#+end_quote"
+         :immediate-finish t)
+        ;; push last captured item into inbox
+        ("l" "last-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
+         (function qz/inbox-last-captured)
+         :immediate-finish t)
+        ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
+         (function qz/current-roam-link)
+         :immediate-finish t)
         ("w" "Weekly Review" entry
          (file+olp+datetree ,(concat qz/org-agenda-directory "reviews.org"))
-         (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))
-        ("r" "Reading" todo ""
-         ((org-agenda-files '(,(concat qz/org-agenda-directory "reading.org")))))))
+         (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))))
 #+end_src
 
 #+RESULTS:
 | i | inbox | entry | (file ~/life/roam/inbox.org) | * TODO %? |
+*** TODO write last captured to inbox
+#+begin_src emacs-lisp
+(defun qz/inbox-last-captured (&optional buffer)
+  (interactive)
+  (when-let ((b (or (and org-capture-last-stored-marker
+                         (marker-buffer org-capture-last-stored-marker))
+                    buffer)))
+    (with-current-buffer b
+      (org-goto-marker-or-bmk org-capture-last-stored-marker)
+      (concat "* [[id:" (org-roam-id-at-point)  "][" (qz/node-title) "]]"))))
+
+(defun qz/capture-last-captured ()
+  (interactive)
+  (when-let ((b (and org-capture-last-stored-marker
+                     (marker-buffer org-capture-last-stored-marker))))
+    (if (with-current-buffer b
+          (not (string-equal "inbox" (qz/node-title))))
+        (org-capture nil "l")
+      (message "qz/capture-last-captured: skipping; last capture was inbox"))))
+#+end_src
+
+#+RESULTS:
+: qz/capture-last-captured
+
+
+
 *** FIXME doom half-loaded buffer hack
 https://github.com/hlissner/doom-emacs/issues/4832
 
@@ -1309,9 +1747,14 @@ https://github.com/hlissner/doom-emacs/issues/4832
 
 #+RESULTS:
 *** TODO weekly review
-*** Convenience Functions :func:
+*** capture convenience functions :func:
 #+begin_src emacs-lisp
 ;; helper capture function for `org-roam' for `agenda-mode'
+(defun qz/current-roam-link ()
+  (interactive)
+  "Get link to org-roam file with title"
+  (concat "* TODO [[" (buffer-file-name) "][" (qz/node-title) "]]"))
+
 (defun qz/org-inbox-capture ()
   (interactive)
   "Capture a task in agenda mode."
@@ -1322,486 +1765,19 @@ https://github.com/hlissner/doom-emacs/issues/4832
   "Capture a task in agenda mode."
   (org-capture nil "I"))
 
-(defun qz/org-roam-capture-todo ()
+(defun qz/roam-capture-todo ()
   (interactive)
   "Capture a task in agenda mode."
-  (org-roam-capture nil "_"))
+  (org-roam-capture- :goto t
+                     :keys "n"
+                     :node (org-roam-node-create :title (doom-thing-at-point-or-region))
+                     :props '(:immediate-finish t :jump-to-captured nil))
+  (qz/capture-last-captured))
 #+end_src
-
-#+RESULTS:
-: qz/org-roam-capture-todo
-**** current roam link
-#+begin_src emacs-lisp
-(defun qz/current-roam-link ()
-  (interactive)
-  "Get link to org-roam file with title"
-  (concat "* TODO [[" (qz/contract-file-name (buffer-file-name (buffer-base-buffer))) "]["
-          (car (org-roam--extract-titles)) "]]"))
-#+end_src
-** org-gcal
-*** secret properties :vars:
-set in authinfo.el
-
-*** files :vars:
-#+begin_src emacs-lisp
-(setq org-gcal-fetch-file-alist
-      `((,qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
-        (,qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
-        (,qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
-(qz/pprint org-gcal-fetch-file-alist)
-#+end_src
-
-#+RESULTS:
-:
-: (("imzaniiyt@gmail.com" . "~/life/roam/calendar-home.org")
-:  ("ejf1ja19lprl01dbued3b67ctc@group.calendar.google.com" . "~/life/roam/calendar-work.org")
-:  ("3dlc1cbk5nidjfrvrvkap0cndo@group.calendar.google.com" . "~/life/roam/calendar-shared.org"))
-
-*** recurring events headlines
-#+begin_src emacs-lisp
-(setq org-gcal-recurring-events-mode 'nested)
-#+end_src
-
-#+RESULTS:
-: nested
-
-** [[file:../../../life/roam/20200401202402-org_roam.org][org-roam]]
-*** Initialisation :init:vars:
-#+begin_src emacs-lisp
-(use-package! org-roam
-  :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
-  :hook
-  (after-init . org-roam-mode)
-  :custom-face
-  (org-roam-link ((t (:inherit org-link :foreground "#df85ff"))))
-  :init
-  (map! :leader
-        :prefix "n"
-        :desc "org-roam" "l" #'org-roam
-        :desc "org-roam-switch-to-buffer" "b" #'org-roam-switch-to-buffer
-        :desc "org-roam-find-file" "f" #'org-roam-find-file
-        :desc "org-roam-insert" "i" #'qz/roam-insert
-        :desc "org-agenda-todo" "t" #'qz/org-agenda-todo
-        :desc "org-roam-dailies-today" "J" #'org-roam-dailies-today
-        :desc "org-roam-dailies-capture-today" "j" #'org-roam-dailies-capture-today
-        :desc "qz/org-roam-capture-current" "C" #'qz/org-roam-capture-current
-        :desc "qz/org-roam-capture-current" "C-c" #'qz/org-roam-capture-current
-        :desc "qz/org-gcal--current" "C-c" #'qz/org-roam-capture-current
-        :desc "org-roam-capture" "c" #'org-roam-capture)
-  (setq org-roam-directory qz/notes-directory
-        org-roam-dailies-directory qz/notes-directory
-        org-roam-db-location (concat org-roam-directory "org-roam.db")
-        org-roam-db-update-idle-seconds 0
-        org-roam-graph-executable "dot"
-        org-roam-graph-extra-config '(("overlap" . "false"))
-        org-roam-graph-exclude-matcher nil)
-
-  :config
-  (require 'org-roam-protocol))
-
-(org-roam-mode +1)
-#+end_src
-
-#+RESULTS:
-: t
-
-*** capture templates, roam :vars:
-#+begin_src emacs-lisp
-(setq qz/org-roam-capture-head
-      "#+setupfile:./hugo_setup.org
-,#+hugo_section: zettels
-,#+hugo_slug: ${slug}
-,#+title: ${title}\n")
-
-(setq org-roam-capture-templates
-      `(("d" "default" plain (function org-roam--capture-get-point)
-         "%?"
-         :file-name ,qz/capture-title-timestamp
-         :head ,qz/org-roam-capture-head
-         :unnarrowed t)
-        ("_" "pass-though-todo" plain (function org-roam--capture-get-point)
-         "%?"
-         :file-name ,qz/capture-title-timestamp
-         :head ,qz/org-roam-capture-head
-         :immediate-finish t)
-        ("p" "private" plain (function org-roam-capture--get-point)
-         "%?"
-         :file-name ,(concat "private-" qz/capture-title-timestamp)
-         :head ,qz/org-roam-capture-head
-         :unnarrowed t)))
-#+end_src
-
-#+RESULTS:
-| d | default | plain | #'org-roam--capture-get-point | %? | :file-name | %(qz/utc-timestamp)-${slug} | :head | #+setupfile:./hugo_setup.org |
-
-*** capture templates, protocol :vars:
-#+begin_src emacs-lisp
-(setq org-roam-capture-ref-templates
-      `(("r" " ref" plain (function org-roam-capture--get-point)
-         "%?"
-         :file-name ,qz/capture-title-timestamp
-         :head "#+setupfile:./hugo_setup.org
-#+roam_key: ${ref}
-#+hugo_slug: ${slug}
-#+title: ${title}
-#+source: ${ref}"
-         :unnarrowed t)))
-#+end_src
-
-#+RESULTS:
-| r | ref | plain | #'org-roam-capture--get-point | %? | :file-name | %(qz/utc-timestamp)-${slug} | :head | #+setupfile:./hugo_setup.org |
-
-*** capture templates, dailies :vars:
-#+begin_src emacs-lisp
-(setq org-roam-dailies-capture-templates
-      `(("d" "default" entry (function org-roam-capture--get-point)
-         "* %<%H:%m> %?\nCREATED: %u"
-         :file-name  "private-%<%Y-%m-%d>"
-         :head "#+title: <%<%Y-%m-%d>>\n#+roam_tags: daily private\n\n")))
-#+end_src
-
-#+RESULTS:
-| d | default | entry | #'org-roam-capture--get-point | * %<%H:%m> %? |
-
-*** migrate properties :func:
-#+begin_src emacs-lisp
-(defun qz/org-roam-migrate-jobs ()
-  (interactive )
-  (dolist (file (org-roam--list-all-files))
-                                        ;(message "processing %s" file)
-    (with-current-buffer (or (find-buffer-visiting file)
-                             (find-file-noselect file))
-      ;; TODO = project
-      (vulpea-project-update-tag)
-
-      (save-buffer))))
-#+end_src
-
-#+RESULTS:
-: qz/org-roam-migrate-jobs
-*** auto populate FILETAG :func:
-https://d12frosted.io/posts/2020-06-25-task-management-with-roam-vol3.html
-
-#+begin_src emacs-lisp
-(defun vulpea-ensure-filetag ()
-  "Add respective file tag if it's missing in the current note."
-  (interactive)
-  (let ((tags (org-roam--extract-tags-prop
-               (buffer-file-name
-                (buffer-base-buffer)))))
-    (when (and (seq-contains-p tags "person")
-               (null (org-roam--extract-global-props-keyword
-                      '("filetags"))))
-      (let ((tag (qz/title-to-tag (+org-get-global-property "title"))))
-        (progn (message tag)
-               (qz/org-roam-add-tag tag t))))))
-
-(defun vulpea-tags-add ()
-  "Add a tag to current note."
-  (interactive)
-  (when (org-roam-tag-add)
-    (vulpea-ensure-filetag)))
-
-(defun qz/roam-dispatch-person (title)
-  "add tag to headline for PERSON"
-  (save-excursion
-    (ignore-errors
-      (org-back-to-heading)
-      (org-set-tags
-       (seq-uniq
-        (cons
-         (vulpea--title-to-tag title)
-         (org-get-tags nil t)))))))
-
-(setq qz/roam-tag-dispatch
-      '(("person" . qz/roam-dispatch-person)))
-
-(defun qz/roam-insert ()
-  "Insert a link to the note."
-  (interactive)
-  (when-let*
-      ((res (org-roam-insert))
-       (path (plist-get res :path))
-       (title (plist-get res :title))
-       (roam-tags (org-roam-with-file path nil
-                    (org-roam--extract-tags path))))
-    (when (seq-contains-p roam-tags "person")
-      (qz/roam-dispatch-person title)
-      (save-buffer res))))
-
-(defun vulpea-project-p ()
-  "Return non-nil if current buffer has any todo entry.
-
-TODO entries marked as done are ignored, meaning the this
-function returns nil if current buffer contains only completed
-tasks.
-
-(1) parse the buffer using org-element-parse-buffer. It
-  returns an abstract syntax tree of the current Org buffer. But
-  since we care only about headings, we ask it to return only them
-  by passing a GRANULARITY parameter - 'headline. This makes
-  things faster.
-
-(2) Then we extract information about TODO keyword from
-  headline AST, which contains a property we are interested in -
-  :todo-type, which returns the type of TODO keyword according to
-  org-todo-keywords - 'done, 'todo or nil (when keyword is not
-  present).
-
-(3) Now all we have to do is to check if the buffer list contains
-  at least one keyword with 'todo type. We could use seq=find on
-  the result of org-element-map, but it turns out that it provides
-  an optional first-match argument that can be used for our needs."
-  (org-element-map                          ; (2)
-      (org-element-parse-buffer 'headline) ; (1)
-      'headline
-    (lambda (h)
-      (eq (org-element-property :todo-type h)
-          'todo))
-    nil 'first-match))                     ; (3)
-
-(defun vulpea-project-update-tag ()
-  "Update PROJECT tag in the current buffer."
-  (when (and (not (active-minibuffer-window))
-             (vulpea-buffer-p))
-    (let* ((file (buffer-file-name (buffer-base-buffer)))
-           (all-tags (org-roam--extract-tags file))
-           (prop-tags (org-roam--extract-tags-prop file))
-           (tags prop-tags))
-      (if (vulpea-project-p)
-          (setq tags (cons "project" tags))
-        (setq tags (remove "project" tags)))
-      (if (and (vulpea-buffer-p) (qz/private-p))
-          (setq tags (cons "private" tags))
-        (setq tags (remove "private" tags)))
-      (unless (eq prop-tags tags)
-        (org-roam--set-global-prop
-         "ROAM_TAGS"
-         (combine-and-quote-strings (seq-uniq tags)))))))
-
-(defun vulpea-buffer-p ()
-  "Return non-nil if the currently visited buffer is a note."
-  (interactive)
-  (and buffer-file-name
-       (string-prefix-p
-        (expand-file-name (file-name-as-directory org-roam-directory))
-        (file-name-directory buffer-file-name))))
-
-(defun vulpea-project-files ()
-  "Return a list of note files containing Project tag."
-  (seq-map
-   #'car
-   (org-roam-db-query
-    [:select file
-     :from tags
-     :where (like tags (quote "%\"project\"%"))])))
-
-(defun vulpea-agenda-files-update (&rest _)
-  "Update the value of `org-agenda-files'."
-  (setq org-agenda-files
-        (seq-uniq
-         (append qz/org-agenda-files (vulpea-project-files)))))
-
-
-
-(advice-add 'org-agenda :before #'vulpea-agenda-files-update)
-#+end_src
-
-#+RESULTS:
-*** testing
-#+begin_src emacs-lisp
-(qz/pprint    (append qz/org-agenda-files (vulpea-project-files)))
-#+end_src
-
-#+RESULTS:
-#+begin_example
-
-("/home/qzdl/life/roam/calendar-home.org" "/home/qzdl/life/roam/calendar-work.org"
- "/home/qzdl/life/roam/schedule.org"
- "/home/qzdl/life/roam/20210505T162454Z-interactive_network_visualization_with_r_r_bloggers.org"
- "/home/qzdl/life/roam/private-2020-12-09.org"
- "/home/qzdl/life/roam/20200701T153403Z-common_lisp_the_language.org"
- "/home/qzdl/life/roam/20200619T215855Z-common_lisp_repl_diaries.org"
- "/home/qzdl/life/roam/20200605T122503Z-meeting_innovation_et_al_0.org"
- "/home/qzdl/life/roam/20210518T124941Z-building_living.org"
- "/home/qzdl/life/roam/20200701T103013Z-counsel_spotify.org"
- "/home/qzdl/life/roam/20200606T175037Z-marvel_movie_timeline_the_best_order_to_watch_marvel_movies.org"
- "/home/qzdl/life/roam/20200405160940-meditation_apps_are_fueling_tech_addiction_not_easing_stress.org"
- "/home/qzdl/life/roam/20210311T122210Z-tennet_hierarchical_lists.org"
- "/home/qzdl/life/roam/20200403151517-a_beginner_s_guide_to_graph_visualization.org"
- "/home/qzdl/life/roam/next.org"
- "/home/qzdl/life/roam/20210427T143800Z-disturbing_films.org"
- "/home/qzdl/life/roam/20201117T102439Z-augmenting_human_intellect_a_conceptual_framework.org"
- "/home/qzdl/life/roam/20200515T113542Z-igraph.org"
- "/home/qzdl/life/roam/20200611T112619Z-autovacuum.org"
- "/home/qzdl/life/roam/20200515T152023Z-pl_pgsql.org"
- "/home/qzdl/life/roam/private-2020-08-30.org"
- "/home/qzdl/life/roam/20210404T152634Z-learning_mathematics.org"
- "/home/qzdl/life/roam/20201117T102439Z-augmenting_human_intellect.org"
- "/home/qzdl/life/roam/20200611T115532Z-pg_stat_database.org"
- "/home/qzdl/life/roam/20200623T081435Z-pg_deploy.org"
- "/home/qzdl/life/roam/20210422T104455Z-org_roam_database_machinations.org"
- "/home/qzdl/life/roam/private-2020-10-20.org"
- "/home/qzdl/life/roam/20201031T163512Z-jessealdridge_electric_toothbrush_simple_client_server_notetaking_tool_inspired_by_notational_velocity.org"
- "/home/qzdl/life/roam/20200615T082229Z-moving_to_berlin.org"
- "/home/qzdl/life/roam/watching.org"
- "/home/qzdl/life/roam/jorge_luis_borges.org"
- "/home/qzdl/life/roam/private-2020-06-02.org"
- "/home/qzdl/life/roam/20200511T151311Z-information_and_the_universe.org"
- "/home/qzdl/life/roam/private-2020-12-10.org"
- "/home/qzdl/life/roam/private-2021-04-04.org"
- "/home/qzdl/life/roam/schedule.org"
- "/home/qzdl/life/roam/20200419T194507Z-microgreens.org"
- "/home/qzdl/life/roam/20200903T080046Z-tpcde_728_monitor_filter_performance_thinkproject_jira.org"
- "/home/qzdl/life/roam/wip.org"
- "/home/qzdl/life/roam/20200609T150107Z-how_to_get_a_list_of_video_capture_devices_web_cameras_on_linux_ubuntu_c_c_stack_overflow.org"
- "/home/qzdl/life/roam/private-2021-04-20.org"
- "/home/qzdl/life/roam/private-2021-05-23.org"
- "/home/qzdl/life/roam/learning.org"
- "/home/qzdl/life/roam/20210524T190500Z-static_equilibrium_constraint.org"
- "/home/qzdl/life/roam/20200515T082816Z-org_roam_network_analysis.org"
- "/home/qzdl/life/roam/reading.org"
- "/home/qzdl/life/roam/inbox.org"
- "/home/qzdl/life/roam/20200609T132052Z-projects.org")
-#+end_example
-
-*** auto hooks :func:
-#+begin_src emacs-lisp
-(add-hook 'find-file-hook #'vulpea-project-update-tag)
-(add-hook 'before-save-hook #'vulpea-project-update-tag)
-(add-hook 'before-save-hook #'vulpea-ensure-filetag)
-#+end_src
-
-#+RESULTS:
-| vulpea-ensure-filetag | vulpea-project-update-tag |
-*** convert title into tag :func:
-#+begin_src emacs-lisp
-(defun qz/title-to-tag (title)
-  "Convert TITLE to tag."
-  (if (equal "@" (subseq title 0 1))
-      title
-    (concat "@" (s-replace " " "" title))))
-#+end_src
-
-#+RESULTS:
-: qz/title-to-tag
-
-*** determine if a file should-be-private-p :func:
-might be better to use the file prop, but maybe we keep the message in to deem
-
-#+begin_src emacs-lisp
-(defun qz/private-p ()
-  (interactive)
-
-  (let ((title (+org--get-property "title")))
-                                        ;(message (concat "...checking privateness of " title))
-    (if (not title)
-        (message "WARNING: unable to evaluate privateness; file [" file "] has no title")
-      (or (string-match-p ".?[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}.?" title)
-          (string-match-p "meeting" title)
-          (qz/org-roam-has-link-to-p title "thinkproject")))))
-
-(defun qz/should-be-private-p (file)
-  (with-current-buffer (or (find-buffer-visiting file)
-                           (find-file-noselect file))
-    (qz/private-p)))
-
-(defun qz/is-file-private ()
-  (interactive)
-  (message (concat "should " (f-this-file) " be private..? "
-                   (or (and (qz/should-be-private-p (f-this-file)) "yes") "no"))))
-#+end_src
-
-#+RESULTS:
-: qz/is-file-private
-*** get list of private notes
-#+begin_src emacs-lisp
-(defun qz/org-roam-private-files ()
-  "Return a list of note files containing tag =private="
-  (seq-map
-   #'car
-   (org-roam-db-query
-    [:select file
-     :from tags
-     :where (like tags (quote "%\"private\"%"))])))
-
-;(qz/pprint (qz/org-roam-private-files))
-#+end_src
-
-#+RESULTS:
-: qz/org-roam-private-files
-
-
-*** has link to
-good for restricting to work stuff
-
-#+begin_src emacs-lisp
-(defun qz/has-link-to (src dst)
-  (org-roam-db-query
-   [:select source
-    :from links
-    :where (and (= dest $r1)
-                (= source $r2))]
-   src dest))
-
-(defun qz/has-link (a b)
-  (seq-map
-   #'car
-   (org-roam-db-query
-    [:select [source dest]
-     :from links
-     :where (or (and (= dest a) (= source b))
-                (and (= dest b) (= source a)))])))
-
-                                        ;(org-roam-db-query
-                                        ; [:select *
-                                        ;  :from links
-                                        ;  :where (and (= dest $r1)
-                                        ;              (= source $r2))]
-                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"
-                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org")
-                                        ;
-                                        ;(qz/has-link-to
-                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org"
-                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"))
-#+end_src
-
-#+RESULTS:
-
-*** a
-#+begin_src emacs-lisp
-(org-roam-db-query
-    [:select *
-     :from links
-     :limit 10])
-#+end_src
-
-#+RESULTS:
-| /home/qzdl/life/roam/20200402200035-what_is_hierarchy_in_this_sense_of_information_representation.org | /home/qzdl/life/roam/20200402200009-what_are_the_implications_of_thinking_in_hierarchies_with_regard_to_associating_and_understanding.org | file | (:outline nil :point 150)  |
-| /home/qzdl/life/roam/20200402200035-what_is_hierarchy_in_this_sense_of_information_representation.org | /home/qzdl/life/roam/20200410185030-focus_question.org                                                                                    | file | (:outline nil :point 78)   |
-| /home/qzdl/life/roam/20200403150915-der_zettelkasten_als_zweitgedachtnis_niklas_luhmanns.org          | /home/qzdl/life/roam/20200403151210-johannes_schmidt.org                                                                                  | file | (:outline nil :point 232)  |
-| /home/qzdl/life/roam/20200403150915-der_zettelkasten_als_zweitgedachtnis_niklas_luhmanns.org          | /home/qzdl/life/roam/20200403143144-zettlekasten.org                                                                                      | file | (:outline nil :point 166)  |
-| /home/qzdl/life/roam/20200403150915-der_zettelkasten_als_zweitgedachtnis_niklas_luhmanns.org          | /home/qzdl/life/roam/20200610T104431Z-german_language.org                                                                                 | file | (:outline nil :point 111)  |
-| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200511T151311Z-information_and_the_universe.org                                                                    | file | (:outline nil :point 1320) |
-| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200414200342-night_owl.org                                                                                         | file | (:outline nil :point 1194) |
-| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200515T160040Z-a_new_kind_of_science.org                                                                           | file | (:outline nil :point 967)  |
-| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200414193742-treadmill_desk.org                                                                                    | file | (:outline nil :point 885)  |
-| /home/qzdl/life/roam/the_personal_analytics_of_my_life_stephen_wolfram_writings.org                   | /home/qzdl/life/roam/20200515T115551Z-quantified_self.org                                                                                 | file | (:outline nil :point 425)  |
-
-*** make private by tagging "private" :func:
-#+begin_src emacs-lisp
-(defun qz/org-roam-make-private ()
-  (interactive)
-  (qz/org-roam-add-tag "private" t))
-#+end_src
-
-#+RESULTS:
-: qz/org-roam-make-private
-
-*** reset; clear automated roam_tags, filetags
 
 *** TODO check if file has links to given note :func:
 [[file:../../../life/roam/20210422T104455Z-org_roam_database_machinations.org][org-roam database machinations]]
+
 #+begin_src emacs-lisp
 (defun qz/org-roam-has-link-to-p (source dest)
   "TODO implement; returns t/nil if source links to dest"
@@ -1809,31 +1785,27 @@ good for restricting to work stuff
 #+end_src
 
 #+RESULTS:
-: qz/org-roam-has-link-to-p
+: qz/roam-capture-todo
+** [[id:3496a6b3-8ec5-431c-b50b-bd948e35d1cf][org-gcal]]
+*** secret properties :vars:
+set in authinfo.el
 
-*** add global prop, preserving existing :func:
+*** files :vars:
+#+begin_src emacs-lisp :results none
+(setq org-gcal-fetch-file-alist
+      `((,qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
+        (,qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
+        (,qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
+(qz/pprint org-gcal-fetch-file-alist)
+#+end_src
+
+*** recurring events headlines
 #+begin_src emacs-lisp
-(defun qz/org-roam-add-global-prop (prop val)
-  (org-roam--set-global-prop
-   prop
-   (combine-and-quote-strings
-    (seq-uniq
-     (cons val (split-string-and-unquote
-                (or (+org--get-property prop) "")))))))
+(setq org-gcal-recurring-events-mode 'nested)
 #+end_src
 
 #+RESULTS:
-: qz/org-roam-add-global-prop
 
-*** add roam_tag, preserving existing :func:
-#+begin_src emacs-lisp
-(defun qz/org-roam-add-tag (tag &optional filetag_too)
-  (qz/org-roam-add-global-prop "roam_tags" tag)
-  (when filetag_too
-    (qz/org-roam-add-global-prop "filetags" tag)))
-#+end_src
-
-#+RESULTS:
 : qz/org-roam-add-tag
 
 *** TODO auto establish meta :func:
@@ -1921,12 +1893,814 @@ Run analysis from source file on org-roam DB
      for e in (if reverse? (reverse c) c)
      for i = 0 then (1+ i)
      do (insert (funcall s i) e))))
+#+end_src
+** [[id:b33372ae-f731-4482-8e3a-0c5e986ac70a][org-roam]]
+*** V1 Initialisation :init:vars:
+#+begin_src emacs-lisp :tangle no
+(use-package! org-roam
+  :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
+  :hook
+  (after-init . org-roam-mode)
+  :custom-face
+  (org-roam-link ((t (:inherit org-link :foreground "#df85ff"))))
+  :init
+  (map! :leader
+        :prefix "n"
+        :desc "org-roam" "l" #'org-roam
+        :desc "org-roam-switch-to-buffer" "b" #'org-roam-switch-to-buffer
+        :desc "org-roam-find-file" "f" #'org-roam-find-file
+        :desc "org-roam-insert" "i" #'qz/roam-insert
+        :desc "org-agenda-todo" "t" #'qz/org-agenda-todo
+        :desc "org-roam-dailies-today" "J" #'org-roam-dailies-today
+        :desc "org-roam-dailies-capture-today" "j" #'org-roam-dailies-capture-today
+        :desc "qz/org-roam-capture-current" "C" #'qz/org-roam-capture-current
+        :desc "qz/org-roam-capture-current" "C-c" #'qz/org-roam-capture-current
+        :desc "qz/org-gcal--current" "C-c" #'qz/org-roam-capture-current
+        :desc "org-roam-capture" "c" #'org-roam-capture)
+  (setq org-roam-directory qz/notes-directory
+        org-roam-dailies-directory qz/notes-directory
+        org-roam-db-location (concat org-roam-directory "org-roam.db")
+        org-roam-graph-executable "dot"
+        org-roam-graph-extra-config '(("overlap" . "false"))
+        org-roam-graph-exclude-matcher nil)
+
+  :config
+  (require 'org-roam-protocol))
+
+(org-roam-mode +1)
+#+end_src
+
+#+RESULTS:
+: t
+
+*** V2 Initialisation :init:vars:
+#+begin_src emacs-lisp
+(use-package! org-roam
+  :after org
+  :commands
+  (org-roam-buffer
+   org-roam-setup
+   org-roam-capture
+   org-roam-node-find)
+  :init
+  (map! :leader
+        :prefix "n"
+        :desc "org-roam" "l" #'org-roam-buffer-toggle
+        :desc "org-roam" "j" #'org-roam-dailies-capture-today
+        :desc "org-roam" "J" #'org-roam-dailies-find-today
+        :desc "org-roam-node-insert" "i" #'org-roam-node-insert
+        :desc "org-roam-node-find" "f" #'org-roam-node-find)
+  :config
+  (setq org-roam-mode-sections
+       (list #'org-roam-backlinks-insert-section
+             #'org-roam-reflinks-insert-section
+             #'org-roam-unlinked-references-insert-section))
+  (org-roam-setup))
+(use-package! org-roam-protocol
+  :after org-protocol)
+#+end_src
+
+#+RESULTS:
+: org-roam-protocol
+
+*** V2 migration
+**** ids, file links
+:PROPERTIES:
+:ID:       57e02885-17bb-44a0-9b97-249cfb8053e6
+:END:
+from https://github.com/org-roam/org-roam/issues/1091#issuecomment-703531409
+#+begin_src emacs-lisp
+(defun my/replace-file-with-id-link ()
+  "Replaces file links with ID links where possible in current buffer."
+  (interactive)
+  (let (path desc)
+    (org-with-point-at 1
+      (while (re-search-forward org-link-bracket-re nil t)
+        (setq desc (match-string 2))
+        (when-let ((link (save-match-data (org-element-lineage (org-element-context) '(link) t))))
+          (when (string-equal "file" (org-element-property :type link))
+            (setq path (expand-file-name (org-element-property :path link)))
+            (replace-match "")
+            (insert (org-roam-format-link path desc))))))))
+
+(defun qz/or-migrate-v2 ()
+  (dolist (file (org-roam--list-all-files))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (org-with-point-at 1
+        (org-id-get-create))
+      (save-buffer)))
+  (org-roam-db-sync)
+  (dolist (file (org-roam--list-all-files))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (my/replace-file-with-id-link)
+      (save-buffer)))
+  (org-roam-db-sync))
+
+;;(qz/or-migrate-v2)
+#+end_src
+
+#+RESULTS:
+: qz/or-migrate-v2
+**** property migration life state d96167ff5a1adcb27e95ce7b0239b107fdd1a0f6
+- for each roam file
+  + collect #+roam_tags R -> '(a b)
+  + collect #+filetags  F -> '(c d)
+  + dedupe the results, set in standard property  ~(set-file-properties 'filetags (dedupe (concat R F)))~
+  + save
+#+begin_src emacs-lisp
+(defun qz/or-migrate-filetags ()
+  (dolist (file (seq-uniq
+                 (append
+                  (split-string-and-unquote
+                   (shell-command-to-string "rg 'roam_tags' ~/life/roam -il"))
+                  (split-string-and-unquote
+                   (shell-command-to-string "rg 'filetags' ~/life/roam -il")))))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (org-with-point-at (point-min)
+        (mapc (lambda (s)  (org-roam-tag-add s))
+              (qz/get-old-tags)))
+      (save-buffer)
+      (kill-this-buffer))
+    (shell-command-to-string "~/.local/bin/wrg '^\\#\\+roam_tags:.*' ~/life/roam/ -i --replace ''")))
+
+(defun qz/get-old-tags ()
+  (split-string-and-unquote
+    (concat (+org-get-global-property "roam_tags")
+            " "
+            (+org-get-global-property "filetags"))))
+
+;;(qz/or-migrate-filetags)
+
+;;(length
+;; (seq-uniq
+;;  (append
+;;   (split-string-and-unquote
+;;    (shell-command-to-string "rg '^\\#\\+roam_tags: \\w' ~/life/roam/ -il"))
+;;   (split-string-and-unquote
+;;    (shell-command-to-string "rg 'filetags' ~/life/roam -l")))))
+#+end_src
+
+#+RESULTS:
+: qz/get-old-tags
+**** verify tags
+***** pre distribution
+#+begin_src sqlite :db ~/.emacs.d/org-roam.db :results drawer table :colnames yes :tangle no
+select tag, count(tag)
+from tags t
+group by tag
+#+end_src
+
+#+RESULTS:
+:results:
+| tag    | count(tag) |
+|--------+------------|
+| @work  |          1 |
+| emacs  |          1 |
+| living |          1 |
+| three  |          1 |
+| week   |          1 |
+| wip    |          1 |
+:end:
+
+***** post distribution
+#+begin_src sqlite :db ~/.emacs.d/org-roam.db :results drawer table :colnames yes :tangle no
+select tag, count(tag)
+from tags t
+group by tag
+#+end_src
+
+#+RESULTS:
+:results:
+| tag    | count(tag) |
+|--------+------------|
+| @work  |          1 |
+| emacs  |          1 |
+| living |          1 |
+| three  |          1 |
+| week   |          1 |
+| wip    |          1 |
+:end:
+***** deep diving info loss
+
+(find-file-literally "/home/qzdl/life/roam/private-2021-06-10.org")
+(shell-command-to-string "cd ~/life/roam && git reset --hard d96167ff5a1adcb27e95ce7b0239b107fdd1a0f6")
+(progn
+  (qz/or-migrate-filetags)
+  (org-roam-db-sync))
+
+#+begin_src emacs-lisp :tangle no
+(org-roam-db-sync)
+(org-roam-db-query
+ [:select [tag file title level]
+  :from tags :as t
+  :join nodes :as n
+    :on (= n:id t:node_id)
+  :where (like file "%german%")
+  :limit 10
+  ])
+#+end_src
+***** get files which are tagged
+#+begin_src elisp :tangle no
+(seq-uniq
+ (append
+  (split-string-and-unquote
+   (shell-command-to-string "rg 'roam_tags' ~/life/roam -l"))
+  (split-string-and-unquote
+   (shell-command-to-string "rg 'filetags' ~/life/roam -l"))))
+#+end_src
+
+
+***** roam counts
+#+begin_src bash :tangle no
+rg '^\#\+roam_tags:' ~/life/roam/ -i --color never  | cut -d ':' -f 1 | grep '^[0-9]' > /tmp/roamcounts
+rg '^\#\+filetags:' ~/life/roam/ -i --color never --column | cut -d ':' -f 1 | grep '^[0-9]'  >> /tmp/roamcounts
+cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(min(d), max(d), median(d), mean(d), length(d), sep="\n")'
+
+#+end_src
+
+#+RESULTS:
+| 0 |
+| 0 |
+| 0 |
+| 0 |
+| 1 |
+
+*** capture templates :vars:
+**** roam capture templates
+:PROPERTIES:
+:ID:       bc3c61d4-d720-40a8-9018-6357f05ae85e
+:END:
+#+begin_src emacs-lisp
+(setq qz/org-roam-capture-head "#+title: ${title}\n")
+(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
+
+(setq org-roam-capture-templates
+      `(("d" "default" plain "%?"
+         :if-new (file+head ,qz/capture-title-timestamp-roam
+                            ,qz/org-roam-capture-head)
+         :unnarrowed t)
+        ("n" "empty" plain "%?"
+         :if-new (file+head ,qz/capture-title-timestamp-roam
+                            ,qz/org-roam-capture-head)
+         :immediate-finish t)
+        ("p" "private" plain "%?"
+         (file+head ,(concat "private-" qz/capture-title-timestamp)
+                    ,qz/org-roam-capture-head)
+         :unnarrowed t)))
+#+end_src
+
+#+RESULTS:
+| d | default | plain | %? | :if-new | (file+head %(qz/utc-timestamp)-${slug}.org #+title: ${title} |
+
+**** protocol :vars:
+#+begin_src emacs-lisp
+(setq org-roam-capture-ref-templates
+      `(("r" "ref" plain
+         "%?"
+         :if-new (file+head ,qz/capture-title-timestamp-roam
+                            "#+title: ${title}\n")
+         :unnarrowed t)))
+
+#+end_src
+
+#+RESULTS:
+| r | ref | plain | %? | :if-new | (file+head %(qz/utc-timestamp)-${slug}.org #+title: ${title} |
+
+**** dailies :vars:
+#+begin_src emacs-lisp
+(setq org-roam-dailies-capture-templates
+      `(("d" "default" entry
+         "* %<%H:%m> %?\nCREATED: %u"
+         :if-new (file+head "private-%<%Y-%m-%d>.org"
+                            "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
+#+end_src
+
+#+RESULTS:
+| d | default | entry | * %<%H:%m> %? |
+*** helpers :func:
+**** TODO point->roam-id; get id from node at point
+#+begin_src emacs-lisp
+(defun qz/point->roam-id (&optional pos)
+  (org-roam-node-id (org-roam-node-at-point))) 
+#+end_src
+
+#+RESULTS:
+: qz/point->roam-id
+**** daily-title-regexp :vars:
+#+begin_src emacs-lisp
+(setq qz/daily-title-regexp ".?[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}.?")
+#+end_src
+
+#+RESULTS:
+: .?[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}.?
+
+**** title->roam-id
+#+begin_src emacs-lisp
+(defun qz/title->roam-id (title)
+  (org-roam-node-id (org-roam-node-from-title-or-alias title)))
+#+end_src
+
+#+RESULTS:
+: qz/title->roam-id
+**** node-title; get title from node (file or entry)
+#+begin_src emacs-lisp
+(defun qz/node-title ()
+  (save-excursion
+    (goto-char (org-roam-node-point (org-roam-node-at-point 'assert)))
+    (if (= (org-outline-level) 0)
+        (cadr (car (org-collect-keywords '("title"))))
+      (substring-no-properties (org-get-heading t t t)))))
+
+;(qz/node-title)
+#+end_src
+
+#+RESULTS:
+: qz/node-title
+**** node-tags;  get tags  from node (file or entry)
+#+begin_src emacs-lisp
+(defun qz/node-tags ()
+  (save-excursion
+    (goto-char (org-roam-node-point (org-roam-node-at-point 'assert)))
+    (if (= (org-outline-level) 0)
+        (split-string-and-unquote (or (cadr (car (org-collect-keywords '("filetags")))) ""))
+      (org-get-tags))))
+
+;(qz/node-tags)
+#+end_src
+
+#+RESULTS:
+: qz/node-tags
+**** sidestep node-read with *node-create
+#+begin_src emacs-lisp :tangle no
+(equal (org-roam-node-read) (org-roam-node-create :title "radarr")) ;; given the same input string
+#+end_src
+
+#+RESULTS:
+: t
+
+**** custom roam-insert :func:
+if ~pass-thru~, then fire capture template from thing at point, to template "n"
+of [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
+
+#+begin_src emacs-lisp
+(map! "s-i" #'qz/roam-immediate-insert)
+
+(defun qz/roam-immediate-insert ()
+  (interactive)
+  (qz/org-roam-node-insert nil t))
+
+(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
+  "Find an Org-roam file, and insert a relative org link to it at point.
+Return selected file if it exists.
+If LOWERCASE is non-nil, downcase the link description.
+FILTER-FN is the name of a function to apply on the candidates
+which takes as its argument an alist of path-completions."
+  (interactive)
+  (unwind-protect
+      ;; Group functions together to avoid inconsistent state on quit
+      (atomic-change-group
+        (let* (region-text
+               beg end
+               (_ (when (region-active-p)
+                    (setq beg (set-marker (make-marker) (region-beginning)))
+                    (setq end (set-marker (make-marker) (region-end)))))
+               (region-text (org-link-display-format
+                             (substring-no-properties (doom-thing-at-point-or-region))))
+               (node (if pass-thru
+                         (org-roam-node-create :title region-text)
+                       (org-roam-node-read region-text filter-fn)))
+               (description (or (and node region-text (org-roam-node-title node))
+                                region-text)))
+          (if (org-roam-node-id node)
+              (progn
+                (when region-text
+                  (delete-region beg end)
+                  (set-marker beg nil)
+                  (set-marker end nil))
+                (insert (org-link-make-string
+                         (concat "id:" (org-roam-node-id node))
+                         description)))
+            (funcall
+              `(lambda ()
+                 (org-roam-capture-
+                  :node node
+                  ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
+                  :props (append
+                          (when (and beg end)
+                            (list :region (cons beg end)))
+                          (list :insert-at (point-marker)
+                                :link-description description
+                                :finalize 'insert-link))))))))
+    (deactivate-mark)))
+
+
+#+end_src
+
+#+RESULTS:
+: a
+
+
+
+*** data-driven automatic actions in org roam :project:
+:PROPERTIES:  :project:person:
+:ID:       6ae36e2f-ab6d-45bc-9448-8dce233c8528
+:END:
+'automatic' routines, pegged to file actions like 'visit, save' by way of advice
+functions. inspired by [[https://d12frosted.io/posts/2020-06-25-task-management-with-roam-vol3.html][Task management with org-roam Vol. 3: FILETAGS]]
+
+**** auto helpers :func:
+***** title-to-tag
+#+begin_src emacs-lisp
+(defun qz/title-to-tag (title)
+  "Convert TITLE to tag."
+  (if (equal "@" (subseq title 0 1))
+      title
+    (concat "@" (s-replace " " "" title))))
+#+end_src
+
+#+RESULTS:
+: qz/title-to-tag
+***** refresh filetags cache
+addressing caching & consistency problems with :PROPERTIES: drawer and #+properties
+
+#+begin_src emacs-lisp
+(defun qz/hard-refresh-org-tags-in-buffer ()
+  (interactive)
+  (setq org-file-tags nil)      ; blast the cache
+  (org-set-regexps-and-options) ; regen property detection regexp
+  (org-get-tags))               ; write to cache
+#+end_src
+
+#+RESULTS:
+: qz/hard-refresh-org-tags-in-buffer
+***** TODO get-file-by-tag; add multi AND/OR
+#+begin_src emacs-lisp
+(defun qz/roam-get-node-by-tag (tag)
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select :distinct file
+     :from tags
+     :inner :join nodes
+     :on (= tags:node_id nodes:id)
+     :where (= tags:tag tag)])))
+#+end_src
+
+#+RESULTS:
+: qz/roam-get-node-by-tag
+
+***** should-be-private-p; interactive sanity check the current file for privacy
+#+begin_src emacs-lisp
+(defun qz/should-be-private-p (file)
+  (with-current-buffer (or (find-buffer-visiting file)
+                           (find-file-noselect file))
+    (qz/private-p)))
+
+(defun qz/is-file-private ()
+  (interactive)
+  (message (concat "should " (f-this-file) " be private..? "
+                   (or (and (qz/should-be-private-p (f-this-file)) "yes") "no"))))
+#+end_src
+
+#+RESULTS:
+: qz/is-file-private
+
+***** project-files; for [[id:d904ace6-a941-49fc-a6d4-7fe3797b0d8e][org-agenda]] candidates :func:
+:PROPERTIES:
+:ID:       cb81cfd7-fb16-4965-af20-69129cf4fd97
+:END:
+#+begin_src emacs-lisp
+(defun qz/project-files ()
+  "Return a list of note files containing Project tag."
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select :distinct file
+     :from tags
+     :inner :join nodes
+     :on (= tags:node_id nodes:id)
+     :where (= tags:tag "project")])))
+
+
+(qz/hard-refresh-org-tags-in-buffer)
+(org-roam-db-sync)
+(qz/project-files)
+#+end_src
+
+#+RESULTS:
+| /home/qzdl/life/roam/private-2020-08-03.org | /home/qzdl/life/roam/20201014T163555Z-byron_blackford.org | /home/qzdl/dotfiles/emacs/.doom.d/config.org |
+***** daily-files; for [[id:d904ace6-a941-49fc-a6d4-7fe3797b0d8e][org-agenda]] candidates
+#+begin_src emacs-lisp
+(defun qz/agenda-daily-files-f ()
+  (seq-filter (lambda (s) (string-match qz/daily-title-regexp s))
+              org-agenda-files))
+;(qz/agenda-daily-files-f)
+#+end_src
+
+#+RESULTS:
+: qz/agenda-daily-files-f
+
+***** migrate automatic :func:
+#+begin_src emacs-lisp
+(defun qz/org-roam-migrate-jobs ()
+  (interactive )
+  (dolist (file (org-roam--list-all-files))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (message "%s visiting" file)
+      (qz/dispatch-hook)
+      (save-buffer))))
+;(qz/org-roam-migrate-jobs)
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-migrate-jobs
+**** auto actions :func:
+***** headine-add-tag
+#+begin_src emacs-lisp
+(defun qz/headline-add-tag (title)
+  "add tag to headline for `title'"
+  (save-excursion
+    (ignore-errors
+      (org-back-to-heading)
+      (org-set-tags
+       (seq-uniq
+        (cons
+         (qz/title-to-tag title)
+         (org-get-tags nil t)))))))
+
+#+end_src
+
+#+RESULTS:
+
+***** TODO ensure-tag
+- check if this needs to manipulate the point
+#+begin_src emacs-lisp
+(defun qz/ensure-tag (tagstring tag)
+  "Apply `org-roam-tag-add' for `tag' to node with existing tags
+`tagstring'
+
+HACK: using `re-search-backward' to jump back to applicable
+point (implicitly, `point-min' for file-level; :PROPERTIES: drawer for
+entry); covering 'inherited match'.
+
+this could be updated to jump back, but only 'landing' final on
+PROPERTIES with non-nil :ID:"
+  (progn (message "ensuring tag for %s" tag)
+         (org-roam-tag-add tag)))
+#+end_src
+
+#+RESULTS:
+: qz/ensure-tag
+***** agenda-files-update; for [[id:d904ace6-a941-49fc-a6d4-7fe3797b0d8e][org-agenda]] candidates
+write generated values to ~org-agenda-files~, for [[id:cb81cfd7-fb16-4965-af20-69129cf4fd97][project-files; for org-agenda
+candidates]]
+
+#+begin_src emacs-lisp
+(defun qz/agenda-files-update (&rest _)
+  "Update the value of `org-agenda-files' with relevant candidates"
+  (interactive)
+  (setq org-agenda-files
+        (seq-uniq (append qz/org-agenda-files (qz/project-files)))
+        qz/agenda-daily-files (qz/agenda-daily-files-f)))
+
+#+end_src
+
+#+RESULTS:
+: (qz/agenda-files-update)
+
+
+**** auto predicates
+***** TODO note-buffer-p
+expand this for all files in roam thing
+
+#+begin_src emacs-lisp
+(defun qz/note-buffer-p (&rest _)
+  "Return non-nil if the currently visited buffer is a note."
+  (interactive)
+  (and buffer-file-name
+       (string-prefix-p
+        (expand-file-name (file-name-as-directory org-roam-directory))
+        (file-name-directory buffer-file-name))))
+#+end_src
+
+#+RESULTS:
+: qz/note-buffer-p
+
+***** file-has-todo-p
+#+begin_src emacs-lisp
+(defun qz/file-has-todo-p (&rest _)
+  "Return non-nil if current buffer has any todo entry.
+
+TODO entries marked as done are ignored, meaning the this
+function returns nil if current buffer contains only completed
+tasks.
+
+(1) parse the buffer using org-element-parse-buffer. It
+  returns an abstract syntax tree of the current Org buffer. But
+  since we care only about headings, we ask it to return only them
+  by passing a GRANULARITY parameter - 'headline. This makes
+  things faster.
+
+(2) Then we extract information about TODO keyword from
+  headline AST, which contains a property we are interested in -
+  :todo-type, which returns the type of TODO keyword according to
+  org-todo-keywords - 'done, 'todo or nil (when keyword is not
+  present).
+
+(3) Now all we have to do is to check if the buffer list contains
+  at least one keyword with 'todo type. We could use seq=find on
+  the result of org-element-map, but it turns out that it provides
+  an optional first-match argument that can be used for our needs."
+  (org-with-wide-buffer
+   (org-element-map                          ; (2)
+       (org-element-parse-buffer 'headline) ; (1)
+       'headline
+     (lambda (h)
+       (eq (org-element-property :todo-type h)
+           'todo))
+     nil 'first-match)))                     ; (3)
+
+#+end_src
+
+#+RESULTS:
+: qz/file-has-todo-p
+***** has-tag-person-p
+#+begin_src emacs-lisp
+(defun qz/has-tag-person-p (&rest tags)
+  (message "has-tag-person-p %s" tags)
+  (seq-contains-p tags "person"))
+#+end_src
+
+#+RESULTS:
+: qz/has-tag-person-p
+
+***** has-link-p
+good for restricting to work stuff
+#+begin_src emacs-lisp
+(defun qz/has-link-p (a b)
+  "undirected connection exists, from `src' to `dst'"
+   (org-roam-db-query
+    [:select [source dest]
+     :from links
+     :where (or (and (= dest a) (= source b))
+                (and (= dest b) (= source a)))]))
+#+end_src
+
+#+RESULTS:
+: qz/has-link-p
+
+***** has-link-to-p
+#+begin_src emacs-lisp
+(defun qz/has-link-to-p (dst &optional src)
+  "directed connection exists, from `src' to `dst'"
+  (if-let ((nap (org-roam-node-at-point)))
+      (let ((src (or src (org-roam-node-id nap))))
+        (org-roam-db-query
+         [:select source
+          :from links
+          :where (and (= dest $r1)
+                      (= source $r2))]
+         src dst))))
+#+end_src
+
+#+RESULTS:
+: qz/has-link-to-p
+
+***** private-p
+might be better to use the file prop, but maybe we keep the message in to deem
+
+#+begin_src emacs-lisp
+(defun qz/private-p (&rest _)
+  (interactive)
+  (let ((title (qz/node-title)))
+    (if (not title)
+        (and (message "unable to evaluate privateness; no title") nil) ; return false (not private)
+      (or (string-match-p qz/daily-title-regexp title) ; daily
+          (string-match-p "meeting" title)                                    ; concerns a meeting
+          (qz/has-link-to-p (qz/title->roam-id "thinkproject"))))))           ; concerns work
+#+end_src
+
+#+RESULTS:
+: qz/private-p
+
+
+**** auto (predicate . action)
+thinking about using a macro for generating these lambdas & inverting control here
+
+#+begin_src emacs-lisp
+(setq qz/auto-buffer-action
+      '((qz/file-has-todo-p  . (lambda (tagstring) (qz/ensure-tag tagstring "project")))
+        (qz/private-p   . (lambda (tagstring) (qz/ensure-tag tagstring "private")))
+        (qz/has-tag-person-p . (lambda (tagstring)
+                                 (qz/ensure-tag tagstring (qz/title-to-tag (qz/node-title)))))))
+
+;;(car (car qz/auto-buffer-action))
+#+end_src
+
+#+RESULTS:
+| qz/file-has-todo-p  | lambda | (tagstring) | (qz/ensure-tag tagstring project)                           |
+| qz/private-p        | lambda | (tagstring) | (qz/ensure-tag tagstring private)                           |
+| qz/has-tag-person-p | lambda | (tagstring) | (qz/ensure-tag tagstring (qz/title-to-tag (qz/node-title))) |
+
+**** auto hooks, dispatch
+#+begin_src emacs-lisp
+(defun qz/dispatch-hook ()
+  "Dispatches actions in notes based on filetags given `qz/auto-tag-action'. Assumes current buffer"
+  (interactive)
+  (when (and (not (+org-capture-frame-p))
+             (not (org-roam-capture-p))
+             (qz/note-buffer-p))
+    (let ((tags (qz/node-tags)))
+      (mapc (lambda (tag+fun)
+              (when (funcall (car tag+fun) tags)
+                (funcall (cdr tag+fun) "")))
+            qz/auto-buffer-action))))
+
+(advice-add 'org-agenda :before #'qz/agenda-files-update)
+(add-hook 'find-file-hook   #'qz/dispatch-hook)
+(add-hook 'before-save-hook #'qz/dispatch-hook)
+#+end_src
+
+#+RESULTS:
+| qz/dispatch-hook |
+
+**** reset; clear automated tag addition filetags
+**** emacsql + attribute looping
+#+begin_src emacs-lisp
+(defun qz/sqlite-row-col (table)
+  (cl-loop
+   for tuple in (org-roam-db-query
+                 `[:select *
+                   :from ,table
+                   :limit 1])
+   collect (cl-loop for attr in tuple
+                    for heading in (org-roam-db-query
+                                    `[:select name
+                                      :from (funcall pragma_table_info ',table)
+                                      :order-by cid :asc])
+                    collect (cons (car heading) (or attr 'null)))))
+
+;(qz/pprint (qz/sqlite-row-col 'links))
+#+end_src
+#+RESULTS:
+: qz/sqlite-row-col
+
+*** testing
+#+begin_src emacs-lisp :tangle no
+(qz/pprint
+ (append qz/org-agenda-files (qz/project-files)))
+#+end_src
+
+#+RESULTS:
+:
+: ("/home/qzdl/life/roam/calendar-home.org" "/home/qzdl/life/roam/calendar-work.org"
+:  "/home/qzdl/life/roam/schedule.org"
+:  "/home/qzdl/life/roam/private-2020-08-03.org"
+:  "/home/qzdl/life/roam/private-2020-08-03.org")
+
+*** get list of private notes
+#+begin_src emacs-lisp
+(defun qz/org-roam-private-files ()
+  "Return a list of note files containing tag =private="
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select node_id
+     :from tags
+     :where (like tag (quote "%\"private\"%"))])))
+
+;(qz/pprint (qz/org-roam-private-files))
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-private-files
+
+
+*** TODO Run analysis :func:
+Run analysis from source file on org-roam DB
+- restrict graph (e.g. exclude sensitive information)
+*** headline parsing function
+#+begin_src emacs-lisp
+(defun qz/get-headline-path (&optional self? reverse? sepf)
+  (interactive)
+  (let* ((s (or sepf
+                (lambda (i)
+                  (if (< 0 i) " -> " ""))))
+         (c (org-get-outline-path self?)))
+    (insert "\n")
+    (cl-loop
+     for e in (if reverse? (reverse c) c)
+     for i = 0 then (1+ i)
+     do (insert (funcall s i) e))))
 
 (defun qz/headline-mm (i)
   (if (< 0 i)
       (concat "\n" (make-string i ?	)) ""))
 
-;; example, for https://tobloef.com/text2mindmap/ + [[file:../../../life/roam/20210521T102710Z-the_great_ideas_vol_ii.org][The Great Ideas, Vol II]]
 ;;(qz/get-headline-path t t 'qz/headline-mm)
 
 
@@ -1950,7 +2724,7 @@ given a subtree (at point)
 
 *** org-roam-server :init:vars:
 [[https://github.com/org-roam/org-roam-server][GitHub - org-roam/org-roam-server]]
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
 (use-package! org-roam-server
   :config
   (setq org-roam-server-host "127.0.0.1"
@@ -2125,292 +2899,12 @@ https://github.com/jkitchin/org-ref
 #+RESULTS:
 | ~/life/tex.bib |
 
-** [[file:../../../life/roam/20200612T111528Z-org_agenda.org][org-agenda]]
-*** init :init:
-- refiling targets
-  - read (book, article, paper, research)
-  - watch (film, youtube, etc)
-  - wip (any)
-
-- views
-  - overview
-    - scheduled, deadlines, time-based
-    - top of the list
-    - processing
-
-  - work (people)
-  - doing (book, paper, article, research, wip)
-
-#+begin_src emacs-lisp
-(use-package! org-agenda
-  :init
-  (map! "<f1>" #'qz/switch-to-agenda)
-  (setq org-agenda-block-separator nil
-        org-agenda-start-with-log-mode t
-        org-agenda-files (list qz/org-agenda-directory))
-  (defun qz/switch-to-agenda ()
-    (interactive)
-    (org-agenda nil "g"))
-  :config
-  (setq org-columns-default-format
-        "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
-  (setq org-agenda-custom-commands
-        `(
-          ("d" "Upcoming deadlines" agenda ""
-           ((org-agenda-time-grid nil)
-            (org-deadline-warning-days 365)        ;; [1]
-            (org-agenda-entry-types '(:deadline))  ;; [2]
-            ))
-          ("ww" "wip all" tags "wip")
-          ("wr" "wip reading" tags "wip+reading||wip+read|reading+next")
-          ("hh" tags "+habit")
-          ("P" "Printed agenda"
-           ((agenda "" ((org-agenda-span 7)                      ;; overview of appointments
-                        (org-agenda-start-on-weekday nil)         ;; calendar begins today
-                        (org-agenda-repeating-timestamp-show-all t)
-                        (org-agenda-entry-types '(:timestamp :sexp))))
-            (agenda "" ((org-agenda-span 1)                      ; daily agenda
-                        (org-deadline-warning-days 7)            ; 7 day advanced warning for deadlines
-                        (org-agenda-todo-keyword-format "[ ]")
-                        (org-agenda-scheduled-leaders '("" ""))
-                        (org-agenda-prefix-format "%t%s")))
-            (todo "TODO"                                          ;; todos sorted by context
-                  ((org-agenda-prefix-format "[ ] %T: ")
-                   (org-agenda-sorting-strategy '(tag-up priority-down))
-                   (org-agenda-todo-keyword-format "")
-                   (org-agenda-overriding-header "\nTasks by Context\n------------------\n"))))
-           ((org-agenda-with-colors nil)
-            (org-agenda-compact-blocks t)
-            (org-agenda-remove-tags t)
-            (ps-number-of-columns 2)
-            (ps-landscape-mode t))
-           ("~/agenda.ps"))
-          ;; other commands go here
-          )))
-
-                                        ;(defun qz/rg-get-files-with-tags ()
-                                        ;  "Returns a LIST of files that contain TAGS (currently, just `TODO')"
-                                        ;  (split-string
-                                        ;   (shell-command-to-string "rg TODO ~/life/roam/ -c | awk -F '[,:]' '{print $1}'")))
-                                        ;
-                                        ;(setq org-agenda-files
-                                        ;      (append org-agenda-files (qz/rg-get-files-with-tags)))
-#+end_src
-
-#+RESULTS:
-: t
-
-*** Vulpea's category agenda refinement :org:
-#+begin_src elisp
-(setq qz/org-agenda-prefix-length 20
-      org-agenda-prefix-format
-      '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
-        (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
-
-(defun vulpea-agenda-category (&optional len)
-  "Get category of item at point for agenda.
-
-Category is defined by one of the following items:
-- CATEGORY property
-- TITLE keyword
-- TITLE property
-- filename without directory and extension
-
-When LEN is a number, resulting string is padded right with
-spaces and then truncated with ... on the right if result is
-longer than LEN.
-
-Usage example:
-
-  (setq org-agenda-prefix-format
-        '((agenda . \" %(vulpea-agenda-category) %?-12t %12s\")))
-
-Refer to `org-agenda-prefix-format' for more information."
-  (let* ((file-name (when buffer-file-name
-                      (file-name-sans-extension
-                       (file-name-nondirectory buffer-file-name))))
-         (title (car-safe (org-roam--extract-titles-title)))
-         (category (org-get-category))
-         (result
-          (or (if (and
-                   title
-                   (string-equal category file-name))
-                  title
-                category)
-              "")))
-    (if (numberp len)
-        (s-truncate len (s-pad-right len " " result))
-      result)))
-#+end_src
-
-#+RESULTS:
-: vulpea-agenda-category
-*** agenda view, gtd :func:vars:
-#+begin_src emacs-lisp
-(defun qz/org-agenda-gtd ()
-  (interactive)
-  (org-agenda nil "g")
-  (org-agenda-goto-today))
-
-(setq org-agenda-custom-commands nil)
-(add-to-list
- 'org-agenda-custom-commands
- `("g" "GTD"
-   ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
-    (tags-todo "wip"
-               ((org-agenda-overriding-header "wip")))
-    (todo "TODO"
-          ((org-agenda-overriding-header "To Refile")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "inbox.org")))))
-    (todo "TODO"
-          ((org-agenda-overriding-header "Emails")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "emails.org")))))
-    (todo "TODO"
-          ((org-agenda-overriding-header "One-off Tasks")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "next.org"))))))))
-    ;;        (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))
-
-(qz/pprint org-agenda-custom-commands)
-#+end_src
-*** safer org defer whaever
-
-#+begin_src emacs-lisp
- (defun +org-defer-mode-in-agenda-buffers-h ()
-      "`org-agenda' opens temporary, incomplete org-mode buffers.
-I've disabled a lot of org-mode's startup processes for these invisible buffers
-to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
-the user tries to visit one of these buffers they'll see a gimped, half-broken
-org buffer. To avoid that, restart `org-mode' when they're switched to so they
-can grow up to be fully-fledged org-mode buffers."
-      (dolist (buffer org-agenda-new-buffers)
-        (when (buffer-live-p buffer)
-          (with-current-buffer buffer
-            (add-hook 'doom-switch-buffer-hook #'+org--restart-mode-h
-                      nil 'local)))))
-#+end_src
-
-#+RESULTS:
-: +org-defer-mode-in-agenda-buffers-h
-
-*** agenda view, shopping :func:vars:
-#+begin_src emacs-lisp
-(add-to-list
- 'org-agenda-custom-commands
- '("ms" "shopping" tags "buy"))
-#+end_src
-#+RESULTS:
-| ms | shopping           | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | buy         |                                                                                                    |          |              |
-| g  | GTD                | ((agenda  ((org-agenda-span 'day) (org-deadline-warning-days 60))) (tags-todo wip ((org-agenda-overriding-header wip))) (todo TODO ((org-agenda-overriding-header To Refile) (org-agenda-files '(~/life/roam/inbox.org)))) (todo TODO ((org-agenda-overriding-header Emails) (org-agenda-files '(~/life/roam/emails.org)))) (todo NEXT ((org-agenda-overriding-header Silo) (org-agenda-files '(~/life/roam/someday.org ~/life/roam/projects.org ~/life/roam/next.org)))) (todo TODO ((org-agenda-overriding-header Projects) (org-agenda-files '(~/life/roam/projects.org)))) (todo TODO ((org-agenda-overriding-header One-off Tasks) (org-agenda-files '(~/life/roam/next.org)) (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))) |             |                                                                                                    |          |              |
-| d  | Upcoming deadlines | agenda                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |             | ((org-agenda-time-grid nil) (org-deadline-warning-days 365) (org-agenda-entry-types '(:deadline))) |          |              |
-| ww | wip all            | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | wip         |                                                                                                    |          |              |
-| wr | wip reading        | tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | wip+reading |                                                                                                    | wip+read | reading+next |
-| hh | tags               | +habit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |             |                                                                                                    |          |              |
-| P  | Printed agenda     | ((agenda  ((org-agenda-span 7) (org-agenda-start-on-weekday nil) (org-agenda-repeating-timestamp-show-all t) (org-agenda-entry-types '(:timestamp :sexp)))) (agenda  ((org-agenda-span 1) (org-deadline-warning-days 7) (org-agenda-todo-keyword-format [ ]) (org-agenda-scheduled-leaders '( )) (org-agenda-prefix-format %t%s))) (todo TODO ((org-agenda-prefix-format [ ] %T: ) (org-agenda-sorting-strategy '(tag-up priority-down)) (org-agenda-todo-keyword-format ) (org-agenda-overriding-header                                                                                                                                                                                                                                                          |             |                                                                                                    |          |              |
-
-*** agenda view, TODO :func:
-#+begin_src emacs-lisp
-(defun qz/org-agenda-todo ()
-  (interactive)
-  (org-agenda nil "t"))
-#+end_src
-
-*** TODO agenda view, wip
-#+begin_src emacs-lisp 
-#+end_src
-
-*** TODO agenda view, calendar
-
-*** map :kbd:
-#+begin_src emacs-lisp
-(map! :map org-agenda-mode-map
-      "J" #'qz/org-agenda-process-inbox
-      "C-j" #'qz/org-agenda-process-item
-      "R" #'org-agenda-refile)
-#+end_src
-
-#+RESULTS:
-
-*** process agenda item :func:
-- Give the task some location context. Tagging the task with tags @work and
-  @home means I can work on this appropriately
-- Give the task a priority level, between A, B, and C. Here’s how I decide a
-  priority. It’s a pretty loose dichotomy, but works for me.
-  - A: Tasks that must get done regardless.
-  - B: Tasks that should get done, but only after Priority A tasks.
-  - C: Tasks that are good to get done, but not compulsory.
-- Give the task an effort estimate. This is in the format HH:MM, if the task is
-  estimated to take days, perhaps it needs to be broken down further.
-- Refile the item. Here my tasks get assigned to a selection from relevant
-  refile targets.
-#+begin_src emacs-lisp
-
-(setq org-agenda-bulk-custom-functions '((?b . #'qz/org-agenda-process-item)))
-
-(defun qz/org-process-inbox ()
-  "Called in org-agenda-mode, processes all inbox items."
-  (interactive)
-  (org-agenda-bulk-mark-regexp "inbox:")
-  (org-agenda-bulk-action ?b))
-
-
-(defun qz/org-agenda-process-item ()
-  "Process a single item in the org-agenda."
-  (interactive)
-  (org-with-wide-buffer
-   (org-agenda-set-tags)
-   (org-agenda-priority)
-   (org-agenda-refile nil nil t)))
-#+end_src
-
-#+RESULTS:
-: qz/org-agenda-process-item
-
-
-*** TODO processing bulk agenda :func:
-#+begin_src emacs-lisp
-
-#+end_src
-
-#+RESULTS:
-: qz/org-process-inbox
-
-
-*** tags
-#+begin_src emacs-lisp
-(setq org-tag-alist
-      '(("@errand" . ?e)
-        ("@work" . ?w)
-        ("@home" . ?h)
-        ("@blog" . ?B)
-        (:newline)
-        ("emacs" . ?E)
-        ("wip" . ?W)
-        ("CANCELLED" . ?c)
-        (:newline)
-        ("learning" . ?l)
-        ("research" . ?r)
-        (:newline)
-        (:newline)
-        ("book" . ?b)
-        ("article" . ?a)
-        ("paper" . ?p)
-        (:newline)
-        (:newline)
-        ("talk" . ?t)
-        ("film" . ?f)))
-#+end_src
-
-#+RESULTS:
-: ((@errand . 101) (@work . 119) (@home . 104) (@blog . 66) (:newline) (emacs . 69) (wip . 87) (CANCELLED . 99) (:newline) (learning . 108) (research . 114) (:newline) (:newline) (book . 98) (article . 97) (paper . 112) (:newline) (:newline) (talk . 116) (film . 102))
 ** org-super-agenda
 #+begin_src emacs-lisp
 (require 'org-super-agenda)
-
 #+end_src
 
-** TODO [[file:../../../life/roam/20200722T143300Z-org_drill.org][org-drill]]
+** TODO [[id:44f5ec09-570d-45d1-9cdd-446331e0c26e][org-drill]]
 ** ox (export)
 #+begin_src emacs-lisp
 (require 'ox-reveal)
@@ -2424,7 +2918,8 @@ can grow up to be fully-fledged org-mode buffers."
 (setq mathpix-screenshot-method "scrot -s %s")
 
 (map! "C-c o m" #'qz/mathpix-screenshot)
-;; add var capture
+
+;; add var capture, to save last result
 (defun qz/mathpix-screenshot ()
   "Capture screenshot and send result to Mathpix API."
   (interactive)
@@ -2453,7 +2948,7 @@ can grow up to be fully-fledged org-mode buffers."
 * TODO GNUs
 Following [[https://www.emacswiki.org/emacs/GnusTutorial][EmacsWiki: Gnus Tutorial]]
 
-* TODO Completion
+* TODO completion
 ** orderless
 ideally the ordering should account ~match, last-used, degree~
 ** TODO find out about company component delimiters for inputting spaces and stuff
@@ -2467,18 +2962,73 @@ ideally the ordering should account ~match, last-used, degree~
                                         ;      company-minimum-prefix-length 1)
                                         ;
                                         ; highlight matching parcnfts
-(defun just-one-face (fn &rest args)
-  (let ((orderless-match-faces [completions-common-part]))
-    (apply fn args)))
+;; (defun just-one-face (fn &rest args)
+;;   (let ((orderless-match-faces [completions-common-part]))
+;;     (apply fn args)))
 
-(advice-add 'company-capf--candidates :around #'just-one-face)
+;; (advice-add 'company-capf--candidates :around #'just-one-face)
+
+;; (use-package! orderless
+;;   :config
+;;   (after! ivy
+;;     (setq ivy-re-builders-alist '((t . orderless-ivy-re-builder)))))
+
 
 (use-package! orderless
+  :init
+  (setq completion-styles '(orderless)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles . (partial-completion)))))
   :config
   (after! ivy
-    (setq ivy-re-builders-alist '((t . orderless-ivy-re-builder)))))
+  (setq ivy-re-builders-alist '((t . orderless-ivy-re-builder)))))
+
+
+;;(prescient-persist-mode 1)
+;;(selectrum-prescient-mode 1)
+;;(setq selectrum-refine-candidates-function #'orderless-filter)
+;;(setq selectrum-highlight-candidates-function #'orderless-highlight-matches)
 #+end_src
 
 #+RESULTS:
 : t
 *
+
+* funny applications
+** ingredients
+Some code wrapping [[id:bddbea79-f454-47d5-8505-f397d19c353f][schollz/ingredients]], outputting some [[id:6baf4bff-d5fe-4ce0-a130-0464e49de67d][org-mode]] heading & body
+#+begin_src emacs-lisp
+(setq qz/buffer-mod-commands '(qz/get-ingredients-mod-buffer))
+
+(defun qz/get-ingredients-mod-buffer ()
+  "scrape the website found in ROAM_KEY for ingredients,
+outputting the result in the buffer at-point"
+  (interactive)
+  (let* ((c (current-buffer))
+         (pt (point))
+         (json-object-type 'hash-table)
+         (json-array-type 'list)
+         (json-key-type 'string)
+         (jsono (json-read-from-string
+                 (shell-command-to-string
+                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
+         (ingreds (gethash "ingredients" jsono)))
+    (insert "* Ingredients\n")
+    (insert
+     (apply
+      'concat
+      (mapcar (lambda (e)
+                (concat "- " (gethash "line" e)
+                        " [" (number-to-string (gethash "cups" (gethash "measure" e)))
+                        " cups]\n")) ingreds)))))
+
+(defun qz/read-property-mod-buffer ()
+ (interactive)
+ (let* ((command (completing-read "command: " qz/buffer-mod-commands))
+       (args (+org--get-property (completing-read "property: " org-default-properties))))
+   (setq current-prefix-arg '(4))
+   (shell-command (concat command " " args " &"))))
+#+end_src
+
+#+RESULTS:
+: qz/read-property-mod-buffer

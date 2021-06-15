@@ -88,10 +88,10 @@
 ;;; ORG ROAM
 (package! org-roam
   :recipe (:host github :repo "org-roam/org-roam" :branch "v2"))
-
-
-(package! org-roam-server)
-(package! org-roam-bibtex)
+(package! org-transclusion
+  :recipe (:host github :repo "nobiot/org-transclusion" :branch "dev/0.2.0"))
+;;(package! org-roam-server)
+;;(package! org-roam-bibtex)
 
 ;;; OTHER PDF & BIB
 (package! org-ref)

@@ -1,5 +1,30 @@
+(defun dice ()
+  (interactive)
+  (let ((n (1+ (random* 6))))
+    (message "%s" n)
+     n))
+
+(funcall '(message "a"))
+
+(funcall #`(message "a"))
+
+(defun dice ()
+  (1+ (random* 6)))
+
+(funcall 'list
+         :title "const value"
+         (when (= 1 (dice)) :shoo)
+         (when (= 1 (dice)) 'doo))
+
+(cl-loop for i from 1 to 6
+         for d = (dice)
+         for f = `(lambda () (list :title "const value"
+                              ,@(when (= 1 d) '(:id "yaaa"))))
+         collect (message "%s | %s | %s | %s |\n" i d f (funcall f)))
+
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
+(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
 
 (cond
   ((string-equal system-name "qzdl") (setq qz/font-default 32))
@@ -13,6 +38,9 @@
   (map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
+
+(map! "M-z" #'zap-up-to-char) ;; like dt<CHAR> in vim
+(map! "C-x C-z" #'zap-up-to-char)
 
 (map! "C-?" #'undo-redo)
 
@@ -37,7 +65,9 @@
 
 (map! "s-B" 'toggle-rot13-mode)
 
-(map! "s-i" #'qz/roam-insert)
+(map! "s-i" #'qz/roam-capture-todo)
+
+(map! "s-=" #'er/expand-region)
 
 (defun qz/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
@@ -207,6 +237,8 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 
 ;;(qz/org-noter--get-precise-info)
 
+(server-start)
+
 (setq doom-font (font-spec :family "monospace" :size qz/font-default))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
@@ -303,7 +335,7 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 (require 'exwm-randr)
 
 (defun qz/exwm-usbc-ultrawide ()
-   (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
   (add-hook
    'exwm-randr-screen-change-hook
    (lambda ()
@@ -322,8 +354,12 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
       "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
   (exwm-randr-enable))
 
-(qz/exwm-usbc-ultrawide)
+
+(cond
+  ((string-equal system-name "qzdl") nil)
+  (t (qz/exwm-usbc-ultrawide)))
 (exwm-enable)
+(exwm-init)
 
 (setq wallpaper-cycle-interval 900)
 
@@ -440,7 +476,7 @@ start-process-shell-command' with COMMAND"
 (add-hook 'exwm-update-title-hook
           (lambda () (exwm-workspace-rename-buffer exwm-title)))
 
-(defcustom qz/exwm-floating-window-classes '("keybase")
+(defcustom qz/exwm-floating-window-classes '("keybase" "mpv")
   "List of instance names of windows that should start in the floating mode.")
 
 (defun qz/exwm-float-window-on-specific-windows ()
@@ -468,8 +504,6 @@ start-process-shell-command' with COMMAND"
   (interactive)
   (exwm-goto "firefox" :class "Firefox"))
 
-(server-start)
-
 (map! :leader
       (:prefix-map ("n" . "notes")
        (:prefix-map ("d" . "by date")
@@ -477,7 +511,7 @@ start-process-shell-command' with COMMAND"
           :desc "Today"          "t" #'org-roam-dailies-today
           :desc "Tomorrow"       "m" #'org-roam-dailies-tomorrow
           :desc "Yesterday"      "y" #'org-roam-dailies-yesterday)
-       "f" #'org-roam-find-file
+       "C-c" #'org-capture
        "F" #'find-file-in-notes))
 
 (setq qz/psql-error-rollback 0)
@@ -514,37 +548,6 @@ start-process-shell-command' with COMMAND"
     (cl-font-lock-built-in-mode 1))
 
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
-
-(setq qz/buffer-mod-commands '(qz/get-ingredients-mod-buffer))
-
-(defun qz/get-ingredients-mod-buffer ()
-  "scrape the website found in ROAM_KEY for ingredients,
-outputting the result in the buffer at-point"
-  (interactive)
-  (let* ((c (current-buffer))
-         (pt (point))
-         (json-object-type 'hash-table)
-         (json-array-type 'list)
-         (json-key-type 'string)
-         (jsono (json-read-from-string
-                 (shell-command-to-string
-                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
-         (ingreds (gethash "ingredients" jsono)))
-    (insert "* Ingredients\n")
-    (insert
-     (apply
-      'concat
-      (mapcar (lambda (e)
-                (concat "- " (gethash "line" e)
-                        " [" (number-to-string (gethash "cups" (gethash "measure" e)))
-                        " cups]\n")) ingreds)))))
-
-(defun qz/read-property-mod-buffer ()
- (interactive)
- (let* ((command (completing-read "command: " qz/buffer-mod-commands))
-       (args (+org--get-property (completing-read "property: " org-default-properties))))
-   (setq current-prefix-arg '(4))
-   (shell-command (concat command " " args " &"))))
 
 (require 'em-tramp)
 (setq eshell-prefer-lisp-functions nil
@@ -692,6 +695,161 @@ v))
       org-noter-notes-search-path (list qz/notes-directory)
       org-roam-directory qz/notes-directory)
 
+(require 'org-fragtog)
+(add-hook 'org-mode-hook 'org-fragtog-mode)
+
+(require 'org-auto-tangle)
+(add-hook 'org-mode-hook 'org-auto-tangle-mode)
+
+(defvar qz/agenda-daily-files nil)
+
+(use-package! org-agenda
+  :init
+  (map! "<f1>" #'qz/switch-to-agenda)
+  (setq org-agenda-block-separator nil
+        org-agenda-start-with-log-mode t
+        org-agenda-files (list qz/org-agenda-directory))
+  (defun qz/switch-to-agenda ()
+    (interactive)
+    (org-agenda nil "g"))
+  :config
+  (setq org-columns-default-format
+        "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
+  (setq org-agenda-custom-commands
+        `(
+          ("d" "Upcoming deadlines" agenda ""
+           ((org-agenda-time-grid nil)
+            (org-deadline-warning-days 365)        ;; [1]
+            (org-agenda-entry-types '(:deadline))  ;; [2]
+            ))
+          ("ww" "wip all" tags "wip")
+          ("wr" "wip reading" tags "wip+reading||wip+read|reading+next")
+          ("hh" tags "+habit")
+          ("P" "Printed agenda"
+           ((agenda "" ((org-agenda-span 7)                      ;; overview of appointments
+                        (org-agenda-start-on-weekday nil)         ;; calendar begins today
+                        (org-agenda-repeating-timestamp-show-all t)
+                        (org-agenda-entry-types '(:timestamp :sexp))))
+            (agenda "" ((org-agenda-span 1)                      ; daily agenda
+                        (org-deadline-warning-days 7)            ; 7 day advanced warning for deadlines
+                        (org-agenda-todo-keyword-format "[ ]")
+                        (org-agenda-scheduled-leaders '("" ""))
+                        (org-agenda-prefix-format "%t%s")))
+            (todo "TODO"                                          ;; todos sorted by context
+                  ((org-agenda-prefix-format "[ ] %T: ")
+                   (org-agenda-sorting-strategy '(tag-up priority-down))
+                   (org-agenda-todo-keyword-format "")
+                   (org-agenda-overriding-header "\nTasks by Context\n------------------\n"))))
+           ((org-agenda-with-colors nil)
+            (org-agenda-compact-blocks t)
+            (org-agenda-remove-tags t)
+            (ps-number-of-columns 2)
+            (ps-landscape-mode t))
+           ("~/agenda.ps"))
+          ;; other commands go here
+          )))
+
+                                        ;(defun qz/rg-get-files-with-tags ()
+                                        ;  "Returns a LIST of files that contain TAGS (currently, just `TODO')"
+                                        ;  (split-string
+                                        ;   (shell-command-to-string "rg TODO ~/life/roam/ -c | awk -F '[,:]' '{print $1}'")))
+                                        ;
+                                        ;(setq org-agenda-files
+                                        ;      (append org-agenda-files (qz/rg-get-files-with-tags)))
+
+(defun qz/org-agenda-gtd ()
+  (interactive)
+  (org-agenda nil "g")
+  (goto-char (point-min))
+  (org-agenda-goto-today))
+
+(setq org-agenda-custom-commands nil)
+(add-to-list
+ 'org-agenda-custom-commands
+ `("g" "GTD"
+   ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
+    (tags-todo "wip"
+               ((org-agenda-overriding-header "wip")))
+    (todo "TODO"
+          ((org-agenda-overriding-header "to process")
+           (org-agenda-files '(,(concat qz/org-agenda-directory "inbox.org")))))
+    (todo "TODO"
+          ((org-agenda-overriding-header "daily inbox")
+           (org-agenda-files qz/agenda-daily-files)))
+    (todo "TODO"
+          ((org-agenda-overriding-header "emails")
+           (org-agenda-files '(,(concat qz/org-agenda-directory "emails.org")))))
+    (todo "TODO"
+          ((org-agenda-overriding-header "one-off Tasks")
+           (org-agenda-files '(,(concat qz/org-agenda-directory "next.org"))))))))
+    ;;        (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))
+
+(qz/pprint org-agenda-custom-commands)
+
+ (defun +org-defer-mode-in-agenda-buffers-h ()
+      "`org-agenda' opens temporary, incomplete org-mode buffers.
+I've disabled a lot of org-mode's startup processes for these invisible buffers
+to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
+the user tries to visit one of these buffers they'll see a gimped, half-broken
+org buffer. To avoid that, restart `org-mode' when they're switched to so they
+can grow up to be fully-fledged org-mode buffers."
+      (dolist (buffer org-agenda-new-buffers)
+        (when (buffer-live-p buffer)
+          (with-current-buffer buffer
+            (add-hook 'doom-switch-buffer-hook #'+org--restart-mode-h
+                      nil 'local)))))
+
+(add-to-list
+ 'org-agenda-custom-commands
+ '("ms" "shopping" tags "buy"))
+
+(defun qz/org-agenda-todo ()
+  (interactive)
+  (org-agenda nil "t"))
+
+(map! :map org-agenda-mode-map
+      "J" #'qz/org-agenda-process-inbox
+      "C-j" #'qz/org-agenda-process-item
+      "R" #'org-agenda-refile)
+
+(setq org-agenda-bulk-custom-functions '((?b . #'qz/org-agenda-process-item)))
+
+(defun qz/org-agenda-process-item ()
+  "Process a single item in the org-agenda."
+  (interactive)
+  (org-with-wide-buffer
+   (org-agenda-set-tags)
+   (org-agenda-priority)
+   (org-agenda-refile nil nil t)))
+
+(defun qz/org-process-inbox ()
+  "Called in org-agenda-mode, processes all inbox items."
+  (interactive)
+  (org-agenda-bulk-mark-regexp "inbox:")
+  (org-agenda-bulk-action ?b))
+
+(setq org-tag-alist
+      '(("@errand" . ?e)
+        ("@work" . ?w)
+        ("@home" . ?h)
+        ("@blog" . ?B)
+        (:newline)
+        ("emacs" . ?E)
+        ("wip" . ?W)
+        ("CANCELLED" . ?c)
+        (:newline)
+        ("learning" . ?l)
+        ("research" . ?r)
+        (:newline)
+        (:newline)
+        ("book" . ?b)
+        ("article" . ?a)
+        ("paper" . ?p)
+        (:newline)
+        (:newline)
+        ("talk" . ?t)
+        ("film" . ?f)))
+
 (setq org-refile-targets '(("next.org" :level . 0)
                            ("reading.org" :level . 0)
                            ("watching.org" :level . 0)
@@ -699,10 +857,46 @@ v))
                            ("inbox.org" :level . 0)
                            ("wip.org" :level . 1 )))
 
-(require 'org-habit)
+(use-package! org
+  :mode ("\\.org\\'" . org-mode)
+  :init
+  (map! :leader
+        :prefix "n"
+        "l" #'org-capture)
+  (map! :map org-mode-map
+        "M-n" #'outline-next-visible-heading
+        "M-p" #'outline-previous-visible-heading
+        "C->" #'org-do-demote
+        "C-<" #'org-do-promote)
+  (setq org-src-window-setup 'current-window
+        org-return-follows-link t
+        org-babel-load-languages '((emacs-lisp . t)
+                                   (jupyter . t)
+                                   (lisp . t)
+                                   (python . t)
+                                   (R . t))
+        org-ellipsis " ▼ "
+        org-confirm-babel-evaluate nil
+        org-use-speed-commands t
+        org-catch-invisible-edits 'show
+        org-preview-latex-image-directory "/tmp/ltximg/"
+        ;; ORG SRC BLOCKS {C-c C-,}
+        org-structure-template-alist '(("q" . "quote")
+                                       ("d" . "definition")
+                                       ("s" . "src")
+                                       ("sb" . "src bash")
+                                       ("sp" . "src psql")
+                                       ("sr" . "src R")
+                                       ("ss" . "src ")
+                                       ("jp" . "src jupyter-python")
+                                       ("jr" . "src jupyter-R")
+                                       ("el" . "src emacs-lisp")))
+  (with-eval-after-load 'flycheck
+    (flycheck-add-mode 'proselint 'org-mode)))
 
-(require 'org-fragtog)
 (add-hook 'org-mode-hook 'org-fragtog-mode)
+
+(require 'org-habit)
 
 (require 'org-auto-tangle)
 (add-hook 'org-mode-hook 'org-auto-tangle-mode)
@@ -722,29 +916,51 @@ v))
 
 (setq qz/capture-title-timestamp "%(qz/utc-timestamp)-${slug}")
 
+;; ORG ROAM BREAKS COMPAT WITH ORG CATURE BY REQUIRING '.ORG' IN FILE
+
 (setq org-capture-templates
       `(("i" "inbox" entry
          (file ,(concat qz/org-agenda-directory "inbox.org"))
          "* TODO %? \nCREATED: %u\nFROM: %a")
-        ;; capture link to live `org-roam' thing
-        ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
-         (function qz/current-roam-link)
-         :immediate-finish t)
-        ("n" "now, as in NOW" entry (file ,(concat qz/org-agenda-directory "wip.org"))
-         "* TODO [#A1] %? \nDEADLINE: %T\nCREATED: %u")
-        ;; fire directly into inbox
-        ("c" "org-protocol-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
-         "* TODO [[%:link][%:description]]\n\n %i"
-         :immediate-finish t)
         ;; spanish language capturing
         ("v" "vocab; spanish" entry
          (file+headline ,(concat qz/notes-directory "spanish_language.org") "vocab, phrases")
          "** \"%?\" :es:\nFROM: %a\n\n*** :en:\n")
+        ;; capture link to live `org-roam' thing
+        ("n" "now, as in NOW" entry (file ,(concat qz/org-agenda-directory "wip.org"))
+         "* TODO [#A1] %? \nDEADLINE: %T\nCREATED: %u")
+        ;; fire directly into inbox
+        ("c" "org-protocol-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
+         "* TODO [[%:link][%:description]]\nCREATED: %u\n\n#+begin_quote\n\n%i\n\n#+end_quote"
+         :immediate-finish t)
+        ;; push last captured item into inbox
+        ("l" "last-capture" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
+         (function qz/inbox-last-captured)
+         :immediate-finish t)
+        ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
+         (function qz/current-roam-link)
+         :immediate-finish t)
         ("w" "Weekly Review" entry
          (file+olp+datetree ,(concat qz/org-agenda-directory "reviews.org"))
-         (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))
-        ("r" "Reading" todo ""
-         ((org-agenda-files '(,(concat qz/org-agenda-directory "reading.org")))))))
+         (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))))
+
+(defun qz/inbox-last-captured (&optional buffer)
+  (interactive)
+  (when-let ((b (or (and org-capture-last-stored-marker
+                         (marker-buffer org-capture-last-stored-marker))
+                    buffer)))
+    (with-current-buffer b
+      (org-goto-marker-or-bmk org-capture-last-stored-marker)
+      (concat "* [[id:" (org-roam-id-at-point)  "][" (qz/node-title) "]]"))))
+
+(defun qz/capture-last-captured ()
+  (interactive)
+  (when-let ((b (and org-capture-last-stored-marker
+                     (marker-buffer org-capture-last-stored-marker))))
+    (if (with-current-buffer b
+          (not (string-equal "inbox" (qz/node-title))))
+        (org-capture nil "l")
+      (message "qz/capture-last-captured: skipping; last capture was inbox"))))
 
 (advice-add
  #'org-capture :around
@@ -753,6 +969,11 @@ v))
      (apply fun args))))
 
 ;; helper capture function for `org-roam' for `agenda-mode'
+(defun qz/current-roam-link ()
+  (interactive)
+  "Get link to org-roam file with title"
+  (concat "* TODO [[" (buffer-file-name) "][" (qz/node-title) "]]"))
+
 (defun qz/org-inbox-capture ()
   (interactive)
   "Capture a task in agenda mode."
@@ -763,16 +984,18 @@ v))
   "Capture a task in agenda mode."
   (org-capture nil "I"))
 
-(defun qz/org-roam-capture-todo ()
+(defun qz/roam-capture-todo ()
   (interactive)
   "Capture a task in agenda mode."
-  (org-roam-capture nil "_"))
+  (org-roam-capture- :goto t
+                     :keys "n"
+                     :node (org-roam-node-create :title (doom-thing-at-point-or-region))
+                     :props '(:immediate-finish t :jump-to-captured nil))
+  (qz/capture-last-captured))
 
-(defun qz/current-roam-link ()
-  (interactive)
-  "Get link to org-roam file with title"
-  (concat "* TODO [[" (qz/contract-file-name (buffer-file-name (buffer-base-buffer))) "]["
-          (car (org-roam--extract-titles)) "]]"))
+(defun qz/org-roam-has-link-to-p (source dest)
+  "TODO implement; returns t/nil if source links to dest"
+  nil)
 
 (setq org-gcal-fetch-file-alist
       `((,qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
@@ -781,312 +1004,6 @@ v))
 (qz/pprint org-gcal-fetch-file-alist)
 
 (setq org-gcal-recurring-events-mode 'nested)
-
-(use-package! org-roam
-  :commands (org-roam-insert org-roam-find-file org-roam-switch-to-buffer org-roam)
-  :hook
-  (after-init . org-roam-mode)
-  :custom-face
-  (org-roam-link ((t (:inherit org-link :foreground "#df85ff"))))
-  :init
-  (map! :leader
-        :prefix "n"
-        :desc "org-roam" "l" #'org-roam
-        :desc "org-roam-switch-to-buffer" "b" #'org-roam-switch-to-buffer
-        :desc "org-roam-find-file" "f" #'org-roam-find-file
-        :desc "org-roam-insert" "i" #'qz/roam-insert
-        :desc "org-agenda-todo" "t" #'qz/org-agenda-todo
-        :desc "org-roam-dailies-today" "J" #'org-roam-dailies-today
-        :desc "org-roam-dailies-capture-today" "j" #'org-roam-dailies-capture-today
-        :desc "qz/org-roam-capture-current" "C" #'qz/org-roam-capture-current
-        :desc "qz/org-roam-capture-current" "C-c" #'qz/org-roam-capture-current
-        :desc "qz/org-gcal--current" "C-c" #'qz/org-roam-capture-current
-        :desc "org-roam-capture" "c" #'org-roam-capture)
-  (setq org-roam-directory qz/notes-directory
-        org-roam-dailies-directory qz/notes-directory
-        org-roam-db-location (concat org-roam-directory "org-roam.db")
-        org-roam-db-update-idle-seconds 0
-        org-roam-graph-executable "dot"
-        org-roam-graph-extra-config '(("overlap" . "false"))
-        org-roam-graph-exclude-matcher nil)
-
-  :config
-  (require 'org-roam-protocol))
-
-(org-roam-mode +1)
-
-(setq qz/org-roam-capture-head
-      "#+setupfile:./hugo_setup.org
-#+hugo_section: zettels
-#+hugo_slug: ${slug}
-#+title: ${title}\n")
-
-(setq org-roam-capture-templates
-      `(("d" "default" plain (function org-roam--capture-get-point)
-         "%?"
-         :file-name ,qz/capture-title-timestamp
-         :head ,qz/org-roam-capture-head
-         :unnarrowed t)
-        ("_" "pass-though-todo" plain (function org-roam--capture-get-point)
-         "%?"
-         :file-name ,qz/capture-title-timestamp
-         :head ,qz/org-roam-capture-head
-         :immediate-finish t)
-        ("p" "private" plain (function org-roam-capture--get-point)
-         "%?"
-         :file-name ,(concat "private-" qz/capture-title-timestamp)
-         :head ,qz/org-roam-capture-head
-         :unnarrowed t)))
-
-(setq org-roam-capture-ref-templates
-      `(("r" " ref" plain (function org-roam-capture--get-point)
-         "%?"
-         :file-name ,qz/capture-title-timestamp
-         :head "#+setupfile:./hugo_setup.org
-#+roam_key: ${ref}
-#+hugo_slug: ${slug}
-#+title: ${title}
-#+source: ${ref}"
-         :unnarrowed t)))
-
-(setq org-roam-dailies-capture-templates
-      `(("d" "default" entry (function org-roam-capture--get-point)
-         "* %<%H:%m> %?\nCREATED: %u"
-         :file-name  "private-%<%Y-%m-%d>"
-         :head "#+title: <%<%Y-%m-%d>>\n#+roam_tags: daily private\n\n")))
-
-(defun qz/org-roam-migrate-jobs ()
-  (interactive )
-  (dolist (file (org-roam--list-all-files))
-                                        ;(message "processing %s" file)
-    (with-current-buffer (or (find-buffer-visiting file)
-                             (find-file-noselect file))
-      ;; TODO = project
-      (vulpea-project-update-tag)
-
-      (save-buffer))))
-
-(defun vulpea-ensure-filetag ()
-  "Add respective file tag if it's missing in the current note."
-  (interactive)
-  (let ((tags (org-roam--extract-tags-prop
-               (buffer-file-name
-                (buffer-base-buffer)))))
-    (when (and (seq-contains-p tags "person")
-               (null (org-roam--extract-global-props-keyword
-                      '("filetags"))))
-      (let ((tag (qz/title-to-tag (+org-get-global-property "title"))))
-        (progn (message tag)
-               (qz/org-roam-add-tag tag t))))))
-
-(defun vulpea-tags-add ()
-  "Add a tag to current note."
-  (interactive)
-  (when (org-roam-tag-add)
-    (vulpea-ensure-filetag)))
-
-(defun qz/roam-dispatch-person (title)
-  "add tag to headline for PERSON"
-  (save-excursion
-    (ignore-errors
-      (org-back-to-heading)
-      (org-set-tags
-       (seq-uniq
-        (cons
-         (vulpea--title-to-tag title)
-         (org-get-tags nil t)))))))
-
-(setq qz/roam-tag-dispatch
-      '(("person" . qz/roam-dispatch-person)))
-
-(defun qz/roam-insert ()
-  "Insert a link to the note."
-  (interactive)
-  (when-let*
-      ((res (org-roam-insert))
-       (path (plist-get res :path))
-       (title (plist-get res :title))
-       (roam-tags (org-roam-with-file path nil
-                    (org-roam--extract-tags path))))
-    (when (seq-contains-p roam-tags "person")
-      (qz/roam-dispatch-person title)
-      (save-buffer res))))
-
-(defun vulpea-project-p ()
-  "Return non-nil if current buffer has any todo entry.
-
-TODO entries marked as done are ignored, meaning the this
-function returns nil if current buffer contains only completed
-tasks.
-
-(1) parse the buffer using org-element-parse-buffer. It
-  returns an abstract syntax tree of the current Org buffer. But
-  since we care only about headings, we ask it to return only them
-  by passing a GRANULARITY parameter - 'headline. This makes
-  things faster.
-
-(2) Then we extract information about TODO keyword from
-  headline AST, which contains a property we are interested in -
-  :todo-type, which returns the type of TODO keyword according to
-  org-todo-keywords - 'done, 'todo or nil (when keyword is not
-  present).
-
-(3) Now all we have to do is to check if the buffer list contains
-  at least one keyword with 'todo type. We could use seq=find on
-  the result of org-element-map, but it turns out that it provides
-  an optional first-match argument that can be used for our needs."
-  (org-element-map                          ; (2)
-      (org-element-parse-buffer 'headline) ; (1)
-      'headline
-    (lambda (h)
-      (eq (org-element-property :todo-type h)
-          'todo))
-    nil 'first-match))                     ; (3)
-
-(defun vulpea-project-update-tag ()
-  "Update PROJECT tag in the current buffer."
-  (when (and (not (active-minibuffer-window))
-             (vulpea-buffer-p))
-    (let* ((file (buffer-file-name (buffer-base-buffer)))
-           (all-tags (org-roam--extract-tags file))
-           (prop-tags (org-roam--extract-tags-prop file))
-           (tags prop-tags))
-      (if (vulpea-project-p)
-          (setq tags (cons "project" tags))
-        (setq tags (remove "project" tags)))
-      (if (and (vulpea-buffer-p) (qz/private-p))
-          (setq tags (cons "private" tags))
-        (setq tags (remove "private" tags)))
-      (unless (eq prop-tags tags)
-        (org-roam--set-global-prop
-         "ROAM_TAGS"
-         (combine-and-quote-strings (seq-uniq tags)))))))
-
-(defun vulpea-buffer-p ()
-  "Return non-nil if the currently visited buffer is a note."
-  (interactive)
-  (and buffer-file-name
-       (string-prefix-p
-        (expand-file-name (file-name-as-directory org-roam-directory))
-        (file-name-directory buffer-file-name))))
-
-(defun vulpea-project-files ()
-  "Return a list of note files containing Project tag."
-  (seq-map
-   #'car
-   (org-roam-db-query
-    [:select file
-     :from tags
-     :where (like tags (quote "%\"project\"%"))])))
-
-(defun vulpea-agenda-files-update (&rest _)
-  "Update the value of `org-agenda-files'."
-  (setq org-agenda-files
-        (seq-uniq
-         (append qz/org-agenda-files (vulpea-project-files)))))
-
-
-
-(advice-add 'org-agenda :before #'vulpea-agenda-files-update)
-
-(qz/pprint    (append qz/org-agenda-files (vulpea-project-files)))
-
-(add-hook 'find-file-hook #'vulpea-project-update-tag)
-(add-hook 'before-save-hook #'vulpea-project-update-tag)
-(add-hook 'before-save-hook #'vulpea-ensure-filetag)
-
-(defun qz/title-to-tag (title)
-  "Convert TITLE to tag."
-  (if (equal "@" (subseq title 0 1))
-      title
-    (concat "@" (s-replace " " "" title))))
-
-(defun qz/private-p ()
-  (interactive)
-
-  (let ((title (+org--get-property "title")))
-                                        ;(message (concat "...checking privateness of " title))
-    (if (not title)
-        (message "WARNING: unable to evaluate privateness; file [" file "] has no title")
-      (or (string-match-p ".?[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}.?" title)
-          (string-match-p "meeting" title)
-          (qz/org-roam-has-link-to-p title "thinkproject")))))
-
-(defun qz/should-be-private-p (file)
-  (with-current-buffer (or (find-buffer-visiting file)
-                           (find-file-noselect file))
-    (qz/private-p)))
-
-(defun qz/is-file-private ()
-  (interactive)
-  (message (concat "should " (f-this-file) " be private..? "
-                   (or (and (qz/should-be-private-p (f-this-file)) "yes") "no"))))
-
-(defun qz/org-roam-private-files ()
-  "Return a list of note files containing tag =private="
-  (seq-map
-   #'car
-   (org-roam-db-query
-    [:select file
-     :from tags
-     :where (like tags (quote "%\"private\"%"))])))
-
-;(qz/pprint (qz/org-roam-private-files))
-
-(defun qz/has-link-to (src dst)
-  (org-roam-db-query
-   [:select source
-    :from links
-    :where (and (= dest $r1)
-                (= source $r2))]
-   src dest))
-
-(defun qz/has-link (a b)
-  (seq-map
-   #'car
-   (org-roam-db-query
-    [:select [source dest]
-     :from links
-     :where (or (and (= dest a) (= source b))
-                (and (= dest b) (= source a)))])))
-
-                                        ;(org-roam-db-query
-                                        ; [:select *
-                                        ;  :from links
-                                        ;  :where (and (= dest $r1)
-                                        ;              (= source $r2))]
-                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"
-                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org")
-                                        ;
-                                        ;(qz/has-link-to
-                                        ; "/home/qzdl/life/roam/20210311T113202Z-chris_heimann.org"
-                                        ; "/home/qzdl/life/roam/20200401201707-thinkproject.org"))
-
-(org-roam-db-query
-    [:select *
-     :from links
-     :limit 10])
-
-(defun qz/org-roam-make-private ()
-  (interactive)
-  (qz/org-roam-add-tag "private" t))
-
-(defun qz/org-roam-has-link-to-p (source dest)
-  "TODO implement; returns t/nil if source links to dest"
-  nil)
-
-(defun qz/org-roam-add-global-prop (prop val)
-  (org-roam--set-global-prop
-   prop
-   (combine-and-quote-strings
-    (seq-uniq
-     (cons val (split-string-and-unquote
-                (or (+org--get-property prop) "")))))))
-
-(defun qz/org-roam-add-tag (tag &optional filetag_too)
-  (qz/org-roam-add-global-prop "roam_tags" tag)
-  (when filetag_too
-    (qz/org-roam-add-global-prop "filetags" tag)))
 
 (defun qz/format-link-from-title (title)
   (let ((file (org-roam-link--get-file-from-title title)))
@@ -1129,11 +1046,430 @@ tasks.
      for i = 0 then (1+ i)
      do (insert (funcall s i) e))))
 
+(use-package! org-roam
+  :after org
+  :commands
+  (org-roam-buffer
+   org-roam-setup
+   org-roam-capture
+   org-roam-node-find)
+  :init
+  (map! :leader
+        :prefix "n"
+        :desc "org-roam" "l" #'org-roam-buffer-toggle
+        :desc "org-roam" "j" #'org-roam-dailies-capture-today
+        :desc "org-roam" "J" #'org-roam-dailies-find-today
+        :desc "org-roam-node-insert" "i" #'org-roam-node-insert
+        :desc "org-roam-node-find" "f" #'org-roam-node-find)
+  :config
+  (setq org-roam-mode-sections
+       (list #'org-roam-backlinks-insert-section
+             #'org-roam-reflinks-insert-section
+             #'org-roam-unlinked-references-insert-section))
+  (org-roam-setup))
+(use-package! org-roam-protocol
+  :after org-protocol)
+
+(defun my/replace-file-with-id-link ()
+  "Replaces file links with ID links where possible in current buffer."
+  (interactive)
+  (let (path desc)
+    (org-with-point-at 1
+      (while (re-search-forward org-link-bracket-re nil t)
+        (setq desc (match-string 2))
+        (when-let ((link (save-match-data (org-element-lineage (org-element-context) '(link) t))))
+          (when (string-equal "file" (org-element-property :type link))
+            (setq path (expand-file-name (org-element-property :path link)))
+            (replace-match "")
+            (insert (org-roam-format-link path desc))))))))
+
+(defun qz/or-migrate-v2 ()
+  (dolist (file (org-roam--list-all-files))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (org-with-point-at 1
+        (org-id-get-create))
+      (save-buffer)))
+  (org-roam-db-sync)
+  (dolist (file (org-roam--list-all-files))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (my/replace-file-with-id-link)
+      (save-buffer)))
+  (org-roam-db-sync))
+
+;;(qz/or-migrate-v2)
+
+(defun qz/or-migrate-filetags ()
+  (dolist (file (seq-uniq
+                 (append
+                  (split-string-and-unquote
+                   (shell-command-to-string "rg 'roam_tags' ~/life/roam -il"))
+                  (split-string-and-unquote
+                   (shell-command-to-string "rg 'filetags' ~/life/roam -il")))))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (org-with-point-at (point-min)
+        (mapc (lambda (s)  (org-roam-tag-add s))
+              (qz/get-old-tags)))
+      (save-buffer)
+      (kill-this-buffer))
+    (shell-command-to-string "~/.local/bin/wrg '^\\#\\+roam_tags:.*' ~/life/roam/ -i --replace ''")))
+
+(defun qz/get-old-tags ()
+  (split-string-and-unquote
+    (concat (+org-get-global-property "roam_tags")
+            " "
+            (+org-get-global-property "filetags"))))
+
+;;(qz/or-migrate-filetags)
+
+;;(length
+;; (seq-uniq
+;;  (append
+;;   (split-string-and-unquote
+;;    (shell-command-to-string "rg '^\\#\\+roam_tags: \\w' ~/life/roam/ -il"))
+;;   (split-string-and-unquote
+;;    (shell-command-to-string "rg 'filetags' ~/life/roam -l")))))
+
+(setq qz/org-roam-capture-head "#+title: ${title}\n")
+(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
+
+(setq org-roam-capture-templates
+      `(("d" "default" plain "%?"
+         :if-new (file+head ,qz/capture-title-timestamp-roam
+                            ,qz/org-roam-capture-head)
+         :unnarrowed t)
+        ("n" "empty" plain "%?"
+         :if-new (file+head ,qz/capture-title-timestamp-roam
+                            ,qz/org-roam-capture-head)
+         :immediate-finish t)
+        ("p" "private" plain "%?"
+         (file+head ,(concat "private-" qz/capture-title-timestamp)
+                    ,qz/org-roam-capture-head)
+         :unnarrowed t)))
+
+(setq org-roam-capture-ref-templates
+      `(("r" "ref" plain
+         "%?"
+         :if-new (file+head ,qz/capture-title-timestamp-roam
+                            "#+title: ${title}\n")
+         :unnarrowed t)))
+
+(setq org-roam-dailies-capture-templates
+      `(("d" "default" entry
+         "* %<%H:%m> %?\nCREATED: %u"
+         :if-new (file+head "private-%<%Y-%m-%d>.org"
+                            "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
+
+(defun qz/point->roam-id (&optional pos)
+  (org-roam-node-id (org-roam-node-at-point)))
+
+(setq qz/daily-title-regexp ".?[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}.?")
+
+(defun qz/title->roam-id (title)
+  (org-roam-node-id (org-roam-node-from-title-or-alias title)))
+
+(defun qz/node-title ()
+  (save-excursion
+    (goto-char (org-roam-node-point (org-roam-node-at-point 'assert)))
+    (if (= (org-outline-level) 0)
+        (cadr (car (org-collect-keywords '("title"))))
+      (substring-no-properties (org-get-heading t t t)))))
+
+;(qz/node-title)
+
+(defun qz/node-tags ()
+  (save-excursion
+    (goto-char (org-roam-node-point (org-roam-node-at-point 'assert)))
+    (if (= (org-outline-level) 0)
+        (split-string-and-unquote (or (cadr (car (org-collect-keywords '("filetags")))) ""))
+      (org-get-tags))))
+
+;(qz/node-tags)
+
+(map! "s-i" #'qz/roam-immediate-insert)
+
+(defun qz/roam-immediate-insert ()
+  (interactive)
+  (qz/org-roam-node-insert nil t))
+
+(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
+  "Find an Org-roam file, and insert a relative org link to it at point.
+Return selected file if it exists.
+If LOWERCASE is non-nil, downcase the link description.
+FILTER-FN is the name of a function to apply on the candidates
+which takes as its argument an alist of path-completions."
+  (interactive)
+  (unwind-protect
+      ;; Group functions together to avoid inconsistent state on quit
+      (atomic-change-group
+        (let* (region-text
+               beg end
+               (_ (when (region-active-p)
+                    (setq beg (set-marker (make-marker) (region-beginning)))
+                    (setq end (set-marker (make-marker) (region-end)))))
+               (region-text (org-link-display-format
+                             (substring-no-properties (doom-thing-at-point-or-region))))
+               (node (if pass-thru
+                         (org-roam-node-create :title region-text)
+                       (org-roam-node-read region-text filter-fn)))
+               (description (or (and node region-text (org-roam-node-title node))
+                                region-text)))
+          (if (org-roam-node-id node)
+              (progn
+                (when region-text
+                  (delete-region beg end)
+                  (set-marker beg nil)
+                  (set-marker end nil))
+                (insert (org-link-make-string
+                         (concat "id:" (org-roam-node-id node))
+                         description)))
+            (funcall
+              `(lambda ()
+                 (org-roam-capture-
+                  :node node
+                  ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
+                  :props (append
+                          (when (and beg end)
+                            (list :region (cons beg end)))
+                          (list :insert-at (point-marker)
+                                :link-description description
+                                :finalize 'insert-link))))))))
+    (deactivate-mark)))
+
+(defun qz/title-to-tag (title)
+  "Convert TITLE to tag."
+  (if (equal "@" (subseq title 0 1))
+      title
+    (concat "@" (s-replace " " "" title))))
+
+(defun qz/hard-refresh-org-tags-in-buffer ()
+  (interactive)
+  (setq org-file-tags nil)      ; blast the cache
+  (org-set-regexps-and-options) ; regen property detection regexp
+  (org-get-tags))               ; write to cache
+
+(defun qz/roam-get-node-by-tag (tag)
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select :distinct file
+     :from tags
+     :inner :join nodes
+     :on (= tags:node_id nodes:id)
+     :where (= tags:tag tag)])))
+
+(defun qz/should-be-private-p (file)
+  (with-current-buffer (or (find-buffer-visiting file)
+                           (find-file-noselect file))
+    (qz/private-p)))
+
+(defun qz/is-file-private ()
+  (interactive)
+  (message (concat "should " (f-this-file) " be private..? "
+                   (or (and (qz/should-be-private-p (f-this-file)) "yes") "no"))))
+
+(defun qz/project-files ()
+  "Return a list of note files containing Project tag."
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select :distinct file
+     :from tags
+     :inner :join nodes
+     :on (= tags:node_id nodes:id)
+     :where (= tags:tag "project")])))
+
+
+(qz/hard-refresh-org-tags-in-buffer)
+(org-roam-db-sync)
+(qz/project-files)
+
+(defun qz/agenda-daily-files-f ()
+  (seq-filter (lambda (s) (string-match qz/daily-title-regexp s))
+              org-agenda-files))
+;(qz/agenda-daily-files-f)
+
+(defun qz/org-roam-migrate-jobs ()
+  (interactive )
+  (dolist (file (org-roam--list-all-files))
+    (with-current-buffer (or (find-buffer-visiting file)
+                             (find-file-noselect file))
+      (message "%s visiting" file)
+      (qz/dispatch-hook)
+      (save-buffer))))
+;(qz/org-roam-migrate-jobs)
+
+(defun qz/headline-add-tag (title)
+  "add tag to headline for `title'"
+  (save-excursion
+    (ignore-errors
+      (org-back-to-heading)
+      (org-set-tags
+       (seq-uniq
+        (cons
+         (qz/title-to-tag title)
+         (org-get-tags nil t)))))))
+
+(defun qz/ensure-tag (tagstring tag)
+  "Apply `org-roam-tag-add' for `tag' to node with existing tags
+`tagstring'
+
+HACK: using `re-search-backward' to jump back to applicable
+point (implicitly, `point-min' for file-level; :PROPERTIES: drawer for
+entry); covering 'inherited match'.
+
+this could be updated to jump back, but only 'landing' final on
+PROPERTIES with non-nil :ID:"
+  (progn (message "ensuring tag for %s" tag)
+         (org-roam-tag-add tag)))
+
+(defun qz/agenda-files-update (&rest _)
+  "Update the value of `org-agenda-files' with relevant candidates"
+  (interactive)
+  (setq org-agenda-files
+        (seq-uniq (append qz/org-agenda-files (qz/project-files)))
+        qz/agenda-daily-files (qz/agenda-daily-files-f)))
+
+(defun qz/note-buffer-p (&rest _)
+  "Return non-nil if the currently visited buffer is a note."
+  (interactive)
+  (and buffer-file-name
+       (string-prefix-p
+        (expand-file-name (file-name-as-directory org-roam-directory))
+        (file-name-directory buffer-file-name))))
+
+(defun qz/file-has-todo-p (&rest _)
+  "Return non-nil if current buffer has any todo entry.
+
+TODO entries marked as done are ignored, meaning the this
+function returns nil if current buffer contains only completed
+tasks.
+
+(1) parse the buffer using org-element-parse-buffer. It
+  returns an abstract syntax tree of the current Org buffer. But
+  since we care only about headings, we ask it to return only them
+  by passing a GRANULARITY parameter - 'headline. This makes
+  things faster.
+
+(2) Then we extract information about TODO keyword from
+  headline AST, which contains a property we are interested in -
+  :todo-type, which returns the type of TODO keyword according to
+  org-todo-keywords - 'done, 'todo or nil (when keyword is not
+  present).
+
+(3) Now all we have to do is to check if the buffer list contains
+  at least one keyword with 'todo type. We could use seq=find on
+  the result of org-element-map, but it turns out that it provides
+  an optional first-match argument that can be used for our needs."
+  (org-with-wide-buffer
+   (org-element-map                          ; (2)
+       (org-element-parse-buffer 'headline) ; (1)
+       'headline
+     (lambda (h)
+       (eq (org-element-property :todo-type h)
+           'todo))
+     nil 'first-match)))                     ; (3)
+
+(defun qz/has-tag-person-p (&rest tags)
+  (message "has-tag-person-p %s" tags)
+  (seq-contains-p tags "person"))
+
+(defun qz/has-link-p (a b)
+  "undirected connection exists, from `src' to `dst'"
+   (org-roam-db-query
+    [:select [source dest]
+     :from links
+     :where (or (and (= dest a) (= source b))
+                (and (= dest b) (= source a)))]))
+
+(defun qz/has-link-to-p (dst &optional src)
+  "directed connection exists, from `src' to `dst'"
+  (if-let ((nap (org-roam-node-at-point)))
+      (let ((src (or src (org-roam-node-id nap))))
+        (org-roam-db-query
+         [:select source
+          :from links
+          :where (and (= dest $r1)
+                      (= source $r2))]
+         src dst))))
+
+(defun qz/private-p (&rest _)
+  (interactive)
+  (let ((title (qz/node-title)))
+    (if (not title)
+        (and (message "unable to evaluate privateness; no title") nil) ; return false (not private)
+      (or (string-match-p qz/daily-title-regexp title) ; daily
+          (string-match-p "meeting" title)                                    ; concerns a meeting
+          (qz/has-link-to-p (qz/title->roam-id "thinkproject"))))))           ; concerns work
+
+(setq qz/auto-buffer-action
+      '((qz/file-has-todo-p  . (lambda (tagstring) (qz/ensure-tag tagstring "project")))
+        (qz/private-p   . (lambda (tagstring) (qz/ensure-tag tagstring "private")))
+        (qz/has-tag-person-p . (lambda (tagstring)
+                                 (qz/ensure-tag tagstring (qz/title-to-tag (qz/node-title)))))))
+
+;;(car (car qz/auto-buffer-action))
+
+(defun qz/dispatch-hook ()
+  "Dispatches actions in notes based on filetags given `qz/auto-tag-action'. Assumes current buffer"
+  (interactive)
+  (when (and (not (+org-capture-frame-p))
+             (not (org-roam-capture-p))
+             (qz/note-buffer-p))
+    (let ((tags (qz/node-tags)))
+      (mapc (lambda (tag+fun)
+              (when (funcall (car tag+fun) tags)
+                (funcall (cdr tag+fun) "")))
+            qz/auto-buffer-action))))
+
+(advice-add 'org-agenda :before #'qz/agenda-files-update)
+(add-hook 'find-file-hook   #'qz/dispatch-hook)
+(add-hook 'before-save-hook #'qz/dispatch-hook)
+
+(defun qz/sqlite-row-col (table)
+  (cl-loop
+   for tuple in (org-roam-db-query
+                 `[:select *
+                   :from ,table
+                   :limit 1])
+   collect (cl-loop for attr in tuple
+                    for heading in (org-roam-db-query
+                                    `[:select name
+                                      :from (funcall pragma_table_info ',table)
+                                      :order-by cid :asc])
+                    collect (cons (car heading) (or attr 'null)))))
+
+;(qz/pprint (qz/sqlite-row-col 'links))
+
+(defun qz/org-roam-private-files ()
+  "Return a list of note files containing tag =private="
+  (seq-map
+   #'car
+   (org-roam-db-query
+    [:select node_id
+     :from tags
+     :where (like tag (quote "%\"private\"%"))])))
+
+;(qz/pprint (qz/org-roam-private-files))
+
+(defun qz/get-headline-path (&optional self? reverse? sepf)
+  (interactive)
+  (let* ((s (or sepf
+                (lambda (i)
+                  (if (< 0 i) " -> " ""))))
+         (c (org-get-outline-path self?)))
+    (insert "\n")
+    (cl-loop
+     for e in (if reverse? (reverse c) c)
+     for i = 0 then (1+ i)
+     do (insert (funcall s i) e))))
+
 (defun qz/headline-mm (i)
   (if (< 0 i)
       (concat "\n" (make-string i ?	)) ""))
 
-;; example, for https://tobloef.com/text2mindmap/ + [[file:../../../life/roam/20210521T102710Z-the_great_ideas_vol_ii.org][The Great Ideas, Vol II]]
 ;;(qz/get-headline-path t t 'qz/headline-mm)
 
 
@@ -1145,15 +1481,6 @@ tasks.
 ;;   (qz/get-headline-path t t 'qz/headline-mm)
 ;;   (qz/get-headline-path t nil 'qz/headline-mm)
 ;;   (qz/get-headline-path nil nil 'qz/headline-mm))
-
-(use-package! org-roam-server
-  :config
-  (setq org-roam-server-host "127.0.0.1"
-        org-roam-server-port 8080
-        org-roam-server-export-inline-images t
-        org-roam-server-authenticate nil
-        org-roam-server-network-label-truncate t
-        org-roam-server-network-label-truncate-length 60))
 
 (defun qz/org-noter-insert-note (notetext &optional precise-info)
   "Insert note associated with the current location.
@@ -1299,154 +1626,6 @@ defines if the text should be inserted inside the note."
       reftex-default-bibliography reftex-bib-path
       org-ref-default-bibliography reftex-bib-path)
 
-(use-package! org-agenda
-  :init
-  (map! "<f1>" #'qz/switch-to-agenda)
-  (setq org-agenda-block-separator nil
-        org-agenda-start-with-log-mode t
-        org-agenda-files (list qz/org-agenda-directory))
-  (defun qz/switch-to-agenda ()
-    (interactive)
-    (org-agenda nil "g"))
-  :config
-  (setq org-columns-default-format
-        "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
-  (setq org-agenda-custom-commands
-        `(
-          ("d" "Upcoming deadlines" agenda ""
-           ((org-agenda-time-grid nil)
-            (org-deadline-warning-days 365)        ;; [1]
-            (org-agenda-entry-types '(:deadline))  ;; [2]
-            ))
-          ("ww" "wip all" tags "wip")
-          ("wr" "wip reading" tags "wip+reading||wip+read|reading+next")
-          ("hh" tags "+habit")
-          ("P" "Printed agenda"
-           ((agenda "" ((org-agenda-span 7)                      ;; overview of appointments
-                        (org-agenda-start-on-weekday nil)         ;; calendar begins today
-                        (org-agenda-repeating-timestamp-show-all t)
-                        (org-agenda-entry-types '(:timestamp :sexp))))
-            (agenda "" ((org-agenda-span 1)                      ; daily agenda
-                        (org-deadline-warning-days 7)            ; 7 day advanced warning for deadlines
-                        (org-agenda-todo-keyword-format "[ ]")
-                        (org-agenda-scheduled-leaders '("" ""))
-                        (org-agenda-prefix-format "%t%s")))
-            (todo "TODO"                                          ;; todos sorted by context
-                  ((org-agenda-prefix-format "[ ] %T: ")
-                   (org-agenda-sorting-strategy '(tag-up priority-down))
-                   (org-agenda-todo-keyword-format "")
-                   (org-agenda-overriding-header "\nTasks by Context\n------------------\n"))))
-           ((org-agenda-with-colors nil)
-            (org-agenda-compact-blocks t)
-            (org-agenda-remove-tags t)
-            (ps-number-of-columns 2)
-            (ps-landscape-mode t))
-           ("~/agenda.ps"))
-          ;; other commands go here
-          )))
-
-                                        ;(defun qz/rg-get-files-with-tags ()
-                                        ;  "Returns a LIST of files that contain TAGS (currently, just `TODO')"
-                                        ;  (split-string
-                                        ;   (shell-command-to-string "rg TODO ~/life/roam/ -c | awk -F '[,:]' '{print $1}'")))
-                                        ;
-                                        ;(setq org-agenda-files
-                                        ;      (append org-agenda-files (qz/rg-get-files-with-tags)))
-
-(defun qz/org-agenda-gtd ()
-  (interactive)
-  (org-agenda nil "g")
-  (org-agenda-goto-today))
-
-(setq org-agenda-custom-commands nil)
-(add-to-list
- 'org-agenda-custom-commands
- `("g" "GTD"
-   ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
-    (tags-todo "wip"
-               ((org-agenda-overriding-header "wip")))
-    (todo "TODO"
-          ((org-agenda-overriding-header "To Refile")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "inbox.org")))))
-    (todo "TODO"
-          ((org-agenda-overriding-header "Emails")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "emails.org")))))
-    (todo "TODO"
-          ((org-agenda-overriding-header "One-off Tasks")
-           (org-agenda-files '(,(concat qz/org-agenda-directory "next.org"))))))))
-    ;;        (org-agenda-skip-function '(org-agenda-skip-entry-if 'deadline 'scheduled))))
-
-(qz/pprint org-agenda-custom-commands)
-
- (defun +org-defer-mode-in-agenda-buffers-h ()
-      "`org-agenda' opens temporary, incomplete org-mode buffers.
-I've disabled a lot of org-mode's startup processes for these invisible buffers
-to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
-the user tries to visit one of these buffers they'll see a gimped, half-broken
-org buffer. To avoid that, restart `org-mode' when they're switched to so they
-can grow up to be fully-fledged org-mode buffers."
-      (dolist (buffer org-agenda-new-buffers)
-        (when (buffer-live-p buffer)
-          (with-current-buffer buffer
-            (add-hook 'doom-switch-buffer-hook #'+org--restart-mode-h
-                      nil 'local)))))
-
-(add-to-list
- 'org-agenda-custom-commands
- '("ms" "shopping" tags "buy"))
-
-(defun qz/org-agenda-todo ()
-  (interactive)
-  (org-agenda nil "t"))
-
-
-
-(map! :map org-agenda-mode-map
-      "J" #'qz/org-agenda-process-inbox
-      "C-j" #'qz/org-agenda-process-item
-      "R" #'org-agenda-refile)
-
-(setq org-agenda-bulk-custom-functions '((?b . #'qz/org-agenda-process-item)))
-
-(defun qz/org-process-inbox ()
-  "Called in org-agenda-mode, processes all inbox items."
-  (interactive)
-  (org-agenda-bulk-mark-regexp "inbox:")
-  (org-agenda-bulk-action ?b))
-
-
-(defun qz/org-agenda-process-item ()
-  "Process a single item in the org-agenda."
-  (interactive)
-  (org-with-wide-buffer
-   (org-agenda-set-tags)
-   (org-agenda-priority)
-   (org-agenda-refile nil nil t)))
-
-
-
-(setq org-tag-alist
-      '(("@errand" . ?e)
-        ("@work" . ?w)
-        ("@home" . ?h)
-        ("@blog" . ?B)
-        (:newline)
-        ("emacs" . ?E)
-        ("wip" . ?W)
-        ("CANCELLED" . ?c)
-        (:newline)
-        ("learning" . ?l)
-        ("research" . ?r)
-        (:newline)
-        (:newline)
-        ("book" . ?b)
-        ("article" . ?a)
-        ("paper" . ?p)
-        (:newline)
-        (:newline)
-        ("talk" . ?t)
-        ("film" . ?f)))
-
 (require 'org-super-agenda)
 
 (require 'ox-reveal)
@@ -1455,7 +1634,8 @@ can grow up to be fully-fledged org-mode buffers."
 (setq mathpix-screenshot-method "scrot -s %s")
 
 (map! "C-c o m" #'qz/mathpix-screenshot)
-;; add var capture
+
+;; add var capture, to save last result
 (defun qz/mathpix-screenshot ()
   "Capture screenshot and send result to Mathpix API."
   (interactive)
@@ -1486,16 +1666,63 @@ can grow up to be fully-fledged org-mode buffers."
                                         ;      company-minimum-prefix-length 1)
                                         ;
                                         ; highlight matching parcnfts
-(defun just-one-face (fn &rest args)
-  (let ((orderless-match-faces [completions-common-part]))
-    (apply fn args)))
+;; (defun just-one-face (fn &rest args)
+;;   (let ((orderless-match-faces [completions-common-part]))
+;;     (apply fn args)))
 
-(advice-add 'company-capf--candidates :around #'just-one-face)
+;; (advice-add 'company-capf--candidates :around #'just-one-face)
+
+;; (use-package! orderless
+;;   :config
+;;   (after! ivy
+;;     (setq ivy-re-builders-alist '((t . orderless-ivy-re-builder)))))
+
 
 (use-package! orderless
+  :init
+  (setq completion-styles '(orderless)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles . (partial-completion)))))
   :config
   (after! ivy
-    (setq ivy-re-builders-alist '((t . orderless-ivy-re-builder)))))
+  (setq ivy-re-builders-alist '((t . orderless-ivy-re-builder)))))
+
+
+;;(prescient-persist-mode 1)
+;;(selectrum-prescient-mode 1)
+;;(setq selectrum-refine-candidates-function #'orderless-filter)
+;;(setq selectrum-highlight-candidates-function #'orderless-highlight-matches)
+
+(setq qz/buffer-mod-commands '(qz/get-ingredients-mod-buffer))
+
+(defun qz/get-ingredients-mod-buffer ()
+  "scrape the website found in ROAM_KEY for ingredients,
+outputting the result in the buffer at-point"
+  (interactive)
+  (let* ((c (current-buffer))
+         (pt (point))
+         (json-object-type 'hash-table)
+         (json-array-type 'list)
+         (json-key-type 'string)
+         (jsono (json-read-from-string
+                 (shell-command-to-string
+                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
+         (ingreds (gethash "ingredients" jsono)))
+    (insert "* Ingredients\n")
+    (insert
+     (apply
+      'concat
+      (mapcar (lambda (e)
+                (concat "- " (gethash "line" e)
+                        " [" (number-to-string (gethash "cups" (gethash "measure" e)))
+                        " cups]\n")) ingreds)))))
+
+(defun qz/read-property-mod-buffer ()
+ (interactive)
+ (let* ((command (completing-read "command: " qz/buffer-mod-commands))
+       (args (+org--get-property (completing-read "property: " org-default-properties))))
+   (setq current-prefix-arg '(4))
+   (shell-command (concat command " " args " &"))))
 
 (setq qz/org-agenda-prefix-length 20
       org-agenda-prefix-format
@@ -1526,7 +1753,7 @@ Refer to `org-agenda-prefix-format' for more information."
   (let* ((file-name (when buffer-file-name
                       (file-name-sans-extension
                        (file-name-nondirectory buffer-file-name))))
-         (title (car-safe (org-roam--extract-titles-title)))
+         (title (qz/node-title))
          (category (org-get-category))
          (result
           (or (if (and
