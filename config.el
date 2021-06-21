@@ -4,27 +4,9 @@
     (message "%s" n)
      n))
 
-(funcall '(message "a"))
-
-(funcall #`(message "a"))
-
-(defun dice ()
-  (1+ (random* 6)))
-
-(funcall 'list
-         :title "const value"
-         (when (= 1 (dice)) :shoo)
-         (when (= 1 (dice)) 'doo))
-
-(cl-loop for i from 1 to 6
-         for d = (dice)
-         for f = `(lambda () (list :title "const value"
-                              ,@(when (= 1 d) '(:id "yaaa"))))
-         collect (message "%s | %s | %s | %s |\n" i d f (funcall f)))
-
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
-(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
+(setq qz/capture-title-timestamp-roam "%(qz/utc-timesftamp)-${slug}.org")
 
 (cond
   ((string-equal system-name "qzdl") (setq qz/font-default 32))
@@ -547,7 +529,9 @@ start-process-shell-command' with COMMAND"
 (if (symbolp 'cl-font-lock-built-in-mode)
     (cl-font-lock-built-in-mode 1))
 
-(load (expand-file-name "~/.roswell/helper.el"))
+(let ((f (expand-file-name "~/.roswell/helper.el")))
+  (when (file-exists-p f)
+      (load f)))
 
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 

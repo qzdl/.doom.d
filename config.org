@@ -5,6 +5,8 @@
 #+property: header-args :tangle yes
 #+filetags: project
 
+[[./images/screenshot-01.png]]
+
 * about this configuration
 ** metaprogramming
 *** dice function
@@ -68,7 +70,7 @@ or
 #+begin_src emacs-lisp
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
-(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
+(setq qz/capture-title-timestamp-roam "%(qz/utc-timesftamp)-${slug}.org")
 #+end_src
 
 #+RESULTS:
@@ -999,7 +1001,9 @@ so useful it's unreal
 *** sly, from roswell
 yep, just ~ros install sly~
 #+begin_src emacs-lisp
-(load (expand-file-name "~/.roswell/helper.el"))
+(let ((f (expand-file-name "~/.roswell/helper.el")))
+  (when (file-exists-p f)
+      (load f)))
 #+end_src
 
 *** TODO sly eval-overlay :func:
