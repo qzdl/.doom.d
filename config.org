@@ -5,9 +5,7 @@
 #+property: header-args :tangle yes
 #+filetags: project
 
-
 * about this configuration
-#+property: header-args :tangle no
 ** metaprogramming
 *** dice function
 #+begin_src emacs-lisp
@@ -24,12 +22,12 @@
 *** meta-eval (funcall '(message "a"))
 
 would be nice to have this, but hey
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
 (funcall '(message "a"))
 #+end_src
 
 not valid, use
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
 (funcall #`(message "a"))
 #+end_src
 or
@@ -39,7 +37,7 @@ or
 *** splice ,@values
 *** alternative
 *** concrete usage, anonymous macro kwargs splicing
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
 (defun dice ()
   (1+ (random* 6)))
 
@@ -451,7 +449,6 @@ often start sending out lower numbers.
 #+begin_src emacs-lisp
 (server-start)
 #+end_src
-
 
 * visual
 ** fonts & text :vars:
@@ -918,6 +915,21 @@ The =n= of {C-c n} denotes notes.
 
 #+RESULTS:
 : find-file-in-notes
+** {s-o} tasks, clocking
+#+begin_src emacs-lisp :tangle no
+(map! :leader
+      (:prefix-map ("C-o" . "org-tasks")
+         :desc "clock-in"  "i" #'org-clock-in-current
+         :desc "clock-out" "o" #'org-clock-in-current
+         :desc "select clock" "s-o" #'org-clock-in-current
+         :desc "goto clock"   "s-n" #'org-clock-in-current
+         ))
+
+
+#+end_src
+
+#+RESULTS:
+: org-clock-in-current
 
 * [[id:5f896cd4-d7b8-44d2-a40d-ccdae1b80c33][programming]]
 ** [[id:eae3ee00-be74-4f59-8a4d-b638baebc9f8][SQL]]
@@ -984,6 +996,11 @@ so useful it's unreal
 
 #+RESULTS:
 : t
+*** sly, from roswell
+yep, just ~ros install sly~
+#+begin_src emacs-lisp
+(load (expand-file-name "~/.roswell/helper.el"))
+#+end_src
 
 *** TODO sly eval-overlay :func:
 this doesn't actually work. kinda jealous of CIDER ngl
@@ -1096,6 +1113,7 @@ v))
 (map! :mode pdf-view-mode
       "h" #'pdf-annot-add-highlight-markup-annotation)
 #+end_src
+
 * [[id:68ebe469-0a04-4a0c-ba46-0efc9a868351][KeyFreq]] :init:
 A package that logs command usage; blessed be Xah Lee
 #+begin_src emacs-lisp
@@ -2219,6 +2237,7 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 
 #+RESULTS:
 : qz/node-title
+
 **** node-tags;  get tags  from node (file or entry)
 #+begin_src emacs-lisp
 (defun qz/node-tags ()
@@ -2233,6 +2252,7 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 
 #+RESULTS:
 : qz/node-tags
+
 **** sidestep node-read with *node-create
 #+begin_src emacs-lisp :tangle no
 (equal (org-roam-node-read) (org-roam-node-create :title "radarr")) ;; given the same input string
@@ -2385,13 +2405,12 @@ addressing caching & consistency problems with :PROPERTIES: drawer and #+propert
      :where (= tags:tag "project")])))
 
 
-(qz/hard-refresh-org-tags-in-buffer)
-(org-roam-db-sync)
-(qz/project-files)
+;(qz/project-files)
 #+end_src
 
 #+RESULTS:
-| /home/qzdl/life/roam/private-2020-08-03.org | /home/qzdl/life/roam/20201014T163555Z-byron_blackford.org | /home/qzdl/dotfiles/emacs/.doom.d/config.org |
+: qz/project-files
+
 ***** daily-files; for [[id:d904ace6-a941-49fc-a6d4-7fe3797b0d8e][org-agenda]] candidates
 #+begin_src emacs-lisp
 (defun qz/agenda-daily-files-f ()

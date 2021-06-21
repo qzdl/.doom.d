@@ -547,6 +547,8 @@ start-process-shell-command' with COMMAND"
 (if (symbolp 'cl-font-lock-built-in-mode)
     (cl-font-lock-built-in-mode 1))
 
+(load (expand-file-name "~/.roswell/helper.el"))
+
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 
 (require 'em-tramp)
@@ -1282,9 +1284,7 @@ which takes as its argument an alist of path-completions."
      :where (= tags:tag "project")])))
 
 
-(qz/hard-refresh-org-tags-in-buffer)
-(org-roam-db-sync)
-(qz/project-files)
+;(qz/project-files)
 
 (defun qz/agenda-daily-files-f ()
   (seq-filter (lambda (s) (string-match qz/daily-title-regexp s))
