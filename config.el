@@ -5,6 +5,8 @@
   ((string-equal system-name "qzdl") (setq qz/font-default 32))
   (t (setq qz/font-default 16)))
 
+(setq epg-gpg-program "gpg")
+
   (map! "<mouse-8>" 'better-jumper-jump-backward)
   (map! "<mouse-9>" 'better-jumper-jump-forward)
 
@@ -109,6 +111,10 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
                           (and (boundp vv) (not (keywordp vv))))))
                   t nil nil
                   (if (symbolp v) (symbol-name v)))))
+
+(defun qz/contract-file-name (file)
+  "turn an objective path to a relative path to homedir `~/`"
+  (replace-regexp-in-string(expand-file-name "~/") "~/" file))
 
 (defun qz/toggle-1->0 (n)
   (if (equal 1 n) 0 1))
@@ -540,9 +546,9 @@ outputting the result in the buffer at-point"
       password-cache t
       password-cache-expiry 300)
 
-;(require 'hyperbole)
+(require 'hyperbole)
 
-;(map! "C-<mouse-2>" #'hkey-either)
+(map! "C-<mouse-2>" #'hkey-either)
 
 (add-hook 'pdf-view-mode-hook #'pdf-view-midnight-minor-mode)
 
@@ -583,6 +589,41 @@ v))
 
 (keyfreq-mode 1)
 (keyfreq-autosave-mode 1)
+
+(use-package! org
+  :mode ("\\.org\\'" . org-mode)
+  :init
+  (map! :leader
+        :prefix "n"
+        "l" #'org-capture)
+  (map! :map org-mode-map
+        "M-n" #'outline-next-visible-heading
+        "M-p" #'outline-previous-visible-heading
+        "C->" #'org-do-demote
+        "C-<" #'org-do-promote)
+  (setq org-src-window-setup 'current-window
+        org-return-follows-link t
+        org-babel-load-languages '((emacs-lisp . t)
+                                   ;; (common-lisp . t)
+                                   (python . t)
+                                   (ipython . t)
+                                   (R . t))
+        org-ellipsis " ▼ "
+        org-confirm-babel-evaluate nil
+        org-use-speed-commands t
+        org-catch-invisible-edits 'show
+        org-preview-latex-image-directory "/tmp/ltximg/"
+        ;; ORG SRC BLOCKS {C-c C-,}
+        org-structure-template-alist '(("q" . "quote")
+                                       ("d" . "definition")
+                                       ("s" . "src")
+                                       ("sb" . "src bash")
+                                       ("se" . "src emacs-lisp")
+                                       ("sp" . "src psql")
+                                       ("sr" . "src R")
+                                       ("el" . "src emacs-lisp")))
+  (with-eval-after-load 'flycheck
+    (flycheck-add-mode 'proselint 'org-mode)))
 
 (setq org-file-apps
       '((auto-mode . emacs)
@@ -648,43 +689,6 @@ v))
                            ("learning.org" :level . 0)
                            ("wip.org" :level . 1 )))
 
-(use-package! org
-  :mode ("\\.org\\'" . org-mode)
-  :init
-  (map! :leader
-        :prefix "n"
-        "l" #'org-capture)
-  (map! :map org-mode-map
-        "M-n" #'outline-next-visible-heading
-        "M-p" #'outline-previous-visible-heading
-        "C->" #'org-do-demote
-        "C-<" #'org-do-promote)
-  (setq org-src-window-setup 'current-window
-        org-return-follows-link t
-        org-babel-load-languages '((emacs-lisp . t)
-                                   ;; (common-lisp . t)
-                                   (python . t)
-                                   (ipython . t)
-                                   (R . t))
-        org-ellipsis " ▼ "
-        org-confirm-babel-evaluate nil
-        org-use-speed-commands t
-        org-catch-invisible-edits 'show
-        org-preview-latex-image-directory "/tmp/ltximg/"
-        ;; ORG SRC BLOCKS {C-c C-,}
-        org-structure-template-alist '(("q" . "quote")
-                                       ("d" . "definition")
-                                       ("s" . "src")
-                                       ("sb" . "src bash")
-                                       ("se" . "src emacs-lisp")
-                                       ("sp" . "src psql")
-                                       ("sr" . "src R")
-                                       ("el" . "src emacs-lisp")))
-  (with-eval-after-load 'flycheck
-    (flycheck-add-mode 'proselint 'org-mode)))
-
-(add-hook 'org-mode-hook 'org-fragtog-mode)
-
 (require 'org-auto-tangle)
 (add-hook 'org-mode-hook 'org-auto-tangle-mode)
 
@@ -730,12 +734,6 @@ v))
      (apply fun args))))
 
 ;; helper capture function for `org-roam' for `agenda-mode'
-(defun qz/current-roam-link ()
-  (interactive)
-  "Get link to org-roam file with title"
-  (concat "* TODO [[" (buffer-file-name) "]["
-          (car (org-roam--extract-titles)) "]]"))
-
 (defun qz/org-inbox-capture ()
   (interactive)
   "Capture a task in agenda mode."
@@ -750,6 +748,12 @@ v))
   (interactive)
   "Capture a task in agenda mode."
   (org-roam-capture nil "_"))
+
+(defun qz/current-roam-link ()
+  (interactive)
+  "Get link to org-roam file with title"
+  (concat "* TODO [[" (qz/contract-file-name (buffer-file-name (buffer-base-buffer))) "]["
+          (car (org-roam--extract-titles)) "]]"))
 
 (setq org-gcal-fetch-file-alist
       `((qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
@@ -781,6 +785,7 @@ v))
   (setq org-roam-directory qz/notes-directory
         org-roam-dailies-directory qz/notes-directory
         org-roam-db-location (concat org-roam-directory "org-roam.db")
+        org-roam-db-update-idle-seconds 0
         org-roam-graph-executable "dot"
         org-roam-graph-extra-config '(("overlap" . "false"))
         org-roam-graph-exclude-matcher nil)
@@ -1047,7 +1052,7 @@ tasks.
   (qz/org-roam-add-tag "private" t))
 
 (defun qz/org-roam-has-link-to-p (source dest)
-  """TODO implement; returns t/nil if source links to dest"
+  "TODO implement; returns t/nil if source links to dest"
   nil)
 
 (defun qz/org-roam-add-global-prop (prop val)
@@ -1062,6 +1067,35 @@ tasks.
   (qz/org-roam-add-global-prop "roam_tags" tag)
   (when filetag_too
     (qz/org-roam-add-global-prop "filetags" tag)))
+
+(defun qz/format-link-from-title (title)
+  (let ((file (org-roam-link--get-file-from-title title)))
+    (and file (org-roam-format-link file title))))
+
+(defun qz/roam-auto-youtube-video ()
+  (interactive)
+  (let ((key (+org--get-property "roam_key")))
+    (when (string-match "YouTube" key)
+      (let*
+        ((channel+url (qz/roam-key->yt-channel key))
+         (link (qz/format-link-from-title (first channel+url)))
+         (channel (or link (concat "[[roam:" (first channel+url) "]]")))
+         (str
+          (concat "A "
+                  (qz/format-link-from-title "YouTube") " "
+                  (qz/format-link-from-title "video") " from "
+                  channel)))
+        (insert str)))))
+
+(defun qz/roam-key->yt-channel (key)
+  (let ((str (shell-command-to-string
+              (concat
+               "youtube-dl " key "--skip-download --dump-json | "
+               "python -c 'import sys;import json;b=json.loads(sys.stdin.read());print(b.get(\"channel\")+\",\"+b.get(\"channel_url\"))'"))))
+    (message str)
+    (and str (split-string str ","))))
+
+;(qz/roam-key->yt-channel "https://www.youtube.com/watch?v=KopB4l5QkEg")
 
 (defun qz/get-headline-path (&optional self? reverse? sepf)
   (interactive)
@@ -1162,7 +1196,7 @@ tasks.
 
 (defun qz/org-agenda-gtd ()
   (interactive)
-  (org-agenda "d." "g")
+  (org-agenda nil "g")
   (org-agenda-goto-today))
 
 (add-to-list
@@ -1170,7 +1204,7 @@ tasks.
  `("g" "GTD"
    ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
     (tags-todo "wip"
-               ((org-agenda-overriding-header "wip")                        ))
+               ((org-agenda-overriding-header "wip")))
     (todo "TODO"
           ((org-agenda-overriding-header "To Refile")
            (org-agenda-files '(,(concat qz/org-agenda-directory "inbox.org")))))

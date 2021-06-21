@@ -70,7 +70,7 @@
 (package! speed-type)
 (package! orderless
  :recipe (:host github :repo "oantolin/orderless"))
-
+(package! ovpn-mode)
 
 ;;=============
 ;; ORG STUFF ;;
@@ -81,8 +81,8 @@
 (package! org-jira)
 (package! org-fragtog)
 (package! org-gcal)
-(package! org-auto-tangle)
-;;https://github.com/yilkalargaw/org-auto-tangle
+(package! org-download)
+(package! org-auto-tangle) ; https://github.com/yilkalargaw/org-auto-tangle
 
 ;;; ORG ROAM
 (package! org-roam

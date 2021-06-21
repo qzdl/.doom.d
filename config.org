@@ -16,6 +16,13 @@
   ((string-equal system-name "qzdl") (setq qz/font-default 32))
   (t (setq qz/font-default 16)))
 #+end_src
+*** epg propgram
+#+begin_src emacs-lisp
+(setq epg-gpg-program "gpg")
+#+end_src
+
+#+RESULTS:
+: gpg
 
 #+RESULTS:
 : 16
@@ -108,6 +115,7 @@ incase the shell needs to be changed
 
 #+RESULTS:
 : qz/utc-timestamp
+
 *** custom popup qz/buffer-popup
 #+begin_src emacs-lisp
 (defvar qz/buffer-popup-minor-mode-map
@@ -193,6 +201,19 @@ stealing from 'describe-variable -> cool to insert the value of named var, from 
                   t nil nil
                   (if (symbolp v) (symbol-name v)))))
 #+end_src
+
+*** contract file name
+keep it relative; sorry Ayn
+#+begin_src emacs-lisp
+(defun qz/contract-file-name (file)
+  "turn an objective path to a relative path to homedir `~/`"
+  (replace-regexp-in-string(expand-file-name "~/") "~/" file))
+#+end_src
+
+#+RESULTS:
+: qz/contract-file-name
+
+
 *** toggle between non-nil -> [ 0 | 1 ], [ on | off ]
 This function is used for quality of life in ensuring correct bottom values are
 used when toggling modes; the set of activation values are not necessarily using
@@ -937,7 +958,7 @@ also, see [[~/.eshellrc][~/.eshellrc]]
 * [[file:../../../life/roam/20200511T193645Z-gnu_hyperbole.org][Hyperbole]]
 ** Initialisation :init:
 #+begin_src emacs-lisp
-;(require 'hyperbole)
+(require 'hyperbole)
 #+end_src
 
 #+RESULTS:
@@ -945,7 +966,7 @@ also, see [[~/.eshellrc][~/.eshellrc]]
 
 ** Action-Key with mouse buttons :kbd:
 #+begin_src emacs-lisp
-;(map! "C-<mouse-2>" #'hkey-either)
+(map! "C-<mouse-2>" #'hkey-either)
 #+end_src
 
 #+RESULTS:
@@ -1011,6 +1032,46 @@ A package that logs command usage; blessed be Xah Lee
 : t
 
 * org
+** [[file:../../../life/roam/20200515T120103Z-org_mode.org][org-mode]] :init:vars:
+#+begin_src emacs-lisp :results none
+(use-package! org
+  :mode ("\\.org\\'" . org-mode)
+  :init
+  (map! :leader
+        :prefix "n"
+        "l" #'org-capture)
+  (map! :map org-mode-map
+        "M-n" #'outline-next-visible-heading
+        "M-p" #'outline-previous-visible-heading
+        "C->" #'org-do-demote
+        "C-<" #'org-do-promote)
+  (setq org-src-window-setup 'current-window
+        org-return-follows-link t
+        org-babel-load-languages '((emacs-lisp . t)
+                                   ;; (common-lisp . t)
+                                   (python . t)
+                                   (ipython . t)
+                                   (R . t))
+        org-ellipsis " ▼ "
+        org-confirm-babel-evaluate nil
+        org-use-speed-commands t
+        org-catch-invisible-edits 'show
+        org-preview-latex-image-directory "/tmp/ltximg/"
+        ;; ORG SRC BLOCKS {C-c C-,}
+        org-structure-template-alist '(("q" . "quote")
+                                       ("d" . "definition")
+                                       ("s" . "src")
+                                       ("sb" . "src bash")
+                                       ("se" . "src emacs-lisp")
+                                       ("sp" . "src psql")
+                                       ("sr" . "src R")
+                                       ("el" . "src emacs-lisp")))
+  (with-eval-after-load 'flycheck
+    (flycheck-add-mode 'proselint 'org-mode)))
+#+end_src
+
+
+
 ** tweaks :vars:
 *** File apps
 Handle opening with { C-c C-o } or { RET } or { mouse-1 }
@@ -1113,51 +1174,6 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 #+RESULTS:
 : ((next.org :level . 0) (reading.org :level . 0) (watching.org :level . 0) (learning.org :level . 0) (wip.org :level . 1))
 
-** [[file:../../../life/roam/20200515T120103Z-org_mode.org][org-mode]] :init:vars:
-#+begin_src emacs-lisp :results none
-(use-package! org
-  :mode ("\\.org\\'" . org-mode)
-  :init
-  (map! :leader
-        :prefix "n"
-        "l" #'org-capture)
-  (map! :map org-mode-map
-        "M-n" #'outline-next-visible-heading
-        "M-p" #'outline-previous-visible-heading
-        "C->" #'org-do-demote
-        "C-<" #'org-do-promote)
-  (setq org-src-window-setup 'current-window
-        org-return-follows-link t
-        org-babel-load-languages '((emacs-lisp . t)
-                                   ;; (common-lisp . t)
-                                   (python . t)
-                                   (ipython . t)
-                                   (R . t))
-        org-ellipsis " ▼ "
-        org-confirm-babel-evaluate nil
-        org-use-speed-commands t
-        org-catch-invisible-edits 'show
-        org-preview-latex-image-directory "/tmp/ltximg/"
-        ;; ORG SRC BLOCKS {C-c C-,}
-        org-structure-template-alist '(("q" . "quote")
-                                       ("d" . "definition")
-                                       ("s" . "src")
-                                       ("sb" . "src bash")
-                                       ("se" . "src emacs-lisp")
-                                       ("sp" . "src psql")
-                                       ("sr" . "src R")
-                                       ("el" . "src emacs-lisp")))
-  (with-eval-after-load 'flycheck
-    (flycheck-add-mode 'proselint 'org-mode)))
-#+end_src
-
-*** org-mode-hook -> org-fragtog
-#+begin_src emacs-lisp
-(add-hook 'org-mode-hook 'org-fragtog-mode)
-#+end_src
-
-#+RESULTS:
-| org-fragtog-mode | er/add-org-mode-expansions | +lookup--init-org-mode-handlers-h | (closure (t) (&rest _) (add-hook 'before-save-hook 'org-encrypt-entries nil t)) | #[0 \301\211\207 [imenu-create-index-function org-imenu-get-tree] 2] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-show-all append local] 5] | #[0 \300\301\302\303\304$\207 [add-hook change-major-mode-hook org-babel-show-result-all append local] 5] | org-babel-result-hide-spec | org-babel-hide-all-hashes | doom-disable-show-paren-mode-h | doom-disable-show-trailing-whitespace-h | +org-enable-auto-reformat-tables-h | +org-enable-auto-update-cookies-h | +org-make-last-point-visible-h | toc-org-enable | org-eldoc-load | +literate-enable-recompile-h |
 
 ** org-jira :vars:
 set in authinfo.el
@@ -1246,12 +1262,6 @@ https://github.com/hlissner/doom-emacs/issues/4832
 *** Convenience Functions :func:
 #+begin_src emacs-lisp
 ;; helper capture function for `org-roam' for `agenda-mode'
-(defun qz/current-roam-link ()
-  (interactive)
-  "Get link to org-roam file with title"
-  (concat "* TODO [[" (buffer-file-name) "]["
-          (car (org-roam--extract-titles)) "]]"))
-
 (defun qz/org-inbox-capture ()
   (interactive)
   "Capture a task in agenda mode."
@@ -1270,6 +1280,14 @@ https://github.com/hlissner/doom-emacs/issues/4832
 
 #+RESULTS:
 : qz/org-roam-capture-todo
+**** current roam link
+#+begin_src emacs-lisp
+(defun qz/current-roam-link ()
+  (interactive)
+  "Get link to org-roam file with title"
+  (concat "* TODO [[" (qz/contract-file-name (buffer-file-name (buffer-base-buffer))) "]["
+          (car (org-roam--extract-titles)) "]]"))
+#+end_src
 ** org-gcal
 *** secret properties :vars:
 set in authinfo.el
@@ -1319,6 +1337,7 @@ set in authinfo.el
   (setq org-roam-directory qz/notes-directory
         org-roam-dailies-directory qz/notes-directory
         org-roam-db-location (concat org-roam-directory "org-roam.db")
+        org-roam-db-update-idle-seconds 0
         org-roam-graph-executable "dot"
         org-roam-graph-extra-config '(("overlap" . "false"))
         org-roam-graph-exclude-matcher nil)
@@ -1731,7 +1750,7 @@ good for restricting to work stuff
 [[file:../../../life/roam/20210422T104455Z-org_roam_database_machinations.org][org-roam database machinations]]
 #+begin_src emacs-lisp
 (defun qz/org-roam-has-link-to-p (source dest)
-  """TODO implement; returns t/nil if source links to dest"
+  "TODO implement; returns t/nil if source links to dest"
   nil)
 #+end_src
 
@@ -1764,6 +1783,74 @@ good for restricting to work stuff
 : qz/org-roam-add-tag
 
 *** TODO auto establish meta :func:
+*** TODO auto tag youtube videos
+#+begin_src emacs-lisp
+(defun qz/format-link-from-title (title)
+  (let ((file (org-roam-link--get-file-from-title title)))
+    (and file (org-roam-format-link file title))))
+
+(defun qz/roam-auto-youtube-video ()
+  (interactive)
+  (let ((key (+org--get-property "roam_key")))
+    (when (string-match "YouTube" key)
+      (let*
+        ((channel+url (qz/roam-key->yt-channel key))
+         (link (qz/format-link-from-title (first channel+url)))
+         (channel (or link (concat "[[roam:" (first channel+url) "]]")))
+         (str
+          (concat "A "
+                  (qz/format-link-from-title "YouTube") " "
+                  (qz/format-link-from-title "video") " from "
+                  channel)))
+        (insert str)))))
+#+end_src
+
+#+RESULTS:
+: qz/roam-auto-youtube-video
+
+
+*** TODO scrape youtube channel
+
+#+begin_src emacs-lisp
+(defun qz/roam-key->yt-channel (key)
+  (let ((str (shell-command-to-string
+              (concat
+               "youtube-dl " key "--skip-download --dump-json | "
+               "python -c 'import sys;import json;b=json.loads(sys.stdin.read());print(b.get(\"channel\")+\",\"+b.get(\"channel_url\"))'"))))
+    (message str)
+    (and str (split-string str ","))))
+
+;(qz/roam-key->yt-channel "https://www.youtube.com/watch?v=KopB4l5QkEg")
+#+end_src
+
+#+RESULTS:
+| HexiBase | https://www.youtube.com/channel/UCtpB66XKjAtFZfZyzmC-_Cg |
+
+
+**** what a journey
+#+begin_src bash :results raw drawer :tangle no
+youtube-dl --skip-download --dump-json https://www.youtube.com/watch?v=KopB4l5QkEg | python -c 'import json;import sys;print(json.loads(sys.stdin.read()).get("channel"))'
+#+end_src
+
+#+RESULTS:
+:results:
+HexiBase
+:end:
+
+
+#+begin_src python  :results output :tangle no
+import json
+c = None
+with open('./ytdl.json') as f:
+    c = json.loads(f.read())
+
+print(c.get('channel'))
+#+end_src
+
+#+RESULTS:
+: HexiBase
+
+
 *** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
 - restrict graph (e.g. exclude sensitive information)
@@ -1964,7 +2051,7 @@ Refer to `org-agenda-prefix-format' for more information."
 #+begin_src emacs-lisp :results none
 (defun qz/org-agenda-gtd ()
   (interactive)
-  (org-agenda "d." "g")
+  (org-agenda nil "g")
   (org-agenda-goto-today))
 
 (add-to-list
@@ -1972,7 +2059,7 @@ Refer to `org-agenda-prefix-format' for more information."
  `("g" "GTD"
    ((agenda "" ((org-agenda-span 'day) (org-deadline-warning-days 60)))
     (tags-todo "wip"
-               ((org-agenda-overriding-header "wip")                        ))
+               ((org-agenda-overriding-header "wip")))
     (todo "TODO"
           ((org-agenda-overriding-header "To Refile")
            (org-agenda-files '(,(concat qz/org-agenda-directory "inbox.org")))))
