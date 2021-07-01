@@ -16,8 +16,8 @@
 
 (load-file "~/.doom.d/private/authinfo.el")
 
-(map! "<mouse-8>" 'better-jumper-jump-backward)
-(map! "<mouse-9>" 'better-jumper-jump-forward)
+  (map! "<mouse-8>" 'better-jumper-jump-backward)
+  (map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
 
@@ -338,8 +338,19 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
   (exwm-randr-enable))
 
 
+(defun qz/exwm-hdmi-tv ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP1 --off --output DP1 --off --output DP2 --off --output HDMI1 --primary --mode 1920x1080 --pos 0x0 --rotate normal --scale 2x2 --output HDMI2 --off --output VIRTUAL1 --off")))
+  (exwm-randr-enable))
+
+
 (cond
-  ((string-equal system-name "qzdl") nil)
+  ((string-equal system-name "qzdl") (qz/exwm-hdmi-tv))
   (t (qz/exwm-usbc-ultrawide)))
 (exwm-enable)
 (exwm-init)
@@ -556,17 +567,17 @@ start-process-shell-command' with COMMAND"
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-(defun qz/upcase-sql-keywords ()
-  (interactive)
-  (save-excursion
-    (dolist (keywords sql-mode-postgres-font-lock-keywords)
-      (goto-char (point-min))
-      (while (re-search-forward (car keywords) nil t)
-        (goto-char (+ 1 (match-beginning 0)))
-        (when (eql font-lock-keyword-face (face-at-point))
-          (backward-char)
-          (upcase-word 1)
-          (forward-char))))))
+  (defun qz/upcase-sql-keywords ()
+    (interactive)
+    (save-excursion
+      (dolist (keywords sql-mode-postgres-font-lock-keywords)
+        (goto-char (point-min))
+        (while (re-search-forward (car keywords) nil t)
+          (goto-char (+ 1 (match-beginning 0)))
+          (when (eql font-lock-keyword-face (face-at-point))
+            (backward-char)
+            (upcase-word 1)
+            (forward-char))))))
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -702,19 +713,33 @@ v))
                (mapcar #'qz/get-radio-naked
                        (qz/matches-in-buffer (message (qz/definer-headliner relate))))))))))
 
-(defun qz/matches-in-buffer (regexp &optional buffer with-point?)
-  "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
-  (let ((matches))
-    (save-match-data
-      (save-excursion
-        (with-current-buffer (or buffer (current-buffer))
-          (save-restriction
-            (widen)
-            (goto-char 1)
-            (while (search-forward-regexp regexp nil t 1)
-              (let ((s (match-string-no-properties 0))
-                    (push (if with-point? (cons s (point)) s) matches)))))))
-      matches)))
+;; (defun qz/matches-in-buffer (regexp &optional buffer with-point?)
+;;   "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
+;;   (let ((matches))
+;;     (save-match-data
+;;       (save-excursion
+;;         (with-current-buffer (or buffer (current-buffer))
+;;           (save-restriction
+;;             (widen)
+;;             (goto-char 1)
+;;             (while (search-forward-regexp regexp nil t 1)
+;;               (let ((s (match-string-no-properties 0))
+;;                     (push (if with-point? (cons s (point)) s) matches)))))))
+;;       matches)))
+
+;; (defun qz/matches-in-buffer (regexp &optional buffer with-point)
+;;   "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
+;;   (let ((matches nil))
+;;     (save-match-data
+;;       (save-excursion
+;;         (with-current-buffer (or buffer (current-buffer))
+;;           (save-restriction
+;;             (widen)
+;;             (goto-char 1)
+;;             (while (search-forward-regexp regexp nil t 1)
+;;               (let ((s (match-string-no-properties 0)))
+;;                 (push (if with-point (cons s (point)) s) matches)))))))
+;;     matches))
 
 (setq org-directory "~/life/"
       qz/notes-directory (concat org-directory "roam/")
@@ -819,7 +844,7 @@ v))
 
 (qz/pprint org-agenda-custom-commands)
 
-(defun +org-defer-mode-in-agenda-buffers-h ()
+ (defun +org-defer-mode-in-agenda-buffers-h ()
       "`org-agenda' opens temporary, incomplete org-mode buffers.
 I've disabled a lot of org-mode's startup processes for these invisible buffers
 to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
@@ -1033,11 +1058,12 @@ can grow up to be fully-fledged org-mode buffers."
   "TODO implement; returns t/nil if source links to dest"
   nil)
 
-(setq org-gcal-fetch-file-alist
+(ignore-errors
+  (setq org-gcal-fetch-file-alist
       `((,qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
         (,qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
         (,qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
-(qz/pprint org-gcal-fetch-file-alist)
+  (qz/pprint org-gcal-fetch-file-alist))
 
 (setq org-gcal-recurring-events-mode 'nested)
 
@@ -1821,7 +1847,7 @@ defines if the text should be inserted inside the note."
                  (mathpix-get-result mathpix-screenshot-file)))
           (delete-file mathpix-screenshot-file)))))
 
-;(require 'orderless)
+                                        ;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
                                         ;(icomplete-mode) ; optional but recommended!
                                         ;

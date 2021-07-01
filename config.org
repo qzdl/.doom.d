@@ -4,9 +4,6 @@
 #+title: Emacs Configuration
 #+property: header-args :tangle yes
 
-(format " %s %s%s%s" (format "%s" (if (member category-icon . #2=('(#1="" nil))) #1# (concat category-icon #1# (get-text-property 0 #3='extra-space category-icon)))) (format "%s" (org-eval (vulpea-agenda-category qz/org-agenda-prefix-length))) (if (member time '(#1# nil)) #1# (format "%-12s" (concat time #1#))) (format "%s" (if (member extra . #2#) #1# (concat extra " " (get-text-property 0 #3# extra)))))
-
-
 * about this configuration
 ** metaprogramming
 *** dice function
@@ -848,8 +845,19 @@ big thanks to https://github.com/akirak/emacs.d
   (exwm-randr-enable))
 
 
+(defun qz/exwm-hdmi-tv ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP1 --off --output DP1 --off --output DP2 --off --output HDMI1 --primary --mode 1920x1080 --pos 0x0 --rotate normal --scale 2x2 --output HDMI2 --off --output VIRTUAL1 --off")))
+  (exwm-randr-enable))
+
+
 (cond
-  ((string-equal system-name "qzdl") nil)
+  ((string-equal system-name "qzdl") (qz/exwm-hdmi-tv))
   (t (qz/exwm-usbc-ultrawide)))
 (exwm-enable)
 (exwm-init)
@@ -1469,23 +1477,37 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
                (mapcar #'qz/get-radio-naked
                        (qz/matches-in-buffer (message (qz/definer-headliner relate))))))))))
 
-(defun qz/matches-in-buffer (regexp &optional buffer with-point?)
-  "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
-  (let ((matches))
-    (save-match-data
-      (save-excursion
-        (with-current-buffer (or buffer (current-buffer))
-          (save-restriction
-            (widen)
-            (goto-char 1)
-            (while (search-forward-regexp regexp nil t 1)
-              (let ((s (match-string-no-properties 0))
-                    (push (if with-point? (cons s (point)) s) matches)))))))
-      matches)))
+;; (defun qz/matches-in-buffer (regexp &optional buffer with-point?)
+;;   "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
+;;   (let ((matches))
+;;     (save-match-data
+;;       (save-excursion
+;;         (with-current-buffer (or buffer (current-buffer))
+;;           (save-restriction
+;;             (widen)
+;;             (goto-char 1)
+;;             (while (search-forward-regexp regexp nil t 1)
+;;               (let ((s (match-string-no-properties 0))
+;;                     (push (if with-point? (cons s (point)) s) matches)))))))
+;;       matches)))
+
+;; (defun qz/matches-in-buffer (regexp &optional buffer with-point)
+;;   "return a list of matches of REGEXP in BUFFER or the current buffer if not given."
+;;   (let ((matches nil))
+;;     (save-match-data
+;;       (save-excursion
+;;         (with-current-buffer (or buffer (current-buffer))
+;;           (save-restriction
+;;             (widen)
+;;             (goto-char 1)
+;;             (while (search-forward-regexp regexp nil t 1)
+;;               (let ((s (match-string-no-properties 0)))
+;;                 (push (if with-point (cons s (point)) s) matches)))))))
+;;     matches))
 #+end_src
 
 #+RESULTS:
-: qz/matches-in-buffer
+: qz/insert-radio-children
 
 ** directories :vars:
 #+begin_src emacs-lisp
@@ -2065,11 +2087,12 @@ set in authinfo.el
 
 *** files :vars:
 #+begin_src emacs-lisp :results none
-(setq org-gcal-fetch-file-alist
+(ignore-errors
+  (setq org-gcal-fetch-file-alist
       `((,qz/calendar-home . ,(concat qz/notes-directory "calendar-home.org"))
         (,qz/calendar-work . ,(concat qz/notes-directory "calendar-work.org"))
         (,qz/calendar-shared . ,(concat qz/notes-directory "calendar-shared.org"))))
-(qz/pprint org-gcal-fetch-file-alist)
+  (qz/pprint org-gcal-fetch-file-alist))
 #+end_src
 
 *** recurring events headlines
@@ -2082,7 +2105,7 @@ set in authinfo.el
 : qz/org-roam-add-tag
 
 *** TODO auto establish meta :func:
-*** TODO auto tag youtube videos
+*** TODO auto tag youtube videos; fix for v2
 #+begin_src emacs-lisp
 (defun qz/format-link-from-title (title)
   (let ((file (org-roam-link--get-file-from-title title)))
