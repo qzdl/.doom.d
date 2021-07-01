@@ -16,8 +16,8 @@
 
 (load-file "~/.doom.d/private/authinfo.el")
 
-  (map! "<mouse-8>" 'better-jumper-jump-backward)
-  (map! "<mouse-9>" 'better-jumper-jump-forward)
+(map! "<mouse-8>" 'better-jumper-jump-backward)
+(map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
 
@@ -246,8 +246,9 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
       (:prefix-map ("t" . "toggle")
        :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
 
-                                        ;(load! "elegance/elegance.el")
-                                        ;(load! "elegance/sanity.el")
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(menu-bar-mode -1)
 
 (setq writeroom-width 80)
 
@@ -269,7 +270,7 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
   (load-theme 'pink-mountain t))
 
 ;; cba
-(load-theme 'modus-vivendi t)
+;(load-theme 'modus-vivendi t)
 
 ;(require 'ivy-posframe)
 ;
@@ -424,6 +425,13 @@ INDINGS is a list of cons cells containing a key (string) and a command."
 (with-eval-after-load 'exwm-input
   (exwm-input-set-simulation-keys qz/default-simulation-keys))
 
+(defun qz/exwm-input--update-global-prefix-keys ()
+  "an interactive wrapper to rebind with `exwm-input--update-global-prefix-keys'"
+  (interactive)
+  (exwm-input--update-global-prefix-keys))
+
+(with-eval-after-load (exwm-input--update-global-prefix-keys))
+
 ;(setq exwm-workspace-minibuffer-position 'top)
 
 (menu-bar-mode -1)
@@ -496,6 +504,44 @@ start-process-shell-command' with COMMAND"
        "C-c" #'org-capture
        "F" #'find-file-in-notes))
 
+(require 'nano-layout)
+(require 'nano-theme-dark)
+
+;; Theme
+(require 'nano-faces)
+(nano-faces)
+
+(require 'nano-theme)
+(nano-theme)
+
+;; Nano default settings (optional)
+;; (require 'nano-defaults)
+
+;; Nano session saving (optional)
+(require 'nano-session)
+
+;; Nano header & mode lines (optional)
+(require 'nano-modeline)
+
+;; Nano key bindings modification (optional)
+;;(require 'nano-bindings)
+
+;; Compact layout (need to be loaded after nano-modeline)
+;(require 'nano-compact)
+
+;; Nano counsel configuration (optional)
+;; Needs "counsel" package to be installed (M-x: package-install)
+(require 'nano-counsel)
+
+
+;; Welcome message (optional)
+(let ((inhibit-message t))
+  (message "Welcome to GNU Emacs / N Λ N O edition")
+  (message (format "Initialization time: %s" (emacs-init-time))))
+
+;; Help (optional)
+(require 'nano-help)
+
 (setq qz/psql-error-rollback 0)
 
 (qz/toggle-1->0 qz/psql-error-rollback)
@@ -510,17 +556,17 @@ start-process-shell-command' with COMMAND"
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-  (defun qz/upcase-sql-keywords ()
-    (interactive)
-    (save-excursion
-      (dolist (keywords sql-mode-postgres-font-lock-keywords)
-        (goto-char (point-min))
-        (while (re-search-forward (car keywords) nil t)
-          (goto-char (+ 1 (match-beginning 0)))
-          (when (eql font-lock-keyword-face (face-at-point))
-            (backward-char)
-            (upcase-word 1)
-            (forward-char))))))
+(defun qz/upcase-sql-keywords ()
+  (interactive)
+  (save-excursion
+    (dolist (keywords sql-mode-postgres-font-lock-keywords)
+      (goto-char (point-min))
+      (while (re-search-forward (car keywords) nil t)
+        (goto-char (+ 1 (match-beginning 0)))
+        (when (eql font-lock-keyword-face (face-at-point))
+          (backward-char)
+          (upcase-word 1)
+          (forward-char))))))
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -679,7 +725,8 @@ v))
       bibtex-completion-notes-path qz/notes-directory
       org-ref-bibliography-notes "~/life/bib.org"
       org-noter-notes-search-path (list qz/notes-directory)
-      org-roam-directory qz/notes-directory)
+      org-roam-directory qz/notes-directory
+      org-roam-dailies-directory qz/notes-directory)
 
 (require 'org-fragtog)
 (add-hook 'org-mode-hook 'org-fragtog-mode)
@@ -772,7 +819,7 @@ v))
 
 (qz/pprint org-agenda-custom-commands)
 
- (defun +org-defer-mode-in-agenda-buffers-h ()
+(defun +org-defer-mode-in-agenda-buffers-h ()
       "`org-agenda' opens temporary, incomplete org-mode buffers.
 I've disabled a lot of org-mode's startup processes for these invisible buffers
 to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
@@ -927,7 +974,7 @@ can grow up to be fully-fledged org-mode buffers."
          (function qz/current-roam-link)
          :immediate-finish t)
         ("w" "Weekly Review" entry
-         (file+olp+datetree ,(concat qz/org-agenda-directory "reviews.org"))
+         (file+datetree ,(concat qz/org-agenda-directory "reviews.org"))
          (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))))
 
 (defun qz/inbox-last-captured (&optional buffer)
@@ -973,11 +1020,14 @@ can grow up to be fully-fledged org-mode buffers."
 (defun qz/roam-capture-todo ()
   (interactive)
   "Capture a task in agenda mode."
-  (org-roam-capture- :goto t
-                     :keys "n"
-                     :node (org-roam-node-create :title (doom-thing-at-point-or-region))
-                     :props '(:immediate-finish t :jump-to-captured nil))
-  (qz/capture-last-captured))
+  (destructuring-bind (thing region) (qz/thing-at-point-or-region-and-region)
+    (org-roam-capture- :goto t
+                       :keys "n"
+                       :node (org-roam-node-create :title thing)
+                       :props `(:immediate-finish t :jump-to-captured nil
+                                :region ,region     :insert-at ,(point-marker)
+                                :finalize 'insert-link))
+    (qz/capture-last-captured)))
 
 (defun qz/org-roam-has-link-to-p (source dest)
   "TODO implement; returns t/nil if source links to dest"
@@ -1046,6 +1096,7 @@ can grow up to be fully-fledged org-mode buffers."
         :desc "org-roam" "j" #'org-roam-dailies-capture-today
         :desc "org-roam" "J" #'org-roam-dailies-find-today
         :desc "org-roam-node-insert" "i" #'org-roam-node-insert
+        :desc "qz/org-roam-immediate-node-insert" "C-i" #'qz/org-roam-immediate-node-insert
         :desc "org-roam-node-find" "f" #'org-roam-node-find)
   :config
   (setq org-roam-mode-sections
@@ -1133,7 +1184,14 @@ can grow up to be fully-fledged org-mode buffers."
         ("p" "private" plain "%?"
          (file+head ,(concat "private-" qz/capture-title-timestamp)
                     ,qz/org-roam-capture-head)
-         :unnarrowed t)))
+         :unnarrowed t))    )
+
+(add-to-list
+ 'org-roam-capture-templates
+ '("n" "empty" plain
+    "%?"
+    :if-new (file+head "${slug}.org" "#+title: ${title}\n")
+    :immediate-finish t))
 
 (setq org-roam-capture-ref-templates
       `(("r" "ref" plain
@@ -1174,11 +1232,48 @@ can grow up to be fully-fledged org-mode buffers."
 
 ;(qz/node-tags)
 
-(map! "s-i" #'qz/roam-immediate-insert)
-
 (defun qz/roam-immediate-insert ()
   (interactive)
   (qz/org-roam-node-insert nil t))
+
+(defun qz/thing-at-point-or-region-and-region (&optional thing prompt)
+  "Grab the current selection, THING at point, or xref identifier at point.
+
+Returns THING if it is a string. Otherwise, if nothing is found at point and
+PROMPT is non-nil, prompt for a string (if PROMPT is a string it'll be used as
+the prompting string). Returns nil if all else fails.
+
+NOTE: Don't use THING for grabbing symbol-at-point. The xref fallback is smarter
+in some cases."
+  (declare (side-effect-free t))
+  (cond ((stringp thing)
+         thing)
+        ((doom-region-active-p)
+         (cons (buffer-substring-no-properties (region-beginning) (region-end))
+               (cons (region-beginning)
+                     (region-end))))
+        (thing
+         (cons (thing-at-point thing t)
+               (bounds-of-thing-at-point thing)))
+        ((require 'xref nil t)
+         ;; Eglot, nox (a fork of eglot), and elpy implementations for
+         ;; `xref-backend-identifier-at-point' betray the documented purpose of
+         ;; the interface. Eglot/nox return a hardcoded string and elpy prepends
+         ;; the line number to the symbol.
+         (let* ((val
+                 (if (memq (xref-find-backend) '(eglot elpy nox))
+                     (thing-at-point 'symbol t)
+                   ;; A little smarter than using `symbol-at-point', though in most
+                   ;; cases, xref ends up using `symbol-at-point' anyway.
+                   (xref-backend-identifier-at-point (xref-find-backend)))))
+           (cons val (bounds-of-thing-at-point 'symbol))))
+        (prompt
+         (read-string (if (stringp prompt) prompt "")))))
+
+
+
+(destructuring-bind (a . (b . c)) '(1  . (2 . 3))
+  (message "%s %s %s" a b c))
 
 (defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
   "Find an Org-roam file, and insert a relative org link to it at point.
@@ -1190,15 +1285,14 @@ which takes as its argument an alist of path-completions."
   (unwind-protect
       ;; Group functions together to avoid inconsistent state on quit
       (atomic-change-group
-        (let* (region-text
-               beg end
-               (_ (when (region-active-p)
-                    (setq beg (set-marker (make-marker) (region-beginning)))
-                    (setq end (set-marker (make-marker) (region-end)))))
+        (let* ((pt (qz/thing-at-point-or-region-and-region))
+               (beg (set-marker (make-marker) (car (cdr pt))))
+               (end (set-marker (make-marker) (cdr (cdr pt))))
                (region-text (org-link-display-format
-                             (substring-no-properties (doom-thing-at-point-or-region))))
+                             (substring-no-properties (car pt))))
                (node (if pass-thru
-                         (org-roam-node-create :title region-text)
+                         (or (org-roam-node-from-title-or-alias region-text)
+                             (org-roam-node-create :title region-text))
                        (org-roam-node-read region-text filter-fn)))
                (description (or (and node region-text (org-roam-node-title node))
                                 region-text)))
@@ -1216,6 +1310,92 @@ which takes as its argument an alist of path-completions."
                  (org-roam-capture-
                   :node node
                   ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
+                  :props (append
+                          (when (and beg end)
+                            (list :region (cons beg end)))
+                          (list :insert-at (point-marker)
+                                :link-description description
+                                :finalize 'insert-link))))))))
+    (deactivate-mark)))
+
+(defun qz/thing-at-point-or-region-and-region (&optional thing prompt)
+  "Grab the current selection, THING at point, or xref identifier at point.
+
+Returns THING if it is a string. Otherwise, if nothing is found at point and
+PROMPT is non-nil, prompt for a string (if PROMPT is a string it'll be used as
+the prompting string). Returns nil if all else fails.
+
+NOTE: Don't use THING for grabbing symbol-at-point. The xref fallback is smarter
+in some cases."
+  (declare (side-effect-free t))
+  (cond ((stringp thing)
+         thing)
+        ((doom-region-active-p)
+         (cons (buffer-substring-no-properties (region-beginning) (region-end))
+               (cons (region-beginning)
+                     (region-end))))
+        (thing
+         (cons (thing-at-point thing t)
+               (bounds-of-thing-at-point thing)))
+        ((require 'xref nil t)
+         ;; Eglot, nox (a fork of eglot), and elpy implementations for
+         ;; `xref-backend-identifier-at-point' betray the documented purpose of
+         ;; the interface. Eglot/nox return a hardcoded string and elpy prepends
+         ;; the line number to the symbol.
+         (let* ((val
+                 (if (memq (xref-find-backend) '(eglot elpy nox))
+                     (thing-at-point 'symbol t)
+                   ;; A little smarter than using `symbol-at-point', though in most
+                   ;; cases, xref ends up using `symbol-at-point' anyway.
+                   (xref-backend-identifier-at-point (xref-find-backend)))))
+           (cons val (bounds-of-thing-at-point 'symbol))))
+        (prompt
+         (read-string (if (stringp prompt) prompt "")))))
+
+(defun qz/org-roam-immediate-node-insert ()
+"Insert a node on `thing-at-point', corresponding to the thing, creating
+if not existing"
+  (interactive)
+  (qz/org-roam-node-insert nil t))
+
+(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
+  "Find an Org-roam file, and insert a relative org link to it at point.
+Return selected file if it exists.
+If LOWERCASE is non-nil, downcase the link description.
+FILTER-FN is the name of a function to apply on the candidates
+which takes as its argument an alist of path-completions."
+  (interactive)
+  (unwind-protect
+      ;; Group functions together to avoid inconsistent state on quit
+      (atomic-change-group
+        (let* ((pt (qz/thing-at-point-or-region-and-region))
+               (beg (set-marker (make-marker) (car (cdr pt))))
+               (end (set-marker (make-marker) (cdr (cdr pt))))
+               (region-text (org-link-display-format
+                             (substring-no-properties (car pt))))
+               (node (if pass-thru
+                         (or (org-roam-node-from-title-or-alias region-text)
+                             (org-roam-node-create :title region-text))
+                       (org-roam-node-read region-text filter-fn)))
+               (description (or (and node region-text (org-roam-node-title node))
+                                region-text)))
+          (if (org-roam-node-id node)
+              (progn
+                (when region-text
+                  (delete-region beg end)
+                  (set-marker beg nil)
+                  (set-marker end nil))
+                (insert (org-link-make-string
+                         (concat "id:" (org-roam-node-id node))
+                         description)))
+            (funcall
+              `(lambda ()
+                 (org-roam-capture-
+                  :node node
+                  ;; there could be a better way to reference the `immediate-finish'
+                  ;; roam-capture-template here, but for demo it's just easier to splice in
+                  ;; with a funny metaprogramming hack for conditional interning `:key "val"'
+                  ,@(when pass-thru '(:keys "n"))  ; where "n" is an `immediate-finish' template
                   :props (append
                           (when (and beg end)
                             (list :region (cons beg end)))
@@ -1641,7 +1821,7 @@ defines if the text should be inserted inside the note."
                  (mathpix-get-result mathpix-screenshot-file)))
           (delete-file mathpix-screenshot-file)))))
 
-                                        ;(require 'orderless)
+;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
                                         ;(icomplete-mode) ; optional but recommended!
                                         ;
@@ -1707,6 +1887,83 @@ outputting the result in the buffer at-point"
        (args (+org--get-property (completing-read "property: " org-default-properties))))
    (setq current-prefix-arg '(4))
    (shell-command (concat command " " args " &"))))
+
+(defun qz/thing-at-point-or-region-and-region (&optional thing prompt)
+  "Grab the current selection, THING at point, or xref identifier at point.
+
+Returns THING if it is a string. Otherwise, if nothing is found at point and
+PROMPT is non-nil, prompt for a string (if PROMPT is a string it'll be used as
+the prompting string). Returns nil if all else fails.
+
+NOTE: Don't use THING for grabbing symbol-at-point. The xref fallback is smarter
+in some cases."
+  (declare (side-effect-free t))
+  (cond ((stringp thing)
+         thing)
+        ((doom-region-active-p)
+         (cons (buffer-substring-no-properties (region-beginning) (region-end))
+               (cons (region-beginning)
+                     (region-end))))
+        (thing
+         (cons (thing-at-point thing t)
+               (bounds-of-thing-at-point thing)))
+        ((require 'xref nil t)
+         ;; Eglot, nox (a fork of eglot), and elpy implementations for
+         ;; `xref-backend-identifier-at-point' betray the documented purpose of
+         ;; the interface. Eglot/nox return a hardcoded string and elpy prepends
+         ;; the line number to the symbol.
+         (let* ((val
+                 (if (memq (xref-find-backend) '(eglot elpy nox))
+                     (thing-at-point 'symbol t)
+                   ;; A little smarter than using `symbol-at-point', though in most
+                   ;; cases, xref ends up using `symbol-at-point' anyway.
+                   (xref-backend-identifier-at-point (xref-find-backend)))))
+           (cons val (bounds-of-thing-at-point 'symbol))))
+        (prompt
+         (read-string (if (stringp prompt) prompt "")))))
+
+(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
+  "Find an Org-roam file, and insert a relative org link to it at point.
+Return selected file if it exists.
+If LOWERCASE is non-nil, downcase the link description.
+FILTER-FN is the name of a function to apply on the candidates
+which takes as its argument an alist of path-completions."
+  (interactive)
+  (unwind-protect
+      ;; Group functions together to avoid inconsistent state on quit
+      (atomic-change-group
+        (let* ((pt (qz/thing-at-point-or-region-and-region))
+               (beg (set-marker (make-marker) (car (cdr pt))))
+               (end (set-marker (make-marker) (cdr (cdr pt))))
+               (region-text (org-link-display-format
+                             (substring-no-properties (car pt))))
+               (node (if pass-thru
+                         (or (org-roam-node-from-title-or-alias region-text)
+                             (org-roam-node-create :title region-text))
+                       (org-roam-node-read region-text filter-fn)))
+               (description (or (and node region-text (org-roam-node-title node))
+                                region-text)))
+          (if (org-roam-node-id node)
+              (progn
+                (when region-text
+                  (delete-region beg end)
+                  (set-marker beg nil)
+                  (set-marker end nil))
+                (insert (org-link-make-string
+                         (concat "id:" (org-roam-node-id node))
+                         description)))
+            (funcall
+              `(lambda ()
+                 (org-roam-capture-
+                  :node node
+                  ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
+                  :props (append
+                          (when (and beg end)
+                            (list :region (cons beg end)))
+                          (list :insert-at (point-marker)
+                                :link-description description
+                                :finalize 'insert-link))))))))
+    (deactivate-mark)))
 
 (setq qz/org-agenda-prefix-length 20
       org-agenda-prefix-format

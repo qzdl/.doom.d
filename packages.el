@@ -89,7 +89,7 @@
 (package! org-roam
   :recipe (:host github :repo "org-roam/org-roam" :branch "v2"))
 (package! org-transclusion
-  :recipe (:host github :repo "nobiot/org-transclusion" :branch "dev/0.2.0"))
+  :recipe (:host github :repo "nobiot/org-transclusion" :branch "dev/0.2.1"))
 ;;(package! org-roam-server)
 ;;(package! org-roam-bibtex)
 
@@ -137,6 +137,8 @@
 ;;=========
 (package! tron-legacy-emacs-theme
   :recipe (:host github :repo "ianpan870102/tron-legacy-emacs-theme"))
-
+(package! nano-emacs
+  :recipe (:host github :repo "rougier/nano-emacs"))
+(package! smex)
 
 ;;; packages.el ends here
