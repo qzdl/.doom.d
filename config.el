@@ -16,8 +16,8 @@
 
 (load-file "~/.doom.d/private/authinfo.el")
 
-  (map! "<mouse-8>" 'better-jumper-jump-backward)
-  (map! "<mouse-9>" 'better-jumper-jump-forward)
+(map! "<mouse-8>" 'better-jumper-jump-backward)
+(map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
 
@@ -411,6 +411,38 @@ start-process-shell-command' with COMMAND"
   (interactive)
   (exwm-goto "firefox" :class "Firefox"))
 
+(require 'nano-layout)
+(require 'nano-theme-dark)
+
+;; Theme
+(require 'nano-faces)
+(nano-faces)
+
+(require 'nano-theme)
+(nano-theme)
+
+;; Nano default settings (optional)
+;; (require 'nano-defaults)
+
+;; Nano session saving (optional)
+;(require 'nano-session)
+
+;; Nano header & mode lines (optional)
+(require 'nano-modeline)
+
+;; Nano key bindings modification (optional)
+;;(require 'nano-bindings)
+
+;; Compact layout (need to be loaded after nano-modeline)
+;(require 'nano-compact)
+
+;; Nano counsel configuration (optional)
+;; Needs "counsel" package to be installed (M-x: package-install)
+(require 'nano-counsel)
+
+;; Help (optional)
+(require 'nano-help)
+
 (setq doom-font (font-spec :family "monospace" :size qz/font-default))
 (setq doom-theme nil)
 (setq doom-modeline-height 10)
@@ -530,38 +562,6 @@ start-process-shell-command' with COMMAND"
 
 ;; Anselm
 
-(require 'nano-layout)
-(require 'nano-theme-dark)
-
-;; Theme
-(require 'nano-faces)
-(nano-faces)
-
-(require 'nano-theme)
-(nano-theme)
-
-;; Nano default settings (optional)
-;; (require 'nano-defaults)
-
-;; Nano session saving (optional)
-;(require 'nano-session)
-
-;; Nano header & mode lines (optional)
-(require 'nano-modeline)
-
-;; Nano key bindings modification (optional)
-;;(require 'nano-bindings)
-
-;; Compact layout (need to be loaded after nano-modeline)
-;(require 'nano-compact)
-
-;; Nano counsel configuration (optional)
-;; Needs "counsel" package to be installed (M-x: package-install)
-(require 'nano-counsel)
-
-;; Help (optional)
-(require 'nano-help)
-
 (map! :leader
       (:prefix-map ("n" . "notes")
        (:prefix-map ("d" . "by date")
@@ -586,17 +586,17 @@ start-process-shell-command' with COMMAND"
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-  (defun qz/upcase-sql-keywords ()
-    (interactive)
-    (save-excursion
-      (dolist (keywords sql-mode-postgres-font-lock-keywords)
-        (goto-char (point-min))
-        (while (re-search-forward (car keywords) nil t)
-          (goto-char (+ 1 (match-beginning 0)))
-          (when (eql font-lock-keyword-face (face-at-point))
-            (backward-char)
-            (upcase-word 1)
-            (forward-char))))))
+(defun qz/upcase-sql-keywords ()
+  (interactive)
+  (save-excursion
+    (dolist (keywords sql-mode-postgres-font-lock-keywords)
+      (goto-char (point-min))
+      (while (re-search-forward (car keywords) nil t)
+        (goto-char (+ 1 (match-beginning 0)))
+        (when (eql font-lock-keyword-face (face-at-point))
+          (backward-char)
+          (upcase-word 1)
+          (forward-char))))))
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -863,7 +863,7 @@ v))
 
 (qz/pprint org-agenda-custom-commands)
 
- (defun +org-defer-mode-in-agenda-buffers-h ()
+(defun +org-defer-mode-in-agenda-buffers-h ()
       "`org-agenda' opens temporary, incomplete org-mode buffers.
 I've disabled a lot of org-mode's startup processes for these invisible buffers
 to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
@@ -1866,7 +1866,7 @@ defines if the text should be inserted inside the note."
                  (mathpix-get-result mathpix-screenshot-file)))
           (delete-file mathpix-screenshot-file)))))
 
-                                        ;(require 'orderless)
+;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
                                         ;(icomplete-mode) ; optional but recommended!
                                         ;
@@ -2011,11 +2011,11 @@ which takes as its argument an alist of path-completions."
     (deactivate-mark)))
 
 (setq qz/org-agenda-prefix-length 20
-      org-agenda-prefix-format
-      '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
-        (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
+      org-agenda-prefix-format nil)
+      ;; '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
+      ;;   (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
+      ;;   (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
+      ;;   (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
 
 (defun vulpea-agenda-category (&optional len)
   "Get category of item at point for agenda.

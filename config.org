@@ -928,6 +928,43 @@ this doesn't work on my XPS
 #+RESULTS:
 : qz/exwm-goto-browser
 
+* nano
+#+begin_src emacs-lisp
+(require 'nano-layout)
+(require 'nano-theme-dark)
+
+;; Theme
+(require 'nano-faces)
+(nano-faces)
+
+(require 'nano-theme)
+(nano-theme)
+
+;; Nano default settings (optional)
+;; (require 'nano-defaults)
+
+;; Nano session saving (optional)
+;(require 'nano-session)
+
+;; Nano header & mode lines (optional)
+(require 'nano-modeline)
+
+;; Nano key bindings modification (optional)
+;;(require 'nano-bindings)
+
+;; Compact layout (need to be loaded after nano-modeline)
+;(require 'nano-compact)
+
+;; Nano counsel configuration (optional)
+;; Needs "counsel" package to be installed (M-x: package-install)
+(require 'nano-counsel)
+
+;; Help (optional)
+(require 'nano-help)
+#+end_src
+
+#+RESULTS:
+: nano-help
 * visual
 ** fonts & text :vars:
 
@@ -1142,43 +1179,7 @@ the absolute GOAT for ultrawide monitors. {C-x 1} is your friend
 
 #+RESULTS:
 : message-filter-center
-* nano
-#+begin_src emacs-lisp
-(require 'nano-layout)
-(require 'nano-theme-dark)
 
-;; Theme
-(require 'nano-faces)
-(nano-faces)
-
-(require 'nano-theme)
-(nano-theme)
-
-;; Nano default settings (optional)
-;; (require 'nano-defaults)
-
-;; Nano session saving (optional)
-;(require 'nano-session)
-
-;; Nano header & mode lines (optional)
-(require 'nano-modeline)
-
-;; Nano key bindings modification (optional)
-;;(require 'nano-bindings)
-
-;; Compact layout (need to be loaded after nano-modeline)
-;(require 'nano-compact)
-
-;; Nano counsel configuration (optional)
-;; Needs "counsel" package to be installed (M-x: package-install)
-(require 'nano-counsel)
-
-;; Help (optional)
-(require 'nano-help)
-#+end_src
-
-#+RESULTS:
-: nano-help
 * TODO hydra
 ** n :kbd:
 The =n= of {C-c n} denotes notes.
