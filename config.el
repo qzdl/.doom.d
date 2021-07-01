@@ -221,100 +221,6 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 
 (server-start)
 
-(setq doom-font (font-spec :family "monospace" :size qz/font-default))
-(setq doom-theme nil)
-(setq doom-modeline-height 10)
-(setq display-line-numbers-type nil)
-(set-language-environment "UTF-8")
-(set-default-coding-systems 'utf-8)
-
-(tooltip-mode 1)
-
-(setq qz/toggle-time-state t)
-(display-time-mode qz/toggle-time-state)
-
-(defun qz/toggle-time-in-modeline ()
-  (interactive)
-  (message
-   (concat "Time display in modeline is "
-           (if (display-time-mode
-                (setq qz/toggle-time-state
-                      (qz/toggle-1->0 qz/toggle-time-state)))
-               "on" "off"))))
-
-(map! :leader
-      (:prefix-map ("t" . "toggle")
-       :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
-
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-(menu-bar-mode -1)
-
-(setq writeroom-width 80)
-
-(add-to-list 'writeroom-mode-hook
-             (lambda () (setq writeroom-border-width 50)))
-
-(defun qz/load-tron-legacy ()
-  (interactive)
-  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
-  (load-theme 'tron-legacy t)
-  (setq tron-legacy-vivid-cursor t))
-
-(defun qz/load-k ()
-  (interactive)
-  (load-theme 'k t))
-
-(defun qz/load-pink-mountain ()
-  (interactive)
-  (load-theme 'pink-mountain t))
-
-;; cba
-;(load-theme 'modus-vivendi t)
-
-;(require 'ivy-posframe)
-;
-;(defun sarg/ivy-posframe-poshandler (info)
-;  (setq-local
-;   workarea (elt exwm-workspace--workareas exwm-workspace-current-index)
-;   return-value (posframe-poshandler-frame-center info)
-;    (cons (+ (aref workarea 0) (car return-value))
-;          (+ (aref workarea 1) (cdr return-value))))
-;  return-value)
-;
-;(defun sarg/ivy-posframe-exwm (str)
-;  (ivy-posframe--display str #'sarg/ivy-posframe-poshandler))
-;
-;(after! ivy-posframe
-;  (setq ivy-posframe-display-functions-alist '((t . sarg/ivy-posframe-exwm))
-;        ivy-posframe-border-width 4
-;        ivy-posframe-parameters '((parent-frame nil))))
-;
-;(ivy-posframe-mode 1)
-
-(setq qz/preferred-transparency-alpha '(80 . 70))
-
-(set-frame-parameter (selected-frame) 'alpha qz/preferred-transparency-alpha)
-(add-to-list 'default-frame-alist `(alpha . ,qz/preferred-transparency-alpha))
-
-(defun qz/toggle-transparency ()
-  "Toggle between max opacity and `qz/preferred-transparency-alpha'"
-  (interactive)
-  (let ((alpha (frame-parameter nil 'alpha)))
-    (set-frame-parameter
-     nil 'alpha
-     (if (eql (cond ((numberp alpha) alpha)
-                    ((numberp (cdr alpha)) (cdr alpha))
-                    ;; Also handle undocumented (<active> <inactive>) form.
-                    ((numberp (cadr alpha)) (cadr alpha)))
-              100)
-         qz/preferred-transparency-alpha '(100 . 100))))
-  (message (concat "Frame transparency set to "
-                   (number-to-string (car (frame-parameter nil 'alpha))))))
-
-(perfect-margin-mode 1)
-(setq perfect-margin-ignore-regexps nil)
-
 (require 'exwm-randr)
 
 (defun qz/exwm-usbc-ultrawide ()
@@ -505,15 +411,124 @@ start-process-shell-command' with COMMAND"
   (interactive)
   (exwm-goto "firefox" :class "Firefox"))
 
+(setq doom-font (font-spec :family "monospace" :size qz/font-default))
+(setq doom-theme nil)
+(setq doom-modeline-height 10)
+(setq display-line-numbers-type nil)
+(set-language-environment "UTF-8")
+(set-default-coding-systems 'utf-8)
+
+(tooltip-mode 1)
+
+(setq qz/toggle-time-state t)
+(display-time-mode qz/toggle-time-state)
+
+(defun qz/toggle-time-in-modeline ()
+  (interactive)
+  (message
+   (concat "Time display in modeline is "
+           (if (display-time-mode
+                (setq qz/toggle-time-state
+                      (qz/toggle-1->0 qz/toggle-time-state)))
+               "on" "off"))))
+
 (map! :leader
-      (:prefix-map ("n" . "notes")
-       (:prefix-map ("d" . "by date")
-          :desc "Arbitrary date" "d" #'org-roam-dailies-date
-          :desc "Today"          "t" #'org-roam-dailies-today
-          :desc "Tomorrow"       "m" #'org-roam-dailies-tomorrow
-          :desc "Yesterday"      "y" #'org-roam-dailies-yesterday)
-       "C-c" #'org-capture
-       "F" #'find-file-in-notes))
+      (:prefix-map ("t" . "toggle")
+       :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
+
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(menu-bar-mode -1)
+
+(setq writeroom-width 80)
+
+(add-to-list 'writeroom-mode-hook
+             (lambda () (setq writeroom-border-width 50)))
+
+(defun qz/load-tron-legacy ()
+  (interactive)
+  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
+  (load-theme 'tron-legacy t)
+  (setq tron-legacy-vivid-cursor t))
+
+(defun qz/load-k ()
+  (interactive)
+  (load-theme 'k t))
+
+(defun qz/load-pink-mountain ()
+  (interactive)
+  (load-theme 'pink-mountain t))
+
+;; cba
+;(load-theme 'modus-vivendi t)
+
+;(require 'ivy-posframe)
+;
+;(defun sarg/ivy-posframe-poshandler (info)
+;  (setq-local
+;   workarea (elt exwm-workspace--workareas exwm-workspace-current-index)
+;   return-value (posframe-poshandler-frame-center info)
+;    (cons (+ (aref workarea 0) (car return-value))
+;          (+ (aref workarea 1) (cdr return-value))))
+;  return-value)
+;
+;(defun sarg/ivy-posframe-exwm (str)
+;  (ivy-posframe--display str #'sarg/ivy-posframe-poshandler))
+;
+;(after! ivy-posframe
+;  (setq ivy-posframe-display-functions-alist '((t . sarg/ivy-posframe-exwm))
+;        ivy-posframe-border-width 4
+;        ivy-posframe-parameters '((parent-frame nil))))
+;
+;(ivy-posframe-mode 1)
+
+(setq qz/preferred-transparency-alpha '(80 . 70))
+
+(set-frame-parameter (selected-frame) 'alpha qz/preferred-transparency-alpha)
+(add-to-list 'default-frame-alist `(alpha . ,qz/preferred-transparency-alpha))
+
+(defun qz/toggle-transparency ()
+  "Toggle between max opacity and `qz/preferred-transparency-alpha'"
+  (interactive)
+  (let ((alpha (frame-parameter nil 'alpha)))
+    (set-frame-parameter
+     nil 'alpha
+     (if (eql (cond ((numberp alpha) alpha)
+                    ((numberp (cdr alpha)) (cdr alpha))
+                    ;; Also handle undocumented (<active> <inactive>) form.
+                    ((numberp (cadr alpha)) (cadr alpha)))
+              100)
+         qz/preferred-transparency-alpha '(100 . 100))))
+  (message (concat "Frame transparency set to "
+                   (number-to-string (car (frame-parameter nil 'alpha))))))
+
+(perfect-margin-mode 1)
+(setq perfect-margin-ignore-regexps nil
+      perfect-margin-ignore-filters nil)
+
+(defun qz/set-message-filter ()
+  (interactive)
+  (defun message-filter-center (args)
+    "Center message string.
+  This is a :filter-args advice for `message`."
+    (set-window-margins (minibuffer-window) 0)
+    (set-window-margins
+     (minibuffer-window)
+     (if (not (car args))
+         (/ 2 (frame-width)) ;; a new 'default' echo position
+       (max 0 (/ (- (window-width (minibuffer-window))
+                    (string-width (car args)))
+                 2))))
+    args)) ;; allow regular args to be passed
+
+(defun qz/reset-message-filter ()
+  (interactive)
+  (defun message-filter-center (args) args))
+
+(advice-add #'message :filter-args #'message-filter-center)
+(qz/set-message-filter)
+
+;; Anselm
 
 (require 'nano-layout)
 (require 'nano-theme-dark)
@@ -529,7 +544,7 @@ start-process-shell-command' with COMMAND"
 ;; (require 'nano-defaults)
 
 ;; Nano session saving (optional)
-(require 'nano-session)
+;(require 'nano-session)
 
 ;; Nano header & mode lines (optional)
 (require 'nano-modeline)
@@ -544,14 +559,18 @@ start-process-shell-command' with COMMAND"
 ;; Needs "counsel" package to be installed (M-x: package-install)
 (require 'nano-counsel)
 
-
-;; Welcome message (optional)
-(let ((inhibit-message t))
-  (message "Welcome to GNU Emacs / N Λ N O edition")
-  (message (format "Initialization time: %s" (emacs-init-time))))
-
 ;; Help (optional)
 (require 'nano-help)
+
+(map! :leader
+      (:prefix-map ("n" . "notes")
+       (:prefix-map ("d" . "by date")
+          :desc "Arbitrary date" "d" #'org-roam-dailies-date
+          :desc "Today"          "t" #'org-roam-dailies-today
+          :desc "Tomorrow"       "m" #'org-roam-dailies-tomorrow
+          :desc "Yesterday"      "y" #'org-roam-dailies-yesterday)
+       "C-c" #'org-capture
+       "F" #'find-file-in-notes))
 
 (setq qz/psql-error-rollback 0)
 

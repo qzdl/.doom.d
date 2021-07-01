@@ -555,185 +555,6 @@ often start sending out lower numbers.
 (server-start)
 #+end_src
 
-* visual
-** fonts & text :vars:
-
-#+begin_src emacs-lisp
-(setq doom-font (font-spec :family "monospace" :size qz/font-default))
-(setq doom-theme nil)
-(setq doom-modeline-height 10)
-(setq display-line-numbers-type nil)
-(set-language-environment "UTF-8")
-(set-default-coding-systems 'utf-8)
-#+end_src
-
-#+RESULTS:
-: (utf-8-unix . utf-8-unix)
-
-** use tooltips :init:
-#+begin_src emacs-lisp
-(tooltip-mode 1)
-#+end_src
-
-#+RESULTS:
-: t
-
-** toggling time in the modeline :kbd:
-An example of this can be found in [[Time in the modeline]]. Equal is used here to
-coerce non-numeric arguments into something that will toggle.
-#+begin_src emacs-lisp
-(setq qz/toggle-time-state t)
-(display-time-mode qz/toggle-time-state)
-
-(defun qz/toggle-time-in-modeline ()
-  (interactive)
-  (message
-   (concat "Time display in modeline is "
-           (if (display-time-mode
-                (setq qz/toggle-time-state
-                      (qz/toggle-1->0 qz/toggle-time-state)))
-               "on" "off"))))
-
-(map! :leader
-      (:prefix-map ("t" . "toggle")
-       :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
-#+end_src
-
-#+RESULTS:
-: qz/toggle-time-in-modeline
-
-** kill default menu/tool/scroll-bar
-#+begin_src emacs-lisp
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-(menu-bar-mode -1)
-#+end_src
-** writeroom settings :vars:
-
-#+begin_src emacs-lisp
-(setq writeroom-width 80)
-
-(add-to-list 'writeroom-mode-hook
-             (lambda () (setq writeroom-border-width 50)))
-#+end_src
-
-#+RESULTS:
-| (lambda nil (setq writeroom-border-width 50)) | +zen-enable-mixed-pitch-mode-h |
-
-** theme :func:
-#+begin_src emacs-lisp
-(defun qz/load-tron-legacy ()
-  (interactive)
-  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
-  (load-theme 'tron-legacy t)
-  (setq tron-legacy-vivid-cursor t))
-
-(defun qz/load-k ()
-  (interactive)
-  (load-theme 'k t))
-
-(defun qz/load-pink-mountain ()
-  (interactive)
-  (load-theme 'pink-mountain t))
-
-;; cba
-;(load-theme 'modus-vivendi t)
-#+end_src
-
-#+RESULTS:
-: qz/load-pink-mountain
-
-** TODO [[id:956fe315-004c-49e6-958c-c4791eb83357][ivy-posframe]] :init:
-[[https://github.com/tumashu/ivy-posframe][GitHub - tumashu/ivy-posframe: ivy-posframe is a ivy extension, which let ivy...]]
-
-this fucking sucks with [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]], just jumps about the place with each poll of the window
-
-#+begin_src emacs-lisp
-;(require 'ivy-posframe)
-;
-;(defun sarg/ivy-posframe-poshandler (info)
-;  (setq-local
-;   workarea (elt exwm-workspace--workareas exwm-workspace-current-index)
-;   return-value (posframe-poshandler-frame-center info)
-;    (cons (+ (aref workarea 0) (car return-value))
-;          (+ (aref workarea 1) (cdr return-value))))
-;  return-value)
-;
-;(defun sarg/ivy-posframe-exwm (str)
-;  (ivy-posframe--display str #'sarg/ivy-posframe-poshandler))
-;
-;(after! ivy-posframe
-;  (setq ivy-posframe-display-functions-alist '((t . sarg/ivy-posframe-exwm))
-;        ivy-posframe-border-width 4
-;        ivy-posframe-parameters '((parent-frame nil))))
-;
-;(ivy-posframe-mode 1)
-#+end_src
-
-#+RESULTS:
-
-** transparency :func:
-totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
-
-remember to flick on compton to complete the rice
-#+begin_src emacs-lisp
-(setq qz/preferred-transparency-alpha '(80 . 70))
-
-(set-frame-parameter (selected-frame) 'alpha qz/preferred-transparency-alpha)
-(add-to-list 'default-frame-alist `(alpha . ,qz/preferred-transparency-alpha))
-
-(defun qz/toggle-transparency ()
-  "Toggle between max opacity and `qz/preferred-transparency-alpha'"
-  (interactive)
-  (let ((alpha (frame-parameter nil 'alpha)))
-    (set-frame-parameter
-     nil 'alpha
-     (if (eql (cond ((numberp alpha) alpha)
-                    ((numberp (cdr alpha)) (cdr alpha))
-                    ;; Also handle undocumented (<active> <inactive>) form.
-                    ((numberp (cadr alpha)) (cadr alpha)))
-              100)
-         qz/preferred-transparency-alpha '(100 . 100))))
-  (message (concat "Frame transparency set to "
-                   (number-to-string (car (frame-parameter nil 'alpha))))))
-#+end_src
-
-#+RESULTS:
-: qz/toggle-transparency
-
-** [[id:cdc9ba5e-137a-4a28-82ab-2b4c53e5b087][bgex]] :init:
-a patched build of emacs, for crazy bitmap ricing. I found this on r/unixporn
-
-To create a source image, run ~convert a.png a.xpm~
-
-
-#+begin_src emacs-lisp :tangle no
-;(load-file "~/.doom.d/snippets/bgex.el")
-;(require 'bgex)
-
-;; Image on frame (dynamic color mode (SRC * DST / factor))
-;; (bgex-set-image-default "~/.config/wall.xpm" t)
-;; Color for HTML-mode (dynamic color mode)
-;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
-
-;; ;; Color for buffer-name (*scratch*)
-;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
-;; (bgex-set-color-default "skyblue")
-;; ;; XPM string
-;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
-;; (bgex-set-xpm-string-default "XPM strging" t)
-#+end_src
-
-#+RESULTS:
-** [[id:c6490b3a-4dc3-4f9a-bb21-81bb6abc6beb][perfect-margin]] :init:
-the absolute GOAT for ultrawide monitors. {C-x 1} is your friend
-#+begin_src emacs-lisp
-(perfect-margin-mode 1)
-(setq perfect-margin-ignore-regexps nil)
-#+end_src
-
-#+RESULTS:
-
 * [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]]
 big thanks to https://github.com/akirak/emacs.d
 ** TODO gaps
@@ -1107,6 +928,257 @@ this doesn't work on my XPS
 #+RESULTS:
 : qz/exwm-goto-browser
 
+* visual
+** fonts & text :vars:
+
+#+begin_src emacs-lisp
+(setq doom-font (font-spec :family "monospace" :size qz/font-default))
+(setq doom-theme nil)
+(setq doom-modeline-height 10)
+(setq display-line-numbers-type nil)
+(set-language-environment "UTF-8")
+(set-default-coding-systems 'utf-8)
+#+end_src
+
+#+RESULTS:
+: (utf-8-unix . utf-8-unix)
+
+** use tooltips :init:
+#+begin_src emacs-lisp
+(tooltip-mode 1)
+#+end_src
+
+#+RESULTS:
+: t
+
+** toggling time in the modeline :kbd:
+An example of this can be found in [[Time in the modeline]]. Equal is used here to
+coerce non-numeric arguments into something that will toggle.
+#+begin_src emacs-lisp
+(setq qz/toggle-time-state t)
+(display-time-mode qz/toggle-time-state)
+
+(defun qz/toggle-time-in-modeline ()
+  (interactive)
+  (message
+   (concat "Time display in modeline is "
+           (if (display-time-mode
+                (setq qz/toggle-time-state
+                      (qz/toggle-1->0 qz/toggle-time-state)))
+               "on" "off"))))
+
+(map! :leader
+      (:prefix-map ("t" . "toggle")
+       :desc "Time in the modeline"   "T" #'qz/toggle-time-in-modeline))
+#+end_src
+
+#+RESULTS:
+: qz/toggle-time-in-modeline
+
+** kill default menu/tool/scroll-bar
+#+begin_src emacs-lisp
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(menu-bar-mode -1)
+#+end_src
+** writeroom settings :vars:
+
+#+begin_src emacs-lisp
+(setq writeroom-width 80)
+
+(add-to-list 'writeroom-mode-hook
+             (lambda () (setq writeroom-border-width 50)))
+#+end_src
+
+#+RESULTS:
+| (lambda nil (setq writeroom-border-width 50)) | +zen-enable-mixed-pitch-mode-h |
+
+** theme :func:
+#+begin_src emacs-lisp
+(defun qz/load-tron-legacy ()
+  (interactive)
+  (add-to-list 'custom-theme-load-path "~/.emacs.d/.local/straight/repos/tron-legacy-emacs-theme/")
+  (load-theme 'tron-legacy t)
+  (setq tron-legacy-vivid-cursor t))
+
+(defun qz/load-k ()
+  (interactive)
+  (load-theme 'k t))
+
+(defun qz/load-pink-mountain ()
+  (interactive)
+  (load-theme 'pink-mountain t))
+
+;; cba
+;(load-theme 'modus-vivendi t)
+#+end_src
+
+#+RESULTS:
+: qz/load-pink-mountain
+
+** TODO [[id:956fe315-004c-49e6-958c-c4791eb83357][ivy-posframe]] :init:
+[[https://github.com/tumashu/ivy-posframe][GitHub - tumashu/ivy-posframe: ivy-posframe is a ivy extension, which let ivy...]]
+
+this fucking sucks with [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]], just jumps about the place with each poll of the window
+
+#+begin_src emacs-lisp
+;(require 'ivy-posframe)
+;
+;(defun sarg/ivy-posframe-poshandler (info)
+;  (setq-local
+;   workarea (elt exwm-workspace--workareas exwm-workspace-current-index)
+;   return-value (posframe-poshandler-frame-center info)
+;    (cons (+ (aref workarea 0) (car return-value))
+;          (+ (aref workarea 1) (cdr return-value))))
+;  return-value)
+;
+;(defun sarg/ivy-posframe-exwm (str)
+;  (ivy-posframe--display str #'sarg/ivy-posframe-poshandler))
+;
+;(after! ivy-posframe
+;  (setq ivy-posframe-display-functions-alist '((t . sarg/ivy-posframe-exwm))
+;        ivy-posframe-border-width 4
+;        ivy-posframe-parameters '((parent-frame nil))))
+;
+;(ivy-posframe-mode 1)
+#+end_src
+
+#+RESULTS:
+
+** transparency :func:
+totally stolen from [[https://www.emacswiki.org/emacs/TransparentEmacs][EmacsWiki: Transparent Emacs]].
+
+remember to flick on compton to complete the rice
+#+begin_src emacs-lisp
+(setq qz/preferred-transparency-alpha '(80 . 70))
+
+(set-frame-parameter (selected-frame) 'alpha qz/preferred-transparency-alpha)
+(add-to-list 'default-frame-alist `(alpha . ,qz/preferred-transparency-alpha))
+
+(defun qz/toggle-transparency ()
+  "Toggle between max opacity and `qz/preferred-transparency-alpha'"
+  (interactive)
+  (let ((alpha (frame-parameter nil 'alpha)))
+    (set-frame-parameter
+     nil 'alpha
+     (if (eql (cond ((numberp alpha) alpha)
+                    ((numberp (cdr alpha)) (cdr alpha))
+                    ;; Also handle undocumented (<active> <inactive>) form.
+                    ((numberp (cadr alpha)) (cadr alpha)))
+              100)
+         qz/preferred-transparency-alpha '(100 . 100))))
+  (message (concat "Frame transparency set to "
+                   (number-to-string (car (frame-parameter nil 'alpha))))))
+#+end_src
+
+#+RESULTS:
+: qz/toggle-transparency
+
+** [[id:cdc9ba5e-137a-4a28-82ab-2b4c53e5b087][bgex]] :init:
+a patched build of emacs, for crazy bitmap ricing. I found this on r/unixporn
+
+To create a source image, run ~convert a.png a.xpm~
+
+
+#+begin_src emacs-lisp :tangle no
+;(load-file "~/.doom.d/snippets/bgex.el")
+;(require 'bgex)
+
+;; Image on frame (dynamic color mode (SRC * DST / factor))
+;; (bgex-set-image-default "~/.config/wall.xpm" t)
+;; Color for HTML-mode (dynamic color mode)
+;; (bgex-set-color "HTML" 'bgex-identifier-type-major-mode '(60000 40000 40000) t)
+
+;; ;; Color for buffer-name (*scratch*)
+;; (bgex-set-color "*scratch*" 'bgex-identifier-type-buffer-name "skyblue")
+;; (bgex-set-color-default "skyblue")
+;; ;; XPM string
+;; (bgex-set-xpm-string "*scratch*" 'bgex-identifier-type-buffer-name "XPM string" t)
+;; (bgex-set-xpm-string-default "XPM strging" t)
+#+end_src
+
+#+RESULTS:
+** [[id:c6490b3a-4dc3-4f9a-bb21-81bb6abc6beb][perfect-margin]] :init:
+the absolute GOAT for ultrawide monitors. {C-x 1} is your friend
+#+begin_src emacs-lisp
+(perfect-margin-mode 1)
+(setq perfect-margin-ignore-regexps nil
+      perfect-margin-ignore-filters nil)
+#+end_src
+
+#+RESULTS:
+*** hacky-margin; minibuffer centering
+#+begin_src emacs-lisp
+(defun qz/set-message-filter ()
+  (interactive)
+  (defun message-filter-center (args)
+    "Center message string.
+  This is a :filter-args advice for `message`."
+    (set-window-margins (minibuffer-window) 0)
+    (set-window-margins
+     (minibuffer-window)
+     (if (not (car args))
+         (/ 2 (frame-width)) ;; a new 'default' echo position
+       (max 0 (/ (- (window-width (minibuffer-window))
+                    (string-width (car args)))
+                 2))))
+    args)) ;; allow regular args to be passed
+
+(defun qz/reset-message-filter ()
+  (interactive)
+  (defun message-filter-center (args) args))
+
+(advice-add #'message :filter-args #'message-filter-center)
+(qz/set-message-filter)
+#+end_src
+
+#+RESULTS:
+: message-filter-center
+
+
+#+begin_src emacs-lisp
+;; Anselm
+#+end_src
+
+#+RESULTS:
+: message-filter-center
+* nano
+#+begin_src emacs-lisp
+(require 'nano-layout)
+(require 'nano-theme-dark)
+
+;; Theme
+(require 'nano-faces)
+(nano-faces)
+
+(require 'nano-theme)
+(nano-theme)
+
+;; Nano default settings (optional)
+;; (require 'nano-defaults)
+
+;; Nano session saving (optional)
+;(require 'nano-session)
+
+;; Nano header & mode lines (optional)
+(require 'nano-modeline)
+
+;; Nano key bindings modification (optional)
+;;(require 'nano-bindings)
+
+;; Compact layout (need to be loaded after nano-modeline)
+;(require 'nano-compact)
+
+;; Nano counsel configuration (optional)
+;; Needs "counsel" package to be installed (M-x: package-install)
+(require 'nano-counsel)
+
+;; Help (optional)
+(require 'nano-help)
+#+end_src
+
+#+RESULTS:
+: nano-help
 * TODO hydra
 ** n :kbd:
 The =n= of {C-c n} denotes notes.
@@ -1140,50 +1212,6 @@ The =n= of {C-c n} denotes notes.
 
 #+RESULTS:
 : org-clock-in-current
-* nano
-#+begin_src emacs-lisp
-(require 'nano-layout)
-(require 'nano-theme-dark)
-
-;; Theme
-(require 'nano-faces)
-(nano-faces)
-
-(require 'nano-theme)
-(nano-theme)
-
-;; Nano default settings (optional)
-;; (require 'nano-defaults)
-
-;; Nano session saving (optional)
-(require 'nano-session)
-
-;; Nano header & mode lines (optional)
-(require 'nano-modeline)
-
-;; Nano key bindings modification (optional)
-;;(require 'nano-bindings)
-
-;; Compact layout (need to be loaded after nano-modeline)
-;(require 'nano-compact)
-
-;; Nano counsel configuration (optional)
-;; Needs "counsel" package to be installed (M-x: package-install)
-(require 'nano-counsel)
-
-
-;; Welcome message (optional)
-(let ((inhibit-message t))
-  (message "Welcome to GNU Emacs / N Λ N O edition")
-  (message (format "Initialization time: %s" (emacs-init-time))))
-
-;; Help (optional)
-(require 'nano-help)
-#+end_src
-
-#+RESULTS:
-: nano-help
-
 * [[id:5f896cd4-d7b8-44d2-a40d-ccdae1b80c33][programming]]
 ** [[id:eae3ee00-be74-4f59-8a4d-b638baebc9f8][SQL]]
 For reference: [[https://www.emacswiki.org/emacs/SqlMode][EmacsWiki: Sql Mode]]
@@ -1621,11 +1649,11 @@ set in authinfo.el
 *** Vulpea's category agenda refinement :org:
 #+begin_src elisp
 (setq qz/org-agenda-prefix-length 20
-      org-agenda-prefix-format
-      '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
-        (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-        (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
+      org-agenda-prefix-format nil)
+      ;; '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
+      ;;   (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
+      ;;   (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
+      ;;   (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
 
 (defun vulpea-agenda-category (&optional len)
   "Get category of item at point for agenda.
