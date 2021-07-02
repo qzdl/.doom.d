@@ -1450,6 +1450,14 @@ A package that logs command usage; blessed be Xah Lee
     (flycheck-add-mode 'proselint 'org-mode)))
 #+end_src
 
+** org-id :init:vars:
+#+begin_src emacs-lisp
+(require 'org-id)
+(setq org-id-track-globally t)
+#+end_src
+
+#+RESULTS:
+: t
 
 ** tweaks :vars:
 *** File apps
@@ -2507,13 +2515,13 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 #+begin_src emacs-lisp
 (setq org-roam-dailies-capture-templates
       `(("d" "default" entry
-         "* %<%H:%m> %?\nCREATED: %u"
+         "* %<%H:%M> %?\nCREATED: %u"
          :if-new (file+head "private-%<%Y-%m-%d>.org"
                             "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
 #+end_src
 
 #+RESULTS:
-| d | default | entry | * %<%H:%m> %? |
+| d | default | entry | * %<%H:%M> %? |
 *** helpers :func:
 **** TODO point->roam-id; get id from node at point
 #+begin_src emacs-lisp

@@ -16,8 +16,8 @@
 
 (load-file "~/.doom.d/private/authinfo.el")
 
-(map! "<mouse-8>" 'better-jumper-jump-backward)
-(map! "<mouse-9>" 'better-jumper-jump-forward)
+  (map! "<mouse-8>" 'better-jumper-jump-backward)
+  (map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
 
@@ -586,17 +586,17 @@ start-process-shell-command' with COMMAND"
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-(defun qz/upcase-sql-keywords ()
-  (interactive)
-  (save-excursion
-    (dolist (keywords sql-mode-postgres-font-lock-keywords)
-      (goto-char (point-min))
-      (while (re-search-forward (car keywords) nil t)
-        (goto-char (+ 1 (match-beginning 0)))
-        (when (eql font-lock-keyword-face (face-at-point))
-          (backward-char)
-          (upcase-word 1)
-          (forward-char))))))
+  (defun qz/upcase-sql-keywords ()
+    (interactive)
+    (save-excursion
+      (dolist (keywords sql-mode-postgres-font-lock-keywords)
+        (goto-char (point-min))
+        (while (re-search-forward (car keywords) nil t)
+          (goto-char (+ 1 (match-beginning 0)))
+          (when (eql font-lock-keyword-face (face-at-point))
+            (backward-char)
+            (upcase-word 1)
+            (forward-char))))))
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -698,6 +698,9 @@ v))
                                        ("el" . "src emacs-lisp")))
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
+
+(require 'org-id)
+(setq org-id-track-globally t)
 
 (setq org-file-apps
       '((auto-mode . emacs)
@@ -863,7 +866,7 @@ v))
 
 (qz/pprint org-agenda-custom-commands)
 
-(defun +org-defer-mode-in-agenda-buffers-h ()
+ (defun +org-defer-mode-in-agenda-buffers-h ()
       "`org-agenda' opens temporary, incomplete org-mode buffers.
 I've disabled a lot of org-mode's startup processes for these invisible buffers
 to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
@@ -1247,7 +1250,7 @@ can grow up to be fully-fledged org-mode buffers."
 
 (setq org-roam-dailies-capture-templates
       `(("d" "default" entry
-         "* %<%H:%m> %?\nCREATED: %u"
+         "* %<%H:%M> %?\nCREATED: %u"
          :if-new (file+head "private-%<%Y-%m-%d>.org"
                             "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
 
@@ -1866,7 +1869,7 @@ defines if the text should be inserted inside the note."
                  (mathpix-get-result mathpix-screenshot-file)))
           (delete-file mathpix-screenshot-file)))))
 
-;(require 'orderless)
+                                        ;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
                                         ;(icomplete-mode) ; optional but recommended!
                                         ;
