@@ -1020,7 +1020,9 @@ can grow up to be fully-fledged org-mode buffers."
         ("I" "current-roam" entry (file ,(concat qz/org-agenda-directory "inbox.org"))
          (function qz/current-roam-link)
          :immediate-finish t)
-        ("w" "Weekly Review" entry
+        ("t" "tangent" entry (file ,(concat org-roam-dailies-directory (format-time-string "private-%Y-%m-%d.org")))
+         "* TANGENT [%<%H:%M>] %?\nCREATED: %u\nFROM: %a")
+        ("w" "weekly review" entry
          (file+datetree ,(concat qz/org-agenda-directory "reviews.org"))
          (file ,(concat qz/org-agenda-directory "templates/weekly_review.org")))))
 
@@ -1058,6 +1060,11 @@ can grow up to be fully-fledged org-mode buffers."
   (interactive)
   "Capture a task in agenda mode."
   (org-capture nil "i"))
+
+(defun qz/org-daily-tangent-capture ()
+  (interactive)
+  "Capture the inevitable tangent"
+  (org-capture nil "t"))
 
 (defun qz/org-roam-capture-current ()
   (interactive)
@@ -1141,8 +1148,9 @@ can grow up to be fully-fledged org-mode buffers."
   (map! :leader
         :prefix "n"
         :desc "org-roam" "l" #'org-roam-buffer-toggle
-        :desc "org-roam" "j" #'org-roam-dailies-capture-today
-        :desc "org-roam" "J" #'org-roam-dailies-find-today
+        :desc "org-roam: capture entry today" "j" #'org-roam-dailies-capture-today
+        :desc "org-roam: go to today" "J" #'org-roam-dailies-find-today
+        :desc "org-roam: go to today" "C-j" #'qz/org-daily-tangent-capture
         :desc "org-roam-node-insert" "i" #'org-roam-node-insert
         :desc "qz/org-roam-immediate-node-insert" "C-i" #'qz/org-roam-immediate-node-insert
         :desc "org-roam-node-find" "f" #'org-roam-node-find)
@@ -1229,17 +1237,7 @@ can grow up to be fully-fledged org-mode buffers."
          :if-new (file+head ,qz/capture-title-timestamp-roam
                             ,qz/org-roam-capture-head)
          :immediate-finish t)
-        ("p" "private" plain "%?"
-         (file+head ,(concat "private-" qz/capture-title-timestamp)
-                    ,qz/org-roam-capture-head)
-         :unnarrowed t))    )
-
-(add-to-list
- 'org-roam-capture-templates
- '("n" "empty" plain
-    "%?"
-    :if-new (file+head "${slug}.org" "#+title: ${title}\n")
-    :immediate-finish t))
+        ))
 
 (setq org-roam-capture-ref-templates
       `(("r" "ref" plain
@@ -1249,8 +1247,8 @@ can grow up to be fully-fledged org-mode buffers."
          :unnarrowed t)))
 
 (setq org-roam-dailies-capture-templates
-      `(("d" "default" entry
-         "* %<%H:%M> %?\nCREATED: %u"
+      `(("d" "default" plain
+         "* [%<%H:%M>] %?\nCREATED: %u\nFROM: %a"
          :if-new (file+head "private-%<%Y-%m-%d>.org"
                             "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
 
@@ -1262,9 +1260,9 @@ can grow up to be fully-fledged org-mode buffers."
 (defun qz/title->roam-id (title)
   (org-roam-node-id (org-roam-node-from-title-or-alias title)))
 
-(defun qz/node-title ()
+(defun qz/node-title (&optional limit)
   (save-excursion
-    (goto-char (org-roam-node-point (org-roam-node-at-point 'assert)))
+    (goto-char (org-roam-node-point (qz/org-roam-node-at-point 'assert limit)))
     (if (= (org-outline-level) 0)
         (cadr (car (org-collect-keywords '("title"))))
       (substring-no-properties (org-get-heading t t t)))))
