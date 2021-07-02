@@ -402,7 +402,7 @@ start-process-shell-command' with COMMAND"
                                      (and (eq major-mode 'exwm-mode)
                                           (cond
                                            ((stringp class)
-                                            (string-equal class exwm-class-name))))))
+                                            (string-match class exwm-class-name))))))
                                  (buffer-list))))
       (exwm-goto--switch-to-buffer (car bs))
     (start-process-shell-command class nil command)))

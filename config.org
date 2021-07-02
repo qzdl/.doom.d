@@ -557,7 +557,7 @@ often start sending out lower numbers.
 
 * [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]]
 big thanks to https://github.com/akirak/emacs.d
-** TODO gaps
+** TODO gaps (experimental)
 #+begin_src emacs-lisp :tangle no
 (defvar exwm-gap-monitor 100)
 
@@ -907,7 +907,7 @@ suspicious; acts as soon as eval'd
                                      (and (eq major-mode 'exwm-mode)
                                           (cond
                                            ((stringp class)
-                                            (string-equal class exwm-class-name))))))
+                                            (string-match class exwm-class-name))))))
                                  (buffer-list))))
       (exwm-goto--switch-to-buffer (car bs))
     (start-process-shell-command class nil command)))
