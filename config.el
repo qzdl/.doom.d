@@ -773,7 +773,7 @@ v))
       org-ref-bibliography-notes "~/life/bib.org"
       org-noter-notes-search-path (list qz/notes-directory)
       org-roam-directory qz/notes-directory
-      org-roam-dailies-directory qz/notes-directory)
+      org-roam-dailies-directory (concat qz/notes-directory "daily/"))
 
 (require 'org-fragtog)
 (add-hook 'org-mode-hook 'org-fragtog-mode)

@@ -1558,11 +1558,11 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
       org-ref-bibliography-notes "~/life/bib.org"
       org-noter-notes-search-path (list qz/notes-directory)
       org-roam-directory qz/notes-directory
-      org-roam-dailies-directory qz/notes-directory)
+      org-roam-dailies-directory (concat qz/notes-directory "daily/"))
 #+end_src
 
 #+RESULTS:
-: ~/life/roam/
+: ~/life/roam/daily/
 
 ** org-fragtog :init:func:
 #+begin_src emacs-lisp
