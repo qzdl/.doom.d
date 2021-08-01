@@ -554,6 +554,16 @@ often start sending out lower numbers.
 #+begin_src emacs-lisp
 (server-start)
 #+end_src
+** lock
+#+begin_src emacs-lisp
+(defun qz/i3lock ()
+  (interactive)
+        (async-shell-command "exec --no-startup-id mpc pause; exec --no-startup-id pauseallmpv; exec rm -f /tmp/screenshot.png /tmp/out.png && scrot /tmp/screenshot.png && ~/git/corrupter/corrupter /tmp/screenshot.png /tmp/out.png && i3lock -i /tmp/out.png"))
+
+#+end_src
+
+#+RESULTS:
+: qz/i3lock
 
 * [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]]
 big thanks to https://github.com/akirak/emacs.d
@@ -1315,6 +1325,13 @@ yep, [[id:c20edb0c-16a1-4b6a-ac73-8b98782740cd][SLIME]] conventions please
 #+end_src
 
 #+RESULTS:
+** scheme
+#+begin_src emacs-lisp
+(defvar geiser-scheme-implementation 'guile)
+#+end_src
+
+#+RESULTS:
+: geiser-scheme-implementation
 
 ** eshell
 *** sudo, password caching :vars:
@@ -1414,9 +1431,6 @@ A package that logs command usage; blessed be Xah Lee
 (use-package! org
   :mode ("\\.org\\'" . org-mode)
   :init
-  (map! :leader
-        :prefix "n"
-        "l" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
         "M-p" #'outline-previous-visible-heading
@@ -1429,6 +1443,7 @@ A package that logs command usage; blessed be Xah Lee
                                    (jupyter . t)
                                    (python . t)
                                    (ipython . t)
+                                   (scheme . t)
                                    (R . t))
         org-ellipsis " ▼ "
         org-confirm-babel-evaluate nil
@@ -1439,10 +1454,11 @@ A package that logs command usage; blessed be Xah Lee
         org-structure-template-alist '(("q" . "quote")
                                        ("d" . "definition")
                                        ("s" . "src")
+                                       ("ss" . "src scheme")
                                        ("sb" . "src bash")
                                        ("se" . "src emacs-lisp")
                                        ("sp" . "src psql")
-                                       ("jp" . "src jupyter-python")
+                                       ("jp" . "src    jupyter-python")
                                        ("jr" . "src jupyter-R")
                                        ("sr" . "src R")
                                        ("el" . "src emacs-lisp")))
@@ -2299,7 +2315,9 @@ Run analysis from source file on org-roam DB
   (setq org-roam-mode-sections
        (list #'org-roam-backlinks-insert-section
              #'org-roam-reflinks-insert-section
-             #'org-roam-unlinked-references-insert-section))
+             #'org-roam-unlinked-references-insert-section)
+        org-roam-graph-executable "neato"
+        org-roam-graph-extra-config '(("overlap" . "false")))
   (org-roam-setup))
 (use-package! org-roam-protocol
   :after org-protocol)
@@ -2786,6 +2804,57 @@ which takes as its argument an alist of path-completions."
 
 #+RESULTS:
 : qz/org-roam-node-insert
+**** custom node-at-point :func:
+#+begin_src emacs-lisp
+(defun qz/org-roam-node-at-point (&optional assert limit)
+  "Return the node at point.
+If ASSERT, throw an error if there is no node at point."
+  (if-let ((node (magit-section-case
+                   (org-roam-node-section (oref it node))
+                   (t (let* (id
+                             (count 0))
+                        (org-with-wide-buffer
+                         (while (and (not (setq id (org-id-get)))
+                                     (if limit (< limit (setq count (1+ count))) t)
+                                     (not (bobp)))
+                           (org-roam-up-heading-or-point-min))
+                         (when id
+                           (org-roam-populate
+                            (org-roam-node-create :id id
+                                                  :point (point))))))))))
+      node
+    (when assert
+      (user-error "No node at point"))))
+#+end_src
+
+#+RESULTS:
+: qz/org-roam-node-at-point
+
+**** qualify-node :func:
+
+#+begin_src emacs-lisp
+(defvar qz/roam-qualifier " => ")
+(defvar qz/roam-qualifier-limit 1)
+
+(defun qz/qualify-node (&optional qualifier limit)
+  (interactive)
+  (let (q)
+    (save-excursion
+      (when-let ((n (qz/node-title 0))) ;; get current title
+        (org-roam-up-heading-or-point-min) ;; set point up to start search from above current
+        (when-let ((pn (qz/org-roam-node-at-point nil (or limit qz/roam-qualifier-limit))))
+          (setq q (message
+                    (concat (org-roam-node-title pn)
+                            (or qualifier qz/roam-qualifier)
+                            n))))))
+    (org-roam-alias-add q)
+    (save-buffer)
+    q))
+#+end_src
+
+#+RESULTS:
+: qz/qualify-node
+
 
 *** data-driven automatic actions in org roam :project:
 :PROPERTIES:  :project:person:
@@ -3096,7 +3165,7 @@ thinking about using a macro for generating these lambdas & inverting control he
   (when (and (not (+org-capture-frame-p))
              (not (org-roam-capture-p))
              (qz/note-buffer-p))
-    (let ((tags (qz/node-tags)))
+    (when-let ((tags (qz/node-tags)))
       (mapc (lambda (tag+fun)
               (when (funcall (car tag+fun) tags)
                 (funcall (cdr tag+fun) "")))

@@ -16,8 +16,8 @@
 
 (load-file "~/.doom.d/private/authinfo.el")
 
-  (map! "<mouse-8>" 'better-jumper-jump-backward)
-  (map! "<mouse-9>" 'better-jumper-jump-forward)
+(map! "<mouse-8>" 'better-jumper-jump-backward)
+(map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
 
@@ -220,6 +220,10 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 ;;(qz/org-noter--get-precise-info)
 
 (server-start)
+
+(defun qz/i3lock ()
+  (interactive)
+        (async-shell-command "exec --no-startup-id mpc pause; exec --no-startup-id pauseallmpv; exec rm -f /tmp/screenshot.png /tmp/out.png && scrot /tmp/screenshot.png && ~/git/corrupter/corrupter /tmp/screenshot.png /tmp/out.png && i3lock -i /tmp/out.png"))
 
 (require 'exwm-randr)
 
@@ -586,17 +590,17 @@ start-process-shell-command' with COMMAND"
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-  (defun qz/upcase-sql-keywords ()
-    (interactive)
-    (save-excursion
-      (dolist (keywords sql-mode-postgres-font-lock-keywords)
-        (goto-char (point-min))
-        (while (re-search-forward (car keywords) nil t)
-          (goto-char (+ 1 (match-beginning 0)))
-          (when (eql font-lock-keyword-face (face-at-point))
-            (backward-char)
-            (upcase-word 1)
-            (forward-char))))))
+(defun qz/upcase-sql-keywords ()
+  (interactive)
+  (save-excursion
+    (dolist (keywords sql-mode-postgres-font-lock-keywords)
+      (goto-char (point-min))
+      (while (re-search-forward (car keywords) nil t)
+        (goto-char (+ 1 (match-beginning 0)))
+        (when (eql font-lock-keyword-face (face-at-point))
+          (backward-char)
+          (upcase-word 1)
+          (forward-char))))))
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -610,6 +614,8 @@ start-process-shell-command' with COMMAND"
       (load f)))
 
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
+
+(defvar geiser-scheme-implementation 'guile)
 
 (require 'em-tramp)
 (setq eshell-prefer-lisp-functions nil
@@ -664,9 +670,6 @@ v))
 (use-package! org
   :mode ("\\.org\\'" . org-mode)
   :init
-  (map! :leader
-        :prefix "n"
-        "l" #'org-capture)
   (map! :map org-mode-map
         "M-n" #'outline-next-visible-heading
         "M-p" #'outline-previous-visible-heading
@@ -679,6 +682,7 @@ v))
                                    (jupyter . t)
                                    (python . t)
                                    (ipython . t)
+                                   (scheme . t)
                                    (R . t))
         org-ellipsis " ▼ "
         org-confirm-babel-evaluate nil
@@ -689,10 +693,11 @@ v))
         org-structure-template-alist '(("q" . "quote")
                                        ("d" . "definition")
                                        ("s" . "src")
+                                       ("ss" . "src scheme")
                                        ("sb" . "src bash")
                                        ("se" . "src emacs-lisp")
                                        ("sp" . "src psql")
-                                       ("jp" . "src jupyter-python")
+                                       ("jp" . "src    jupyter-python")
                                        ("jr" . "src jupyter-R")
                                        ("sr" . "src R")
                                        ("el" . "src emacs-lisp")))
@@ -866,7 +871,7 @@ v))
 
 (qz/pprint org-agenda-custom-commands)
 
- (defun +org-defer-mode-in-agenda-buffers-h ()
+(defun +org-defer-mode-in-agenda-buffers-h ()
       "`org-agenda' opens temporary, incomplete org-mode buffers.
 I've disabled a lot of org-mode's startup processes for these invisible buffers
 to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
@@ -1158,7 +1163,9 @@ can grow up to be fully-fledged org-mode buffers."
   (setq org-roam-mode-sections
        (list #'org-roam-backlinks-insert-section
              #'org-roam-reflinks-insert-section
-             #'org-roam-unlinked-references-insert-section))
+             #'org-roam-unlinked-references-insert-section)
+        org-roam-graph-executable "neato"
+        org-roam-graph-extra-config '(("overlap" . "false")))
   (org-roam-setup))
 (use-package! org-roam-protocol
   :after org-protocol)
@@ -1450,6 +1457,44 @@ which takes as its argument an alist of path-completions."
                                 :finalize 'insert-link))))))))
     (deactivate-mark)))
 
+(defun qz/org-roam-node-at-point (&optional assert limit)
+  "Return the node at point.
+If ASSERT, throw an error if there is no node at point."
+  (if-let ((node (magit-section-case
+                   (org-roam-node-section (oref it node))
+                   (t (let* (id
+                             (count 0))
+                        (org-with-wide-buffer
+                         (while (and (not (setq id (org-id-get)))
+                                     (if limit (< limit (setq count (1+ count))) t)
+                                     (not (bobp)))
+                           (org-roam-up-heading-or-point-min))
+                         (when id
+                           (org-roam-populate
+                            (org-roam-node-create :id id
+                                                  :point (point))))))))))
+      node
+    (when assert
+      (user-error "No node at point"))))
+
+(defvar qz/roam-qualifier " => ")
+(defvar qz/roam-qualifier-limit 1)
+
+(defun qz/qualify-node (&optional qualifier limit)
+  (interactive)
+  (let (q)
+    (save-excursion
+      (when-let ((n (qz/node-title 0))) ;; get current title
+        (org-roam-up-heading-or-point-min) ;; set point up to start search from above current
+        (when-let ((pn (qz/org-roam-node-at-point nil (or limit qz/roam-qualifier-limit))))
+          (setq q (message
+                    (concat (org-roam-node-title pn)
+                            (or qualifier qz/roam-qualifier)
+                            n))))))
+    (org-roam-alias-add q)
+    (save-buffer)
+    q))
+
 (defun qz/title-to-tag (title)
   "Convert TITLE to tag."
   (if (equal "@" (subseq title 0 1))
@@ -1628,7 +1673,7 @@ tasks.
   (when (and (not (+org-capture-frame-p))
              (not (org-roam-capture-p))
              (qz/note-buffer-p))
-    (let ((tags (qz/node-tags)))
+    (when-let ((tags (qz/node-tags)))
       (mapc (lambda (tag+fun)
               (when (funcall (car tag+fun) tags)
                 (funcall (cdr tag+fun) "")))
@@ -1867,7 +1912,7 @@ defines if the text should be inserted inside the note."
                  (mathpix-get-result mathpix-screenshot-file)))
           (delete-file mathpix-screenshot-file)))))
 
-                                        ;(require 'orderless)
+;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
                                         ;(icomplete-mode) ; optional but recommended!
                                         ;
