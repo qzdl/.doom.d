@@ -4,6 +4,8 @@
 #+title: Emacs Configuration
 #+property: header-args :tangle yes
 
+
+
 * about this configuration
 ** metaprogramming
 *** dice function
@@ -61,23 +63,32 @@ or
 | 6 | 4 | (lambda nil (list :title const value))          | (:title const value)          |
 
 * globals
+** guix-autoload
+#+begin_src emacs-lisp
+(guix-emacs-autoload-packages)
+#+end_src
 ** vars :vars:
 *** doom id
 #+begin_src emacs-lisp
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
-(setq qz/capture-title-timestamp-roam "%(qz/utc-timesftamp)-${slug}.org")
+(setq qz/capture-title-timestamp-roam "20210813T161035Z-${slug}.org")
 #+end_src
 
 #+RESULTS:
-: %(qz/utc-timestamp)-${slug}.org
-*** hostname specific
+: 20210813T161035Z-${slug}.org
+*** hostname specific; fonts
 #+begin_src emacs-lisp
 (cond
   ((string-equal system-name "qzdl") (setq qz/font-default 32))
+  ((string-equal system-name "donutrust") (setq qz/font-default 16))
   (t (setq qz/font-default 16)))
 #+end_src
-*** epg propgram
+
+#+RESULTS:
+: 16
+
+*** epg program
 #+begin_src emacs-lisp
 (setq epg-gpg-program "gpg")
 #+end_src
@@ -174,7 +185,7 @@ keyboard layout. This stellar advice came from [[https://www.emacswiki.org/emacs
 
 *** Shell pop
 #+begin_src emacs-lisp
-(map! "C-x C-'" #'+eshell/toggle)
+(map! "C-x C-'" #'+vterm/toggle)
 #+end_src
 
 #+RESULTS:
@@ -301,10 +312,17 @@ which takes as its argument an alist of path-completions."
 
 #+RESULTS:
 
-*** expand-regiojn on {s-=}
+*** expand-region on {s-=}
 #+begin_src emacs-lisp
 (map! "s-=" #'er/expand-region)
 #+end_src
+*** git-link on {C-c v C-l}
+
+#+begin_src emacs-lisp
+(map! "C-c v C-l" 'git-link)
+#+end_src
+
+#+RESULTS:
 
 *** TODO bookmarks
 ** functions :func:
@@ -414,6 +432,15 @@ keep it relative; sorry Ayn
 #+RESULTS:
 : qz/contract-file-name
 
+*** force xkb layout
+#+begin_src emacs-lisp
+(defun qz/nocap ()
+  (interactive)
+  (async-shell-command "setxkbmap -model thinkpad -layout us -option ctrl:nocaps"))
+#+end_src
+
+#+RESULTS:
+: qz/nocap
 
 *** toggle between non-nil -> [ 0 | 1 ], [ on | off ]
 This function is used for quality of life in ensuring correct bottom values are
@@ -567,6 +594,115 @@ often start sending out lower numbers.
 
 * [[id:2c8c6541-74a2-4e13-af5b-b463a429937d][EXWM]]
 big thanks to https://github.com/akirak/emacs.d
+
+** init; xrandr commands
+I've been thinking about some declarative way to associate host->port->device
+- would be nice to have a fallback tree common-port->device->standard
+- the spec here is =(host . ((port . device)))=
+#+begin_src emacs-lisp :tangle no
+'((thinkpad . ((base . eDP-1)
+               (usbc . DP-1)
+               (hdmi . HDMI-1)))
+  (xps . ((base . eDP-1)
+          (usbc . DP-1)
+          (hdmi . HDMI-1))))
+#+end_src
+
+#+RESULTS:
+| thinkpad | (base . eDP-1) | (usbc . DP-1) | (hdmi . HDMI-1) |
+| xps      | (base . eDP-1) | (usbc . DP-1) | (hdmi . HDMI-1) |
+
+*** ultrawide
+#+begin_src emacs-lisp
+(require 'exwm-randr)
+
+(defun qz/exwm-usbc-ultrawide ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --off --output DP-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off")))
+  (exwm-randr-enable))
+
+(defun qz/exwm-hdmi-ultrawide ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
+  (exwm-randr-enable))
+#+end_src
+
+*** tv
+#+begin_src emacs-lisp
+(defun qz/exwm-hdmi-tv ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP1 --off --output DP1 --off --output DP2 --off --output HDMI1 --primary --mode 1920x1080 --pos 0x0 --rotate normal --scale 2x2 --output HDMI2 --off --output VIRTUAL1 --off")))
+  (exwm-randr-enable))
+#+end_src
+
+#+RESULTS:
+: qz/exwm-hdmi-tv
+
+*** defaults
+I've chosen a default res for a laptop of 1920x1080; this is just bearable
+enough to debug some bullshit when the world is on fire
+#+begin_src emacs-lisp
+(defun qz/exwm-standard ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP-1 --primary --mode 1920x1080 --pos 0x0 --rotate normal --output DP-1 --off --output HDMI-1 --off --output DP-2 --off")))
+  (exwm-randr-enable))
+#+end_src
+*** devices
+#+begin_src emacs-lisp
+(defun qz/exwm-thinkpad ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP1 --scale .75")))
+  (exwm-randr-enable))
+#+end_src
+*** TODO init; make this work better
+system-specific, but would also be nice to have it port-specific, or at least
+fall back to standard, respecting font-sizes. whatever.
+#+begin_src emacs-lisp
+(cond
+  ((string-equal system-name "qzdl") (qz/exwm-hdmi-tv))
+  ((string-equal system-name "donutrust") (qz/exwm-usbc-ultrawide))
+  (t (qz/exwm-standard)))
+(exwm-enable)
+(exwm-init)
+#+end_src
+** fixing keys :kbd:
+https://github.com/ch11ng/exwm/issues/839#issuecomment-850191548
+#+begin_src emacs-lisp
+(defun qz/exwm-input--update-global-prefix-keys ()
+  "an interactive wrapper to rebind with `exwm-input--update-global-prefix-keys'"
+  (interactive)
+  (exwm-input--update-global-prefix-keys))
+
+(with-eval-after-load (exwm-input--update-global-prefix-keys))
+#+end_src
+
+#+RESULTS:
+
 ** TODO gaps (experimental)
 #+begin_src emacs-lisp :tangle no
 (defvar exwm-gap-monitor 100)
@@ -651,98 +787,13 @@ big thanks to https://github.com/akirak/emacs.d
 #+RESULTS:
 : exwm-randr-refresh
 
-** randr, for display :func:init:
-#+begin_src emacs-lisp
-(require 'exwm-randr)
-
-(defun qz/exwm-usbc-ultrawide ()
-  (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
-  (add-hook
-   'exwm-randr-screen-change-hook
-   (lambda ()
-     (start-process-shell-command
-      "xrandr" nil
-      "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --off --output DP-2 --primary --mode 5120x1440 --pos 0x0 --rotate normal")))
-  (exwm-randr-enable))
-
-(defun qz/exwm-hdmi-ultrawide ()
-  (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
-  (add-hook
-   'exwm-randr-screen-change-hook
-   (lambda ()
-     (start-process-shell-command
-      "xrandr" nil
-      "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
-  (exwm-randr-enable))
-
-
-(defun qz/exwm-hdmi-tv ()
-  (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
-  (add-hook
-   'exwm-randr-screen-change-hook
-   (lambda ()
-     (start-process-shell-command
-      "xrandr" nil
-      "xrandr --output eDP1 --off --output DP1 --off --output DP2 --off --output HDMI1 --primary --mode 1920x1080 --pos 0x0 --rotate normal --scale 2x2 --output HDMI2 --off --output VIRTUAL1 --off")))
-  (exwm-randr-enable))
-
-
-(cond
-  ((string-equal system-name "qzdl") (qz/exwm-hdmi-tv))
-  (t (qz/exwm-usbc-ultrawide)))
-(exwm-enable)
-(exwm-init)
-#+end_src
-
-#+RESULTS:
-** wallpaper :init:
-<link-to-elisp-doc 'wallpaper-cycle-interval> is measured in seconds, 900 being 15 minutes
-#+begin_src emacs-lisp
-(setq wallpaper-cycle-interval 900)
-
-(use-package! wallpaper
-  :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
-         (after-init . wallpaper-cycle-mode))
-  :custom ((wallpaper-cycle-interval 900)
-           (wallpaper-cycle-single t)
-           (wallpaper-scaling 'fill)
-           (wallpaper-cycle-directory "~/.config/wallpapers")))
-#+end_src
-
-#+RESULTS:
-| org-roam-mode | wallpaper-cycle-mode | (closure (t) (&rest _) (progn (eval-after-load 'sly #'(lambda nil (sly-setup))))) | doom-modeline-mode | doom-init-fonts-h | doom-init-theme-h | doom-init-leader-keys-h | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-maybe-define-global-key-bindings | magit-auto-revert-mode--init-kludge | magit-startup-asserts | magit-version | table--make-cell-map |
-
-** TODO startup programs :init:
-#+begin_src emacs-lisp
-(setq qz/startup-programs
-      '("compton"
-        "unclutter"))
-
-(defun qz/run-programs-n-process (p)
-  (mapcar (lambda (c) (start-process-shell-command c nil c)) p))
-
-(defun qz/seq-to-kill (p)
-  (mapcar (lambda (s) (concat "killall " s)) p))
-
-(defun qz/run-startup-programs ()
-  (interactive)
-  (qz/run-programs-n-process
-   (qz/seq-to-kill qz/startup-programs))
-  (qz/run-programs-n-process qz/startup-programs))
-
-(qz/run-startup-programs)
-#+end_src
-
-#+RESULTS:
-| compton | unclutter |
-
 ** global bindings :kbd:
 #+begin_src emacs-lisp
 (require 'exwm-input)
 
 (defmacro qz/exwm-bind-keys (&rest bindings)
   "Bind input keys in EXWM.
-INDINGS is a list of cons cells containing a key (string) and a command."
+INDINGS is a list of cons cells containign a key (string) and a command."
   `(progn
      ,@(cl-loop for (key . cmd) in bindings
                 collect `(exwm-input-set-key
@@ -752,157 +803,23 @@ INDINGS is a list of cons cells containing a key (string) and a command."
 
 (require 'window-go)
 (qz/exwm-bind-keys
- ("s-r" . exwm-reset)                     ;; `s-r': Reset (to line-mode).
- ("s-w" . exwm-workspace-switch)          ;; `s-w': Switch workspace.
- ("s-&" . qz/read-process-shell-command)  ;; `s-&': Launch program
- ("s-h" . windmove-left)
- ("s-j" . windmove-down)
- ("s-k" . windmove-up)
- ("s-l" . windmove-right)
- ("s-n" . switch-to-next-buffer)
- ("s-p" . switch-to-prev-buffer)
- ("s-0" . delete-window)
- ("s-+" . delete-other-windows)
- ("s-b" . qz/exwm-goto-browser)
- ("s-a" . qz/org-agenda-gtd))
+ ("s-r" .   exwm-reset)                     ;; `s-r': Reset (to line-mode).
+ ("s-w" .   exwm-workspace-switch)          ;; `s-w': Switch workspace.
+ ("s-&" .   qz/read-process-shell-command)  ;; `s-&': Launch program
+ ("s-h" .   windmove-left)                  ;; `HJKL' window navigation
+ ("s-j" .   windmove-down)                  ;
+ ("s-k" .   windmove-up)                    ;
+ ("s-l" .   windmove-right)                 ;
+ ("s-n" .   switch-to-next-buffer)          ;; cycle buffer stack in window
+ ("s-p" .   switch-to-prev-buffer)          ;      (n)ext   (p)revious
+ ("s-0" .   sticky-window-delete-window)    ;;     rebound `C-x 0' windowcmd
+ ("s-+" .   sticky-window-delete-other-windows) ;; rebound `C-x 1` windowcmd
+ ("s-b" .   qz/exwm-goto-browser)           ;; GOTO: browser, current window
+ ("C-s-b" . qz/goto-the-sticky-window)
+ ("s-a" .   qz/org-agenda-gtd))
 #+end_src
 
 #+RESULTS:
-
-** simulation keys :kbd:
-#+begin_src emacs-lisp
-(defvar qz/default-simulation-keys
-  '(;; movement
-    ([?\C-b] . left)
-    ([?\M-b] . C-left)
-    ([?\C-f] . right)
-    ([?\M-f] . C-right)
-    ([?\C-p] . up)
-    ([?\C-n] . down)
-    ([?\C-a] . home)
-    ([?\C-e] . end)
-    ([?\M-v] . prior)
-    ([?\C-v] . next)
-    ([?\C-d] . delete)
-    ([?\C-k] . (S-end delete))
-    ([?\M-d] . (C-S-right delete))
-    ;; cut/paste.
-    ([?\C-w] . ?\C-x)
-    ([?\M-w] . ?\C-c)
-    ([?\C-y] . ?\C-v)
-    ;; search
-    ([?\C-s] . ?\C-f)))
-
-(with-eval-after-load 'exwm-input
-  (exwm-input-set-simulation-keys qz/default-simulation-keys))
-#+end_src
-
-#+RESULTS:
-
-+RESULTS:
-** fixing keys :kbd:
-https://github.com/ch11ng/exwm/issues/839#issuecomment-850191548
-#+begin_src emacs-lisp
-(defun qz/exwm-input--update-global-prefix-keys ()
-  "an interactive wrapper to rebind with `exwm-input--update-global-prefix-keys'"
-  (interactive)
-  (exwm-input--update-global-prefix-keys))
-
-(with-eval-after-load (exwm-input--update-global-prefix-keys))
-#+end_src
-
-#+RESULTS:
-
-** minibuffer :vars:
-#+begin_src emacs-lisp
-;(setq exwm-workspace-minibuffer-position 'top)
-#+end_src
-
-#+RESULTS:
-
-** remove menu & dialog :vars:
-#+begin_src emacs-lisp
-(menu-bar-mode -1)
-(setq mouse-autoselect-window t
-      use-dialog-box nil)
-#+end_src
-
-#+RESULTS:
-** workspaces & Classes :vars:
-#+begin_src emacs-lisp
-;; Set the initial workspace number.
-(unless (get 'exwm-workspace-number 'saved-value)
-  (setq exwm-workspace-number 4))
-
-;; Make class name the buffer name
-(add-hook 'exwm-update-class-hook
-          (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
-#+end_src
-
-#+RESULTS:
-| lambda | nil | (exwm-workspace-rename-buffer exwm-class-name) |
-
-** window dividers :vars:
-#+begin_src emacs-lisp
-(setq window-divider-default-right-width 4)
-(setq window-divider-default-bottom-width 4)
-(window-divider-mode 1)
-#+end_src
-
-#+RESULTS:
-: t
-
-** mark windows as real :func:
-Emacs can recognise x-windows as 'real' per <link-to-elisp-doc 'doom-real-buffer-p>
-
-#+begin_src emacs-lisp
-(add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
-(add-hook 'doom-switch-window-hook #'doom-mark-buffer-as-real-h)
-
-(defun qz/mark-this-buffer-as-real ()
-  (interactive)
-  (doom-mark-buffer-as-real-h))
-#+end_src
-
-#+RESULTS:
-: qz/mark-this-buffer-as-real
-
-** shell command readline :func:
-#+begin_src emacs-lisp
-(defun qz/read-process-shell-command (command)
-  "Used to launch a program by creating a process. Invokes
-start-process-shell-command' with COMMAND"
-  (interactive (list (read-shell-command "λ ")))
-  (start-process-shell-command command nil command))
-#+end_src
-
-#+RESULTS:
-: qz/read-process-shell-command
-
-** title as buffer naming hook :func:
-suspicious; acts as soon as eval'd
-#+begin_src emacs-lisp
-(add-hook 'exwm-update-title-hook
-          (lambda () (exwm-workspace-rename-buffer exwm-title)))
-#+end_src
-
-#+RESULTS:
-| lambda | nil | (exwm-workspace-rename-buffer exwm-title) |
-
-** TODO screenshotting with selection / window from dmenu script :func:
-** automatically float windows :func:
-#+begin_src emacs-lisp
-(defcustom qz/exwm-floating-window-classes '("keybase" "mpv")
-  "List of instance names of windows that should start in the floating mode.")
-
-(defun qz/exwm-float-window-on-specific-windows ()
-  (when (member exwm-instance-name qz/exwm-floating-window-classes)
-    (exwm-floating-toggle-floating)))
-(add-hook 'exwm-manage-finish-hook #'qz/exwm-float-window-on-specific-windows)
-#+end_src
-
-#+RESULTS:
-| qz/exwm-float-window-on-specific-windows |
 
 ** goto :func:
 #+begin_src emacs-lisp
@@ -937,6 +854,418 @@ this doesn't work on my XPS
 
 #+RESULTS:
 : qz/exwm-goto-browser
+
+** minibuffer :vars:
+#+begin_src emacs-lisp
+;(setq exwm-workspace-minibuffer-position 'top)
+#+end_src
+
+#+RESULTS:
+
+** remove menu & dialog :vars:
+#+begin_src emacs-lisp
+(menu-bar-mode -1)
+(setq mouse-autoselect-window t
+      use-dialog-box nil)
+#+end_src
+
+#+RESULTS:
+** TODO screenshotting with selection / window from dmenu script :func:
+** shell command readline :func:
+#+begin_src emacs-lisp
+(defun qz/read-process-shell-command (command)
+  "Used to launch a program by creating a process. Invokes
+start-process-shell-command' with COMMAND"
+  (interactive (list (read-shell-command "λ ")))
+  (start-process-shell-command command nil command))
+#+end_src
+
+#+RESULTS:
+: qz/read-process-shell-command
+
+** simulation keys :kbd:
+#+begin_src emacs-lisp
+(defvar qz/default-simulation-keys
+  '(;; movement
+    ([?\C-b] . left)
+    ([?\M-b] . C-left)
+    ([?\C-f] . right)
+    ([?\M-f] . C-right)
+    ([?\C-p] . up)
+    ([?\C-n] . down)
+    ([?\C-a] . home)
+    ([?\C-e] . end)
+    ([?\M-v] . prior)
+    ([?\C-v] . next)
+    ([?\C-d] . delete)
+    ([?\C-k] . (S-end delete))
+    ([?\M-d] . (C-S-right delete))
+    ;; cut/paste.
+    ([?\C-w] . ?\C-x)
+    ([?\M-w] . ?\C-c)
+    ([?\C-y] . ?\C-v)
+    ;; search
+    ([?\C-s] . ?\C-f)))
+
+(with-eval-after-load 'exwm-input
+  (exwm-input-set-simulation-keys qz/default-simulation-keys))
+#+end_src
+
+#+RESULTS:
+
++RESULTS:
+** TODO startup programs :init:
+#+begin_src emacs-lisp
+(setq qz/startup-programs
+      '("compton"
+        "unclutter"))
+
+(defun qz/run-programs-n-process (p)
+  (mapcar (lambda (c) (start-process-shell-command c nil c)) p))
+
+(defun qz/seq-to-kill (p)
+  (mapcar (lambda (s) (concat "killall " s)) p))
+
+(defun qz/run-startup-programs ()
+  (interactive)
+  (qz/run-programs-n-process
+   (qz/seq-to-kill qz/startup-programs))
+  (qz/run-programs-n-process qz/startup-programs))
+
+(qz/run-startup-programs)
+#+end_src
+
+#+RESULTS:
+| compton | unclutter |
+
+** title as buffer naming hook :func:
+suspicious; acts as soon as eval'd
+#+begin_src emacs-lisp
+(add-hook 'exwm-update-title-hook
+          (lambda () (exwm-workspace-rename-buffer exwm-title)))
+#+end_src
+
+#+RESULTS:
+| lambda | nil | (exwm-workspace-rename-buffer exwm-title) |
+
+** wallpaper :init:
+<link-to-elisp-doc 'wallpaper-cycle-interval> is measured in seconds, 900 being 15 minutes
+#+begin_src emacs-lisp
+(setq wallpaper-cycle-interval 900)
+
+(use-package! wallpaper
+  :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
+         (after-init . wallpaper-cycle-mode))
+  :custom ((wallpaper-cycle-interval 900)
+           (wallpaper-cycle-single t)
+           (wallpaper-scaling 'fill)
+           (wallpaper-cycle-directory "~/.config/wallpapers")))
+#+end_src
+
+#+RESULTS:
+| wallpaper-cycle-mode | doom-modeline-mode | doom-init-fonts-h | doom-init-theme-h | doom-init-leader-keys-h | general-auto-unbind-keys | x-wm-set-size-hint | tramp-register-archive-file-name-handler | magit-maybe-define-global-key-bindings |
+
+** windows; window dividers :vars:
+#+begin_src emacs-lisp
+(setq window-divider-default-right-width 4)
+(setq window-divider-default-bottom-width 4)
+(window-divider-mode 1)
+#+end_src
+
+#+RESULTS:
+: t
+
+** windows; automatically float windows :func:
+#+begin_src emacs-lisp
+(defcustom qz/exwm-floating-window-classes '("keybase" "mpv")
+  "List of instance names of windows that should start in the floating mode.")
+
+(defun qz/exwm-float-window-on-specific-windows ()
+  (when (member exwm-instance-name qz/exwm-floating-window-classes)
+    (exwm-floating-toggle-floating)))
+(add-hook 'exwm-manage-finish-hook #'qz/exwm-float-window-on-specific-windows)
+#+end_src
+
+#+RESULTS:
+| qz/exwm-float-window-on-specific-windows |
+
+** windows; mark windows as real :func:
+Emacs can recognise x-windows as 'real' per <link-to-elisp-doc 'doom-real-buffer-p>
+
+#+begin_src emacs-lisp
+(add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
+(add-hook 'doom-switch-window-hook #'doom-mark-buffer-as-real-h)
+
+(defun qz/mark-this-buffer-as-real ()
+  (interactive)
+  (doom-mark-buffer-as-real-h))
+#+end_src
+
+#+RESULTS:
+: qz/mark-this-buffer-as-real
+** windows; sticky windows
+:PROPERTIES:
+:ID:       0f9dc414-3044-47eb-983a-9804d729d3a4
+:END:
+:: [[https://www.emacswiki.org/emacs/StickyWindows][EmacsWiki: Sticky Windows]]
+
+#+begin_src emacs-lisp
+(defun qz/window-is-sticky? ()
+  (interactive)
+  (message "is window sticky? %s"(window-dedicated-p)))
+
+(map!
+ "C-x 0" 'sticky-window-delete-window
+ "C-x 1" 'sticky-window-delete-other-windows)
+#+end_src
+
+#+RESULTS:
+: qz/window-is-sticky\?
+
+*** sticky-windows.el :file:
+:: https://www.emacswiki.org/emacs/sticky-windows.el
+#+begin_src emacs-lisp :tangle sticky-windows.el
+;;; sticky-windows.el --- Make windows stay visible
+;;;
+;;; Commentary:
+;;;
+;;; `sticky-window-keep-window-visible' function marks a specific window as being dedicated with `set-window-dedicated-p'.
+;;; However, that does not prevent that window from being deleted with `delete-window' or `delete-other-windows'.  Below are
+;;; wrappers for `delete-window' and `delete-other-windows' that respect the "dedicated window" state, and are typically to be
+;;; bound to the same keybindings as they are by default in Emacs as follows:
+;;;
+;;; (global-set-key     [(control x) (?0)]        'sticky-window-delete-window)
+;;; (global-set-key     [(control x) (?1)]        'sticky-window-delete-other-windows)
+;;;
+;;; In addition, `sticky-window-keep-window-visible' might be bound to the currently unused C-x 9 key binding:
+;;;
+;;; (global-set-key     [(control x) (?9)]        'sticky-window-keep-window-visible)
+;;;
+;;; Change Log: (optional)
+
+;;;###autoload
+(defun sticky-window-keep-window-visible ()
+  "Ensure the buffer associated with the current window stays visible.
+This is handy for ERC buffers where you would like to see the
+conversation while you work in other windows within the frame.
+This is intended to be used with `sticky-window-delete-window'.
+A prefix arg reverses this operation."
+  (interactive)
+  (set-window-dedicated-p (selected-window) (not current-prefix-arg)))
+
+;;;###autoload
+(defun sticky-window-delete-window (force)
+  "This is intended to be a replacement for `delete-window', but
+that avoids deleting windows that have been marked as dedicated
+with `sticky-window-keep-window-visible'."
+  (interactive "P")
+  (if force
+      (delete-window window)
+    (let ((window (selected-window)))
+      (if (and (not current-prefix-arg) (window-dedicated-p window))
+	  (error "This is a dedicated window. Use C-u prefix on this keybinding to really delete it.")
+	(set-window-dedicated-p (selected-window) nil)
+	(delete-window window)))))
+
+;;;###autoload
+(defun sticky-window-delete-other-windows (force)
+  "Delete all other windows that are not marked to be visible with `sticky-window-keep-window-visible'."
+  (interactive "P")
+  (if force
+      (delete-other-windows)
+    (mapcar (lambda (window)
+	      (if (not (window-dedicated-p window))
+		  (delete-window window)))
+	    (cdr (window-list)))))
+
+(provide 'sticky-windows)
+
+;;; sticky-windows.el ends here
+#+end_src
+
+#+RESULTS:
+: sticky-windows
+** windows; sticky daily buffer
+:: [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Window-Sizes.html]]
+it is desirable to have my current overview at hand so I'm not getting
+distracted.
+
+goals:
+- keep in view with [[0f9dc414-3044-47eb-983a-9804d729d3a4][windows; sticky-windows]]
+- a useable fixed size; min/max width bounds on size at 80char
+- no vertical splits; this one might be tough
+- 'permenant' enough to avoid accidental killing, but able to change with
+  ibuffer if necessary (prioritise clocked task)
+- hot-binding to switch, like the canonical repl back+forth with {C-c C-z}
+- goes away in zen-mode
+
+
+*** sticky properties :vars:
+#+begin_src emacs-lisp
+(defvar qz/the-sticky-window nil)
+(defvar qz/last-before-sticky-window nil)
+(defvar qz/sticky-buffer-width 90)
+#+end_src
+
+#+RESULTS:
+: qz/sticky-buffer-width
+
+*** make-window-sticky :func:
+#+begin_src emacs-lisp
+(defun qz/make-window-sticky (&optional window)
+  (interactive)
+  (message
+   "stickied window %s"
+   (setq qz/the-sticky-window
+         (let* ((w (or window (selected-window)))
+                (ww (- qz/sticky-buffer-width (window-width w))))
+           (when (and (> 0 window-resizable w ww)
+                      (window-resize w ww t))
+             (window-preserve-size w t t))
+           (sticky-window-keep-window-visible)
+           w)))
+  qz/the-sticky-window)
+;(qz/make-window-sticky)
+
+
+#+end_src
+
+#+RESULTS:
+
+*** goto-the-sticky-window :func:
+#+begin_src emacs-lisp
+(defun qz/goto-the-sticky-window (&optional returning-window)
+  (interactive)
+  (let ((w (or returning-window (selected-window))))
+    (if (not (equal w qz/the-sticky-window))
+      (progn (setq qz/last-before-sticky-window w)
+             (select-window qz/the-sticky-window))
+      (select-window (or qz/last-before-sticky-window w)))))
+#+end_src
+
+#+RESULTS:
+***
+*** sticky-candidates and selection
+where a candidate is a function that returns a buffer.
+
+- might be interesting to permit interop with perspective.el, where the 'sticky'
+  is an interface to a persp workspace. bit overkill for now though
+  - (+workspace-buffer-list)
+  - (+ivy/switch-workspace-buffer)
+
+#+begin_src emacs-lisp
+(defvar qz/org-roam-dailies-filespec-HACK
+  "private-%Y-%m-%d.org"
+  "see `qz/org-roam-dailies-filespec' for the org-template variant")
+
+(defun qz/get-daily-file-as-buffer ()
+  "Returns a `buffer' for the `dailies-file' according to
+  `qz/org-roam-dailies-filespec-HACK', of directory
+  `org-roam-dailies-path'.
+
+- if the file exists, use `find-file-noselect' to pop a
+  buffer (fast path)
+- if the file doesn't exist, use `org-roam-dailies-' creation via
+  `org-capture'
+
+it was a pain to deal with the fallout of `org-capture'
+window/buffer handling (no **background** buffer operations!!!!).
+
+the solution found for this `org-capture' path is incompatible
+with the `find-file-noselect' path, which operates on the same
+window throughout the operation, hence the distinction given by
+local `exists?'."
+  (interactive)
+  (let* (target
+         (current-buf (current-buffer))
+         (maybe-daily-file
+          (concat org-roam-dailies-directory
+                  (format-time-string qz/org-roam-dailies-filespec-HACK))))
+    (with-current-buffer (generate-new-buffer " *sticky-internal*")
+      (let* ((exists?
+              (and (file-exists-p maybe-daily-file)
+                   (find-file-noselect maybe-daily-file)))
+             (target
+              (or exists?
+                  (progn
+                    (call-interactively 'org-roam-dailies-goto-today)
+                    (current-buffer)))))
+        (if exists?
+            ;; path: find-file-noselect
+            (and nil (set-buffer current-buf) exists?)
+            ;; path: org-capture external window hijacking workaround
+          (mapcar (lambda (w) (quit-window nil w))
+                  (get-buffer-window-list target)))
+        target))))
+
+(setq qz/sticky-buffer-candidate-alist
+  '((daily . qz/get-daily-file-as-buffer)
+    (clocked . (lambda () "TODO"))
+    (chopi . (lambda () "hi chopi"))))
+
+(defun qz/sticky-buffer-candidates ()
+  "get the names from `qz/sticky-buffer-candidate-alist'"
+  (mapcar 'car qz/sticky-buffer-candidate-alist))
+
+(defun qz/choose-candidate (prompt namelist alist)
+  (when-let ((can (completing-read prompt namelist)))
+    (funcall (cdr (assoc (intern can) alist)))))
+
+(defun qz/sticky-choose-candidate ()
+  (qz/choose-candidate
+   "choose a buffer to sticky: "
+   (qz/sticky-buffer-candidates)
+   qz/sticky-buffer-candidate-alist))
+
+;(qz/sticky-buffer-candidates)
+;(qz/get-daily-file-as-buffer)
+;(qz/sticky-choose-candidate)
+#+end_src
+
+#+RESULTS:
+: qz/sticky-choose-candidate
+
+*** TODO expand org-escape from capture templates
+extract the 'escape' format as used in org-capture templates. really more
+trouble than it's worth, but if I see it through, would be a valid PR for org
+mainline.
+
+see <link-to-elisp-doc 'org-capture-fill-template>
+
+*** sticky-setup-window
+#+begin_src emacs-lisp
+(defun qz/sticky-setup-window (&optional window buffer)
+  "use `C-u' prefix-arg to sticky current"
+  (interactive)
+  (destructuring-bind (buffer window)
+      (or (and current-prefix-arg
+               (list (current-buffer) (selected-window)))
+          (list (buffer window)))
+    (set-window-buffer window buffer nil)
+    (qz/make-window-sticky window)))
+
+#+end_src
+
+#+RESULTS:
+: qz/sticky-setup-window
+
+** windows; send/copy to MAIN window
+to save my fucking neck in 5120x1440 exwm man
+
+** workspaces & classes :vars:
+#+begin_src emacs-lisp
+;; Set the initial workspace number.
+(unless (get 'exwm-workspace-number 'saved-value)
+  (setq exwm-workspace-number 4))
+
+;; Make class name the buffer name
+(add-hook 'exwm-update-class-hook
+          (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
+#+end_src
+
+#+RESULTS:
+| lambda | nil | (exwm-workspace-rename-buffer exwm-class-name) |
+
 
 * nano
 #+begin_src emacs-lisp
@@ -1208,7 +1537,7 @@ The =n= of {C-c n} denotes notes.
 
 #+RESULTS:
 : find-file-in-notes
-** {s-o} tasks, clocking
+** TODO {s-o} tasks, clocking
 #+begin_src emacs-lisp :tangle no
 (map! :leader
       (:prefix-map ("C-o" . "org-tasks")
@@ -1264,6 +1593,31 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 
 #+RESULTS:
 : qz/upcase-sql-keywords
+*** sqlite binary
+#+begin_src emacs-lisp
+(setq sql-sqlite-program "sqlite3")
+(setq emacsql-sqlite-executable "~/.guix-profile/bin/emacsql-sqlite")
+#+end_src
+
+#+RESULTS:
+: ~/.guix-profile/bin/emacsql-sqlite
+** python
+*** elpy :init:
+#+begin_src emacs-lisp
+(require 'elpy)
+(elpy-enable)
+(setq elpy-rpc-python-command "python3")
+#+end_src
+
+#+RESULTS:
+: python3
+*** binds
+#+begin_src emacs-lisp
+(map! :mode python-mode
+   "M-." #'elpy-goto-definition-other-window)
+#+end_src
+
+#+RESULTS:
 
 ** paredit ([[id:2c3dfd8a-9a85-4531-842f-e688235f4136][lisp]])
 *** paredit-forward/backward-slurp {M-n/p} :kbd:
@@ -1281,7 +1635,7 @@ so useful it's unreal
 "Highlight built-in functions, variables, and types in ‘lisp-mode’."
 - Enable feature from 28.1 if exists
   <link-to-elisp-doc 'cl-font-lock-built-in-mode>
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :tangle no
 (if (symbolp 'cl-font-lock-built-in-mode)
     (cl-font-lock-built-in-mode 1))
 #+end_src
@@ -1340,7 +1694,7 @@ yep, [[id:c20edb0c-16a1-4b6a-ac73-8b98782740cd][SLIME]] conventions please
 (setq eshell-prefer-lisp-functions nil
       eshell-prefer-lisp-variables t
       password-cache t
-      password-cache-expiry 300) 
+      password-cache-expiry 300)
 
 #+end_src
 
@@ -1349,8 +1703,7 @@ yep, [[id:c20edb0c-16a1-4b6a-ac73-8b98782740cd][SLIME]] conventions please
 **
 
 * [[id:d342065d-2042-4e8b-938d-ed121debc179][hyperbole]]
-** Initialisation :init:
-#+begin_src emacs-lisp
+** Initialisation :init:#+begin_src emacs-lisp
 (require 'hyperbole)
 #+end_src
 
@@ -1623,7 +1976,7 @@ set in authinfo.el
     (org-agenda nil "g"))
   :config
   (setq org-columns-default-format
-        "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
+        "%40ITEM(Task) %Effort(EE){:} LOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
   (setq org-agenda-custom-commands
         `(
           ("d" "Upcoming deadlines" agenda ""
@@ -1675,10 +2028,10 @@ set in authinfo.el
 #+begin_src elisp
 (setq qz/org-agenda-prefix-length 20
       org-agenda-prefix-format nil)
-      ;; '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
-      ;;   (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-      ;;   (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-      ;;   (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
+      ;; '((agenda . " %i Emacs Configuration %?-12t% s")
+      ;;   (todo . " %i Emacs Configuration  ")
+      ;;   (tags . " %i Emacs Configuration  ")
+      ;;   (search . " %i Emacs Configuration  ")))
 
 (defun vulpea-agenda-category (&optional len)
   "Get category of item at point for agenda.
@@ -1696,7 +2049,7 @@ longer than LEN.
 Usage example:
 
   (setq org-agenda-prefix-format
-        '((agenda . \" %(vulpea-agenda-category) %?-12t %12s\")))
+        '((agenda . \" Emacs Configuration %?-12t %12s\")))
 
 Refer to `org-agenda-prefix-format' for more information."
   (let* ((file-name (when buffer-file-name
@@ -2016,7 +2369,7 @@ javascript:location.href =
 #+begin_src emacs-lisp
 (require 'org-capture)
 
-(setq qz/capture-title-timestamp "%(qz/utc-timestamp)-${slug}")
+(setq qz/capture-title-timestamp "20210813T161035Z-${slug}")
 
 ;; ORG ROAM BREAKS COMPAT WITH ORG CATURE BY REQUIRING '.ORG' IN FILE
 
@@ -2294,6 +2647,7 @@ Run analysis from source file on org-roam DB
 
 *** V2 Initialisation :init:vars:
 #+begin_src emacs-lisp
+(setq org-roam-v2-ack t)
 (use-package! org-roam
   :after org
   :commands
@@ -2321,6 +2675,7 @@ Run analysis from source file on org-roam DB
   (org-roam-setup))
 (use-package! org-roam-protocol
   :after org-protocol)
+
 #+end_src
 
 #+RESULTS:
@@ -2498,7 +2853,7 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 :END:
 #+begin_src emacs-lisp :results table
 (setq qz/org-roam-capture-head "#+title: ${title}\n")
-(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
+(setq qz/capture-title-timestamp-roam "20210813T161035Z-${slug}.org")
 
 (setq org-roam-capture-templates
       `(("d" "default" plain "%?"
@@ -2513,7 +2868,7 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 #+end_src
 
 #+RESULTS:
-| d | default | plain | %? | :if-new | (file+head %(qz/utc-timestamp)-${slug}.org #+title: ${title} |
+| d | default | plain | %? | :if-new | (file+head 20210813T161035Z-${slug}.org #+title: ${title} |
 
 **** protocol :vars:
 #+begin_src emacs-lisp
@@ -2527,14 +2882,16 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 #+end_src
 
 #+RESULTS:
-| r | ref | plain | %? | :if-new | (file+head %(qz/utc-timestamp)-${slug}.org #+title: ${title} |
+| r | ref | plain | %? | :if-new | (file+head 20210813T161035Z-${slug}.org #+title: ${title} |
 
 **** dailies :vars:
 #+begin_src emacs-lisp
-(setq org-roam-dailies-capture-templates
+(setq
+ qz/org-roam-dailies-filespec "private-%<%Y-%m-%d>.org"
+ org-roam-dailies-capture-templates
       `(("d" "default" plain
          "* [%<%H:%M>] %?\nCREATED: %u\nFROM: %a"
-         :if-new (file+head "private-%<%Y-%m-%d>.org"
+         :if-new (file+head ,qz/org-roam-dailies-filespec
                             "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
 #+end_src
 
@@ -2545,7 +2902,7 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 **** TODO point->roam-id; get id from node at point
 #+begin_src emacs-lisp
 (defun qz/point->roam-id (&optional pos)
-  (org-roam-node-id (org-roam-node-at-point))) 
+  (org-roam-node-id (org-roam-node-at-point)))
 #+end_src
 
 #+RESULTS:
@@ -2855,6 +3212,12 @@ If ASSERT, throw an error if there is no node at point."
 #+RESULTS:
 : qz/qualify-node
 
+**** fixing wrong-type-argument hash-table-p nil
+this plagued me for WEEKS
+https://github.com/org-roam/org-roam/issues/1734
+#+begin_src emacs-lisp :tangle no
+(org-id-update-id-locations (directory-files-recursively org-roam-directory ".org$\\|.org.gpg$"))
+#+end_src
 
 *** data-driven automatic actions in org roam :project:
 :PROPERTIES:  :project:person:
@@ -3560,9 +3923,10 @@ outputting the result in the buffer at-point"
          (json-object-type 'hash-table)
          (json-array-type 'list)
          (json-key-type 'string)
-         (jsono (json-read-from-string
-                 (shell-command-to-string
-                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
+         (jsono
+          (json-read-from-string
+           (shell-command-to-string
+            (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
          (ingreds (gethash "ingredients" jsono)))
     (insert "* Ingredients\n")
     (insert
@@ -3583,3 +3947,7 @@ outputting the result in the buffer at-point"
 
 #+RESULTS:
 : qz/read-property-mod-buffer
+main -> widow
+- tan1 -> refernce/window
+  -tan1i -> ref/win
+- tan2

@@ -71,7 +71,8 @@
  :recipe (:host github :repo "oantolin/orderless"))
 (package! ovpn-mode)
 
-
+(package! emacs-slack
+  :recipe (:host github :repo "yuya373/emacs-slack"))
 ;;=============
 ;; ORG STUFF ;;
 ;;=============
@@ -87,7 +88,7 @@
 
 ;;; ORG ROAM
 (package! org-roam
-  :recipe (:host github :repo "org-roam/org-roam" :branch "v2"))
+  :recipe (:host github :repo "org-roam/org-roam"))
 (package! org-transclusion
   :recipe (:host github :repo "nobiot/org-transclusion" :branch "dev/0.2.1"))
 ;;(package! org-roam-server)
@@ -95,8 +96,8 @@
 
 ;;; OTHER PDF & BIB
 (package! org-ref)
-(package! org-pdftools)
-(package! org-noter-pdftools)
+;(package! org-pdftools)
+;(package! org-noter-pdftools)
 
 (package! org-recoll
   :recipe (:host github :repo "alraban/org-recoll"))

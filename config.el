@@ -4,20 +4,23 @@
     (message "%s" n)
      n))
 
+(guix-emacs-autoload-packages)
+
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
-(setq qz/capture-title-timestamp-roam "%(qz/utc-timesftamp)-${slug}.org")
+(setq qz/capture-title-timestamp-roam "20210813T161035Z-${slug}.org")
 
 (cond
   ((string-equal system-name "qzdl") (setq qz/font-default 32))
+  ((string-equal system-name "donutrust") (setq qz/font-default 16))
   (t (setq qz/font-default 16)))
 
 (setq epg-gpg-program "gpg")
 
 (load-file "~/.doom.d/private/authinfo.el")
 
-(map! "<mouse-8>" 'better-jumper-jump-backward)
-(map! "<mouse-9>" 'better-jumper-jump-forward)
+  (map! "<mouse-8>" 'better-jumper-jump-backward)
+  (map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
 
@@ -43,13 +46,92 @@
 (define-key key-translation-map [?\C-x] [?\C-u])
 (define-key key-translation-map [?\C-u] [?\C-x])
 
-(map! "C-x C-'" #'+eshell/toggle)
+(map! "C-x C-'" #'+vterm/toggle)
 
 (map! "s-B" 'toggle-rot13-mode)
 
 (map! "s-i" #'qz/roam-capture-todo)
 
+(defun qz/thing-at-point-or-region-and-region (&optional thing prompt)
+  "Grab the current selection, THING at point, or xref identifier at point.
+
+Returns THING if it is a string. Otherwise, if nothing is found at point and
+PROMPT is non-nil, prompt for a string (if PROMPT is a string it'll be used as
+the prompting string). Returns nil if all else fails.
+
+NOTE: Don't use THING for grabbing symbol-at-point. The xref fallback is smarter
+in some cases."
+  (declare (side-effect-free t))
+  (cond ((stringp thing)
+         thing)
+        ((doom-region-active-p)
+         (cons (buffer-substring-no-properties (region-beginning) (region-end))
+               (cons (region-beginning)
+                     (region-end))))
+        (thing
+         (cons (thing-at-point thing t)
+               (bounds-of-thing-at-point thing)))
+        ((require 'xref nil t)
+         ;; Eglot, nox (a fork of eglot), and elpy implementations for
+         ;; `xref-backend-identifier-at-point' betray the documented purpose of
+         ;; the interface. Eglot/nox return a hardcoded string and elpy prepends
+         ;; the line number to the symbol.
+         (let* ((val
+                 (if (memq (xref-find-backend) '(eglot elpy nox))
+                     (thing-at-point 'symbol t)
+                   ;; A little smarter than using `symbol-at-point', though in most
+                   ;; cases, xref ends up using `symbol-at-point' anyway.
+                   (xref-backend-identifier-at-point (xref-find-backend)))))
+           (cons val (bounds-of-thing-at-point 'symbol))))
+        (prompt
+         (read-string (if (stringp prompt) prompt "")))))
+
+(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
+  "Find an Org-roam file, and insert a relative org link to it at point.
+Return selected file if it exists.
+If LOWERCASE is non-nil, downcase the link description.
+FILTER-FN is the name of a function to apply on the candidates
+which takes as its argument an alist of path-completions."
+  (interactive)
+  (unwind-protect
+      ;; Group functions together to avoid inconsistent state on quit
+      (atomic-change-group
+        (let* ((pt (qz/thing-at-point-or-region-and-region))
+               (beg (set-marker (make-marker) (car (cdr pt))))
+               (end (set-marker (make-marker) (cdr (cdr pt))))
+               (region-text (org-link-display-format
+                             (substring-no-properties (car pt))))
+               (node (if pass-thru
+                         (or (org-roam-node-from-title-or-alias region-text)
+                             (org-roam-node-create :title region-text))
+                       (org-roam-node-read region-text filter-fn)))
+               (description (or (and node region-text (org-roam-node-title node))
+                                region-text)))
+          (if (org-roam-node-id node)
+              (progn
+                (when region-text
+                  (delete-region beg end)
+                  (set-marker beg nil)
+                  (set-marker end nil))
+                (insert (org-link-make-string
+                         (concat "id:" (org-roam-node-id node))
+                         description)))
+            (funcall
+              `(lambda ()
+                 (org-roam-capture-
+                  :node node
+                  ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
+                  :props (append
+                          (when (and beg end)
+                            (list :region (cons beg end)))
+                          (list :insert-at (point-marker)
+                                :link-description description
+                                :finalize 'insert-link))))))))
+    (deactivate-mark)))
+
 (map! "s-=" #'er/expand-region)
+
+(map! "C-c v C-l" 'git-link)
 
 (defun qz/utc-timestamp ()
   (format-time-string "%Y%m%dT%H%M%SZ" (current-time) t))
@@ -133,6 +215,10 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 (defun qz/contract-file-name (file)
   "turn an objective path to a relative path to homedir `~/`"
   (replace-regexp-in-string(expand-file-name "~/") "~/" file))
+
+(defun qz/nocap ()
+  (interactive)
+  (async-shell-command "setxkbmap -model thinkpad -layout us -option ctrl:nocaps"))
 
 (defun qz/toggle-1->0 (n)
   (if (equal 1 n) 0 1))
@@ -228,13 +314,13 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
 (require 'exwm-randr)
 
 (defun qz/exwm-usbc-ultrawide ()
-  (setq exwm-randr-workspace-monitor-plist '(0 "DP-2"))
+  (setq exwm-randr-workspace-monitor-plist '(0 "DP-1"))
   (add-hook
    'exwm-randr-screen-change-hook
    (lambda ()
      (start-process-shell-command
       "xrandr" nil
-      "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --off --output DP-2 --primary --mode 5120x1440 --pos 0x0 --rotate normal")))
+      "xrandr --output HDMI-2 --off --output HDMI-1 --off --output DP-1 --off --output eDP-1 --off --output DP-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off")))
   (exwm-randr-enable))
 
 (defun qz/exwm-hdmi-ultrawide ()
@@ -247,7 +333,6 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
       "xrandr --output eDP-1 --off --output DP-1 --off --output HDMI-1 --primary --mode 5120x1440 --pos 0x0 --rotate normal --output DP-2 --off --output HDMI-2 --off")))
   (exwm-randr-enable))
 
-
 (defun qz/exwm-hdmi-tv ()
   (setq exwm-randr-workspace-monitor-plist '(0 "HDMI-1"))
   (add-hook
@@ -258,46 +343,45 @@ totally stolen from <link-to-elisp-doc 'pdf-annot-edit-contents-display-buffer-a
       "xrandr --output eDP1 --off --output DP1 --off --output DP2 --off --output HDMI1 --primary --mode 1920x1080 --pos 0x0 --rotate normal --scale 2x2 --output HDMI2 --off --output VIRTUAL1 --off")))
   (exwm-randr-enable))
 
+(defun qz/exwm-standard ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP-1 --primary --mode 1920x1080 --pos 0x0 --rotate normal --output DP-1 --off --output HDMI-1 --off --output DP-2 --off")))
+  (exwm-randr-enable))
+
+(defun qz/exwm-thinkpad ()
+  (setq exwm-randr-workspace-monitor-plist '(0 "eDP-1"))
+  (add-hook
+   'exwm-randr-screen-change-hook
+   (lambda ()
+     (start-process-shell-command
+      "xrandr" nil
+      "xrandr --output eDP1 --scale .75")))
+  (exwm-randr-enable))
 
 (cond
   ((string-equal system-name "qzdl") (qz/exwm-hdmi-tv))
-  (t (qz/exwm-usbc-ultrawide)))
+  ((string-equal system-name "donutrust") (qz/exwm-usbc-ultrawide))
+  (t (qz/exwm-standard)))
 (exwm-enable)
 (exwm-init)
 
-(setq wallpaper-cycle-interval 900)
-
-(use-package! wallpaper
-  :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
-         (after-init . wallpaper-cycle-mode))
-  :custom ((wallpaper-cycle-interval 900)
-           (wallpaper-cycle-single t)
-           (wallpaper-scaling 'fill)
-           (wallpaper-cycle-directory "~/.config/wallpapers")))
-
-(setq qz/startup-programs
-      '("compton"
-        "unclutter"))
-
-(defun qz/run-programs-n-process (p)
-  (mapcar (lambda (c) (start-process-shell-command c nil c)) p))
-
-(defun qz/seq-to-kill (p)
-  (mapcar (lambda (s) (concat "killall " s)) p))
-
-(defun qz/run-startup-programs ()
+(defun qz/exwm-input--update-global-prefix-keys ()
+  "an interactive wrapper to rebind with `exwm-input--update-global-prefix-keys'"
   (interactive)
-  (qz/run-programs-n-process
-   (qz/seq-to-kill qz/startup-programs))
-  (qz/run-programs-n-process qz/startup-programs))
+  (exwm-input--update-global-prefix-keys))
 
-(qz/run-startup-programs)
+(with-eval-after-load (exwm-input--update-global-prefix-keys))
 
 (require 'exwm-input)
 
 (defmacro qz/exwm-bind-keys (&rest bindings)
   "Bind input keys in EXWM.
-INDINGS is a list of cons cells containing a key (string) and a command."
+INDINGS is a list of cons cells containign a key (string) and a command."
   `(progn
      ,@(cl-loop for (key . cmd) in bindings
                 collect `(exwm-input-set-key
@@ -307,19 +391,52 @@ INDINGS is a list of cons cells containing a key (string) and a command."
 
 (require 'window-go)
 (qz/exwm-bind-keys
- ("s-r" . exwm-reset)                     ;; `s-r': Reset (to line-mode).
- ("s-w" . exwm-workspace-switch)          ;; `s-w': Switch workspace.
- ("s-&" . qz/read-process-shell-command)  ;; `s-&': Launch program
- ("s-h" . windmove-left)
- ("s-j" . windmove-down)
- ("s-k" . windmove-up)
- ("s-l" . windmove-right)
- ("s-n" . switch-to-next-buffer)
- ("s-p" . switch-to-prev-buffer)
- ("s-0" . delete-window)
- ("s-+" . delete-other-windows)
- ("s-b" . qz/exwm-goto-browser)
- ("s-a" . qz/org-agenda-gtd))
+ ("s-r" .   exwm-reset)                     ;; `s-r': Reset (to line-mode).
+ ("s-w" .   exwm-workspace-switch)          ;; `s-w': Switch workspace.
+ ("s-&" .   qz/read-process-shell-command)  ;; `s-&': Launch program
+ ("s-h" .   windmove-left)                  ;; `HJKL' window navigation
+ ("s-j" .   windmove-down)                  ;
+ ("s-k" .   windmove-up)                    ;
+ ("s-l" .   windmove-right)                 ;
+ ("s-n" .   switch-to-next-buffer)          ;; cycle buffer stack in window
+ ("s-p" .   switch-to-prev-buffer)          ;      (n)ext   (p)revious
+ ("s-0" .   sticky-window-delete-window)    ;;     rebound `C-x 0' windowcmd
+ ("s-+" .   sticky-window-delete-other-windows) ;; rebound `C-x 1` windowcmd
+ ("s-b" .   qz/exwm-goto-browser)           ;; GOTO: browser, current window
+ ("C-s-b" . qz/goto-the-sticky-window)
+ ("s-a" .   qz/org-agenda-gtd))
+
+(defun exwm-goto--switch-to-buffer (buf)
+  (if-let ((w (get-buffer-window buf t)))
+      (select-window w)
+    (exwm-workspace-switch-to-buffer buf)))
+
+(cl-defun exwm-goto (command &key class)
+  (if-let ((bs (cl-remove-if-not (lambda (buf)
+                                   (with-current-buffer buf
+                                     (and (eq major-mode 'exwm-mode)
+                                          (cond
+                                           ((stringp class)
+                                            (string-match class exwm-class-name))))))
+                                 (buffer-list))))
+      (exwm-goto--switch-to-buffer (car bs))
+    (start-process-shell-command class nil command)))
+
+(defun qz/exwm-goto-browser ()
+  (interactive)
+  (exwm-goto "firefox" :class "Firefox"))
+
+;(setq exwm-workspace-minibuffer-position 'top)
+
+(menu-bar-mode -1)
+(setq mouse-autoselect-window t
+      use-dialog-box nil)
+
+(defun qz/read-process-shell-command (command)
+  "Used to launch a program by creating a process. Invokes
+start-process-shell-command' with COMMAND"
+  (interactive (list (read-shell-command "λ ")))
+  (start-process-shell-command command nil command))
 
 (defvar qz/default-simulation-keys
   '(;; movement
@@ -346,46 +463,40 @@ INDINGS is a list of cons cells containing a key (string) and a command."
 (with-eval-after-load 'exwm-input
   (exwm-input-set-simulation-keys qz/default-simulation-keys))
 
-(defun qz/exwm-input--update-global-prefix-keys ()
-  "an interactive wrapper to rebind with `exwm-input--update-global-prefix-keys'"
+(setq qz/startup-programs
+      '("compton"
+        "unclutter"))
+
+(defun qz/run-programs-n-process (p)
+  (mapcar (lambda (c) (start-process-shell-command c nil c)) p))
+
+(defun qz/seq-to-kill (p)
+  (mapcar (lambda (s) (concat "killall " s)) p))
+
+(defun qz/run-startup-programs ()
   (interactive)
-  (exwm-input--update-global-prefix-keys))
+  (qz/run-programs-n-process
+   (qz/seq-to-kill qz/startup-programs))
+  (qz/run-programs-n-process qz/startup-programs))
 
-(with-eval-after-load (exwm-input--update-global-prefix-keys))
+(qz/run-startup-programs)
 
-;(setq exwm-workspace-minibuffer-position 'top)
+(add-hook 'exwm-update-title-hook
+          (lambda () (exwm-workspace-rename-buffer exwm-title)))
 
-(menu-bar-mode -1)
-(setq mouse-autoselect-window t
-      use-dialog-box nil)
+(setq wallpaper-cycle-interval 900)
 
-;; Set the initial workspace number.
-(unless (get 'exwm-workspace-number 'saved-value)
-  (setq exwm-workspace-number 4))
-
-;; Make class name the buffer name
-(add-hook 'exwm-update-class-hook
-          (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
+(use-package! wallpaper
+  :hook ((exwm-randr-screen-change . wallpaper-set-wallpaper)
+         (after-init . wallpaper-cycle-mode))
+  :custom ((wallpaper-cycle-interval 900)
+           (wallpaper-cycle-single t)
+           (wallpaper-scaling 'fill)
+           (wallpaper-cycle-directory "~/.config/wallpapers")))
 
 (setq window-divider-default-right-width 4)
 (setq window-divider-default-bottom-width 4)
 (window-divider-mode 1)
-
-(add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
-(add-hook 'doom-switch-window-hook #'doom-mark-buffer-as-real-h)
-
-(defun qz/mark-this-buffer-as-real ()
-  (interactive)
-  (doom-mark-buffer-as-real-h))
-
-(defun qz/read-process-shell-command (command)
-  "Used to launch a program by creating a process. Invokes
-start-process-shell-command' with COMMAND"
-  (interactive (list (read-shell-command "λ ")))
-  (start-process-shell-command command nil command))
-
-(add-hook 'exwm-update-title-hook
-          (lambda () (exwm-workspace-rename-buffer exwm-title)))
 
 (defcustom qz/exwm-floating-window-classes '("keybase" "mpv")
   "List of instance names of windows that should start in the floating mode.")
@@ -395,25 +506,128 @@ start-process-shell-command' with COMMAND"
     (exwm-floating-toggle-floating)))
 (add-hook 'exwm-manage-finish-hook #'qz/exwm-float-window-on-specific-windows)
 
-(defun exwm-goto--switch-to-buffer (buf)
-  (if-let ((w (get-buffer-window buf t)))
-      (select-window w)
-    (exwm-workspace-switch-to-buffer buf)))
+(add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
+(add-hook 'doom-switch-window-hook #'doom-mark-buffer-as-real-h)
 
-(cl-defun exwm-goto (command &key class)
-  (if-let ((bs (cl-remove-if-not (lambda (buf)
-                                   (with-current-buffer buf
-                                     (and (eq major-mode 'exwm-mode)
-                                          (cond
-                                           ((stringp class)
-                                            (string-match class exwm-class-name))))))
-                                 (buffer-list))))
-      (exwm-goto--switch-to-buffer (car bs))
-    (start-process-shell-command class nil command)))
-
-(defun qz/exwm-goto-browser ()
+(defun qz/mark-this-buffer-as-real ()
   (interactive)
-  (exwm-goto "firefox" :class "Firefox"))
+  (doom-mark-buffer-as-real-h))
+
+(defun qz/window-is-sticky? ()
+  (interactive)
+  (message "is window sticky? %s"(window-dedicated-p)))
+
+(map!
+ "C-x 0" 'sticky-window-delete-window
+ "C-x 1" 'sticky-window-delete-other-windows)
+
+(defvar qz/the-sticky-window nil)
+(defvar qz/last-before-sticky-window nil)
+(defvar qz/sticky-buffer-width 90)
+
+(defun qz/make-window-sticky (&optional window)
+  (interactive)
+  (message
+   "stickied window %s"
+   (setq qz/the-sticky-window
+         (let* ((w (or window (selected-window)))
+                (ww (- qz/sticky-buffer-width (window-width w))))
+           (when (and (> 0 window-resizable w ww)
+                      (window-resize w ww t))
+             (window-preserve-size w t t))
+           (sticky-window-keep-window-visible)
+           w)))
+  qz/the-sticky-window)
+;(qz/make-window-sticky)
+
+(defun qz/goto-the-sticky-window (&optional returning-window)
+  (interactive)
+  (let ((w (or returning-window (selected-window))))
+    (if (not (equal w qz/the-sticky-window))
+      (progn (setq qz/last-before-sticky-window w)
+             (select-window qz/the-sticky-window))
+      (select-window (or qz/last-before-sticky-window w)))))
+
+(defvar qz/org-roam-dailies-filespec-HACK
+  "private-%Y-%m-%d.org"
+  "see `qz/org-roam-dailies-filespec' for the org-template variant")
+
+(defun qz/get-daily-file-as-buffer ()
+  "Returns a `buffer' for the `dailies-file' according to
+  `qz/org-roam-dailies-filespec-HACK', of directory
+  `org-roam-dailies-path'.
+
+- if the file exists, use `find-file-noselect' to pop a buffer (fast path)
+- if the file doesn't exist, use `org-roam-dailies-' creation via `org-capture'
+
+it was a pain to deal with the fallout of `org-capture'
+window/buffer handling (no **background** buffer operations!!!!).
+
+the solution found for this `org-capture' path is incompatible
+with the `find-file-noselect' path, which operates on the same
+window throughout the operation, hence the distinction given by
+local `exists?'."
+  (interactive)
+  (let* (target
+         (current-buf (current-buffer))
+         (maybe-daily-file
+          (concat org-roam-dailies-directory
+                  (format-time-string qz/org-roam-dailies-filespec-HACK))))
+    (with-current-buffer (generate-new-buffer " *sticky-internal*")
+      (let* ((exists?
+              (and (file-exists-p maybe-daily-file)
+                   (find-file-noselect maybe-daily-file)))
+             (target
+              (or exists?
+                  (progn
+                    (call-interactively 'org-roam-dailies-goto-today)
+                    (current-buffer)))))
+        (if exists?
+            (and nil (set-buffer current-buf) exists?) ;; find-file-noselect path
+          (mapcar (lambda (w) (quit-window nil w))          ;; org-roam-capture hijack path:
+                  (get-buffer-window-list target)))    ;;  imperative buffer manipulation
+        target))))
+
+(setq qz/sticky-buffer-candidate-alist
+  '((daily . qz/get-daily-file-as-buffer)
+    (clocked . (lambda () "TODO"))
+    (chopi . (lambda () "hi chopi"))))
+
+(defun qz/sticky-buffer-candidates ()
+  "get the names from `qz/sticky-buffer-candidate-alist'"
+  (mapcar 'car qz/sticky-buffer-candidate-alist))
+
+(defun qz/choose-candidate (prompt namelist alist)
+  (when-let ((can (completing-read prompt namelist)))
+    (funcall (cdr (assoc (intern can) alist)))))
+
+(defun qz/sticky-choose-candidate ()
+  (qz/choose-candidate
+   "choose a buffer to sticky: "
+   (qz/sticky-buffer-candidates)
+   qz/sticky-buffer-candidate-alist))
+
+;(qz/sticky-buffer-candidates)
+;(qz/get-daily-file-as-buffer)
+;(qz/sticky-choose-candidate)
+
+(defun qz/sticky-setup-window (&optional window buffer)
+  "use `C-u' prefix-arg to sticky current"
+  (interactive)
+  (destructuring-bind (buffer window)
+      (or (and current-prefix-arg
+               (list (current-buffer) (selected-window)))
+          (list (buffer window)))
+    (set-window-buffer window buffer nil)
+    (qz/make-window-sticky window)))
+
+;; Set the initial workspace number.
+(unless (get 'exwm-workspace-number 'saved-value)
+  (setq exwm-workspace-number 4))
+
+;; Make class name the buffer name
+(add-hook 'exwm-update-class-hook
+          (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
 
 (require 'nano-layout)
 (require 'nano-theme-dark)
@@ -590,24 +804,31 @@ start-process-shell-command' with COMMAND"
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-(defun qz/upcase-sql-keywords ()
-  (interactive)
-  (save-excursion
-    (dolist (keywords sql-mode-postgres-font-lock-keywords)
-      (goto-char (point-min))
-      (while (re-search-forward (car keywords) nil t)
-        (goto-char (+ 1 (match-beginning 0)))
-        (when (eql font-lock-keyword-face (face-at-point))
-          (backward-char)
-          (upcase-word 1)
-          (forward-char))))))
+  (defun qz/upcase-sql-keywords ()
+    (interactive)
+    (save-excursion
+      (dolist (keywords sql-mode-postgres-font-lock-keywords)
+        (goto-char (point-min))
+        (while (re-search-forward (car keywords) nil t)
+          (goto-char (+ 1 (match-beginning 0)))
+          (when (eql font-lock-keyword-face (face-at-point))
+            (backward-char)
+            (upcase-word 1)
+            (forward-char))))))
+
+(setq sql-sqlite-program "sqlite3")
+(setq emacsql-sqlite-executable "~/.guix-profile/bin/emacsql-sqlite")
+
+(require 'elpy)
+(elpy-enable)
+(setq elpy-rpc-python-command "python3")
+
+(map! :mode python-mode
+   "M-." #'elpy-goto-definition-other-window)
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
       "M-n" #'paredit-backward-slurp-sexp)
-
-(if (symbolp 'cl-font-lock-built-in-mode)
-    (cl-font-lock-built-in-mode 1))
 
 (let ((f (expand-file-name "~/.roswell/helper.el")))
   (when (file-exists-p f)
@@ -622,8 +843,6 @@ start-process-shell-command' with COMMAND"
       eshell-prefer-lisp-variables t
       password-cache t
       password-cache-expiry 300)
-
-(require 'hyperbole)
 
 (map! "C-<mouse-2>" #'hkey-either)
 
@@ -799,7 +1018,7 @@ v))
     (org-agenda nil "g"))
   :config
   (setq org-columns-default-format
-        "%40ITEM(Task) %Effort(EE){:} %CLOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
+        "%40ITEM(Task) %Effort(EE){:} LOCKSUM(Time Spent) %SCHEDULED(Scheduled) %DEADLINE(Deadline)")
   (setq org-agenda-custom-commands
         `(
           ("d" "Upcoming deadlines" agenda ""
@@ -842,6 +1061,48 @@ v))
                                         ;(setq org-agenda-files
                                         ;      (append org-agenda-files (qz/rg-get-files-with-tags)))
 
+(setq qz/org-agenda-prefix-length 20
+      org-agenda-prefix-format nil)
+      ;; '((agenda . " %i Emacs Configuration %?-12t% s")
+      ;;   (todo . " %i Emacs Configuration  ")
+      ;;   (tags . " %i Emacs Configuration  ")
+      ;;   (search . " %i Emacs Configuration  ")))
+
+(defun vulpea-agenda-category (&optional len)
+  "Get category of item at point for agenda.
+
+Category is defined by one of the following items:
+- CATEGORY property
+- TITLE keyword
+- TITLE property
+- filename without directory and extension
+
+When LEN is a number, resulting string is padded right with
+spaces and then truncated with ... on the right if result is
+longer than LEN.
+
+Usage example:
+
+  (setq org-agenda-prefix-format
+        '((agenda . \" Emacs Configuration %?-12t %12s\")))
+
+Refer to `org-agenda-prefix-format' for more information."
+  (let* ((file-name (when buffer-file-name
+                      (file-name-sans-extension
+                       (file-name-nondirectory buffer-file-name))))
+         (title (qz/node-title))
+         (category (org-get-category))
+         (result
+          (or (if (and
+                   title
+                   (string-equal category file-name))
+                  title
+                category)
+              "")))
+    (if (numberp len)
+        (s-truncate len (s-pad-right len " " result))
+      result)))
+
 (defun qz/org-agenda-gtd ()
   (interactive)
   (org-agenda nil "g")
@@ -871,7 +1132,7 @@ v))
 
 (qz/pprint org-agenda-custom-commands)
 
-(defun +org-defer-mode-in-agenda-buffers-h ()
+ (defun +org-defer-mode-in-agenda-buffers-h ()
       "`org-agenda' opens temporary, incomplete org-mode buffers.
 I've disabled a lot of org-mode's startup processes for these invisible buffers
 to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
@@ -999,7 +1260,7 @@ can grow up to be fully-fledged org-mode buffers."
 
 (require 'org-capture)
 
-(setq qz/capture-title-timestamp "%(qz/utc-timestamp)-${slug}")
+(setq qz/capture-title-timestamp "20210813T161035Z-${slug}")
 
 ;; ORG ROAM BREAKS COMPAT WITH ORG CATURE BY REQUIRING '.ORG' IN FILE
 
@@ -1142,6 +1403,7 @@ can grow up to be fully-fledged org-mode buffers."
      for i = 0 then (1+ i)
      do (insert (funcall s i) e))))
 
+(setq org-roam-v2-ack t)
 (use-package! org-roam
   :after org
   :commands
@@ -1233,7 +1495,7 @@ can grow up to be fully-fledged org-mode buffers."
 ;;    (shell-command-to-string "rg 'filetags' ~/life/roam -l")))))
 
 (setq qz/org-roam-capture-head "#+title: ${title}\n")
-(setq qz/capture-title-timestamp-roam "%(qz/utc-timestamp)-${slug}.org")
+(setq qz/capture-title-timestamp-roam "20210813T161035Z-${slug}.org")
 
 (setq org-roam-capture-templates
       `(("d" "default" plain "%?"
@@ -1253,10 +1515,12 @@ can grow up to be fully-fledged org-mode buffers."
                             "#+title: ${title}\n")
          :unnarrowed t)))
 
-(setq org-roam-dailies-capture-templates
+(setq
+ qz/org-roam-dailies-filespec "private-%<%Y-%m-%d>.org"
+ org-roam-dailies-capture-templates
       `(("d" "default" plain
          "* [%<%H:%M>] %?\nCREATED: %u\nFROM: %a"
-         :if-new (file+head "private-%<%Y-%m-%d>.org"
+         :if-new (file+head ,qz/org-roam-dailies-filespec
                             "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
 
 (defun qz/point->roam-id (&optional pos)
@@ -1912,7 +2176,7 @@ defines if the text should be inserted inside the note."
                  (mathpix-get-result mathpix-screenshot-file)))
           (delete-file mathpix-screenshot-file)))))
 
-;(require 'orderless)
+                                        ;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
                                         ;(icomplete-mode) ; optional but recommended!
                                         ;
@@ -1959,9 +2223,10 @@ outputting the result in the buffer at-point"
          (json-object-type 'hash-table)
          (json-array-type 'list)
          (json-key-type 'string)
-         (jsono (json-read-from-string
-                 (shell-command-to-string
-                  (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
+         (jsono
+          (json-read-from-string
+           (shell-command-to-string
+            (concat "~/.local/bin/ingredients " (+org--get-property "roam_key")))))
          (ingreds (gethash "ingredients" jsono)))
     (insert "* Ingredients\n")
     (insert
@@ -1978,122 +2243,3 @@ outputting the result in the buffer at-point"
        (args (+org--get-property (completing-read "property: " org-default-properties))))
    (setq current-prefix-arg '(4))
    (shell-command (concat command " " args " &"))))
-
-(defun qz/thing-at-point-or-region-and-region (&optional thing prompt)
-  "Grab the current selection, THING at point, or xref identifier at point.
-
-Returns THING if it is a string. Otherwise, if nothing is found at point and
-PROMPT is non-nil, prompt for a string (if PROMPT is a string it'll be used as
-the prompting string). Returns nil if all else fails.
-
-NOTE: Don't use THING for grabbing symbol-at-point. The xref fallback is smarter
-in some cases."
-  (declare (side-effect-free t))
-  (cond ((stringp thing)
-         thing)
-        ((doom-region-active-p)
-         (cons (buffer-substring-no-properties (region-beginning) (region-end))
-               (cons (region-beginning)
-                     (region-end))))
-        (thing
-         (cons (thing-at-point thing t)
-               (bounds-of-thing-at-point thing)))
-        ((require 'xref nil t)
-         ;; Eglot, nox (a fork of eglot), and elpy implementations for
-         ;; `xref-backend-identifier-at-point' betray the documented purpose of
-         ;; the interface. Eglot/nox return a hardcoded string and elpy prepends
-         ;; the line number to the symbol.
-         (let* ((val
-                 (if (memq (xref-find-backend) '(eglot elpy nox))
-                     (thing-at-point 'symbol t)
-                   ;; A little smarter than using `symbol-at-point', though in most
-                   ;; cases, xref ends up using `symbol-at-point' anyway.
-                   (xref-backend-identifier-at-point (xref-find-backend)))))
-           (cons val (bounds-of-thing-at-point 'symbol))))
-        (prompt
-         (read-string (if (stringp prompt) prompt "")))))
-
-(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
-  "Find an Org-roam file, and insert a relative org link to it at point.
-Return selected file if it exists.
-If LOWERCASE is non-nil, downcase the link description.
-FILTER-FN is the name of a function to apply on the candidates
-which takes as its argument an alist of path-completions."
-  (interactive)
-  (unwind-protect
-      ;; Group functions together to avoid inconsistent state on quit
-      (atomic-change-group
-        (let* ((pt (qz/thing-at-point-or-region-and-region))
-               (beg (set-marker (make-marker) (car (cdr pt))))
-               (end (set-marker (make-marker) (cdr (cdr pt))))
-               (region-text (org-link-display-format
-                             (substring-no-properties (car pt))))
-               (node (if pass-thru
-                         (or (org-roam-node-from-title-or-alias region-text)
-                             (org-roam-node-create :title region-text))
-                       (org-roam-node-read region-text filter-fn)))
-               (description (or (and node region-text (org-roam-node-title node))
-                                region-text)))
-          (if (org-roam-node-id node)
-              (progn
-                (when region-text
-                  (delete-region beg end)
-                  (set-marker beg nil)
-                  (set-marker end nil))
-                (insert (org-link-make-string
-                         (concat "id:" (org-roam-node-id node))
-                         description)))
-            (funcall
-              `(lambda ()
-                 (org-roam-capture-
-                  :node node
-                  ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
-                  :props (append
-                          (when (and beg end)
-                            (list :region (cons beg end)))
-                          (list :insert-at (point-marker)
-                                :link-description description
-                                :finalize 'insert-link))))))))
-    (deactivate-mark)))
-
-(setq qz/org-agenda-prefix-length 20
-      org-agenda-prefix-format nil)
-      ;; '((agenda . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length)%?-12t% s")
-      ;;   (todo . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-      ;;   (tags . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")
-      ;;   (search . " %i %(vulpea-agenda-category qz/org-agenda-prefix-length) ")))
-
-(defun vulpea-agenda-category (&optional len)
-  "Get category of item at point for agenda.
-
-Category is defined by one of the following items:
-- CATEGORY property
-- TITLE keyword
-- TITLE property
-- filename without directory and extension
-
-When LEN is a number, resulting string is padded right with
-spaces and then truncated with ... on the right if result is
-longer than LEN.
-
-Usage example:
-
-  (setq org-agenda-prefix-format
-        '((agenda . \" %(vulpea-agenda-category) %?-12t %12s\")))
-
-Refer to `org-agenda-prefix-format' for more information."
-  (let* ((file-name (when buffer-file-name
-                      (file-name-sans-extension
-                       (file-name-nondirectory buffer-file-name))))
-         (title (qz/node-title))
-         (category (org-get-category))
-         (result
-          (or (if (and
-                   title
-                   (string-equal category file-name))
-                  title
-                category)
-              "")))
-    (if (numberp len)
-        (s-truncate len (s-pad-right len " " result))
-      result)))
