@@ -407,6 +407,7 @@ INDINGS is a list of cons cells containign a key (string) and a command."
  ("s-a" .   qz/org-agenda-gtd))
 
 (defun exwm-goto--switch-to-buffer (buf)
+  "the class name predicate is case-invariant"
   (if-let ((w (get-buffer-window buf t)))
       (select-window w)
     (exwm-workspace-switch-to-buffer buf)))
@@ -424,7 +425,11 @@ INDINGS is a list of cons cells containign a key (string) and a command."
 
 (defun qz/exwm-goto-browser ()
   (interactive)
-  (exwm-goto "firefox" :class "Firefox"))
+    (exwm-goto
+     "firefox"
+     :class (cond
+             ((string-equal (system-name) "donutrust") "Nightly")
+             (t "Firefox"))))
 
 ;(setq exwm-workspace-minibuffer-position 'top)
 
@@ -557,8 +562,10 @@ start-process-shell-command' with COMMAND"
   `qz/org-roam-dailies-filespec-HACK', of directory
   `org-roam-dailies-path'.
 
-- if the file exists, use `find-file-noselect' to pop a buffer (fast path)
-- if the file doesn't exist, use `org-roam-dailies-' creation via `org-capture'
+- if the file exists, use `find-file-noselect' to pop a
+  buffer (fast path)
+- if the file doesn't exist, use `org-roam-dailies-' creation via
+  `org-capture'
 
 it was a pain to deal with the fallout of `org-capture'
 window/buffer handling (no **background** buffer operations!!!!).
@@ -583,9 +590,11 @@ local `exists?'."
                     (call-interactively 'org-roam-dailies-goto-today)
                     (current-buffer)))))
         (if exists?
-            (and nil (set-buffer current-buf) exists?) ;; find-file-noselect path
-          (mapcar (lambda (w) (quit-window nil w))          ;; org-roam-capture hijack path:
-                  (get-buffer-window-list target)))    ;;  imperative buffer manipulation
+            ;; path: find-file-noselect
+            (and nil (set-buffer current-buf) exists?)
+            ;; path: org-capture external window hijacking workaround
+          (mapcar (lambda (w) (quit-window nil w))
+                  (get-buffer-window-list target)))
         target))))
 
 (setq qz/sticky-buffer-candidate-alist

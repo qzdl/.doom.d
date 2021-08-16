@@ -824,6 +824,7 @@ INDINGS is a list of cons cells containign a key (string) and a command."
 ** goto :func:
 #+begin_src emacs-lisp
 (defun exwm-goto--switch-to-buffer (buf)
+  "the class name predicate is case-invariant"
   (if-let ((w (get-buffer-window buf t)))
       (select-window w)
     (exwm-workspace-switch-to-buffer buf)))
@@ -844,17 +845,24 @@ INDINGS is a list of cons cells containign a key (string) and a command."
 : exwm-goto
 
 ** TODO goto apps :func:
-this doesn't work on my XPS
+- nonguix's firefox has an X class ="Nightly"=, but arch builds are "Firefox".
+- this is a non-unification problem
 
 #+begin_src emacs-lisp
 (defun qz/exwm-goto-browser ()
   (interactive)
-  (exwm-goto "firefox" :class "Firefox"))
+    (exwm-goto
+     "firefox"
+     :class (cond
+             ((string-equal (system-name) "donutrust") "Nightly")
+             (t "Firefox"))))
 #+end_src
 
 #+RESULTS:
-: qz/exwm-goto-browser
-
+: qz/exwm-goto-brows
+er
+**** TODO adjust in lookup functions for per-system settings
+**** TODO extend GOTO to flip back to previous like {C-c C-z} repl
 ** minibuffer :vars:
 #+begin_src emacs-lisp
 ;(setq exwm-workspace-minibuffer-position 'top)
