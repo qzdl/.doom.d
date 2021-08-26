@@ -8,7 +8,6 @@
 
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
-(setq qz/capture-title-timestamp-roam "20210813T161035Z-${slug}.org")
 
 (cond
   ((string-equal system-name "qzdl") (setq qz/font-default 32))
@@ -19,8 +18,8 @@
 
 (load-file "~/.doom.d/private/authinfo.el")
 
-  (map! "<mouse-8>" 'better-jumper-jump-backward)
-  (map! "<mouse-9>" 'better-jumper-jump-forward)
+(map! "<mouse-8>" 'better-jumper-jump-backward)
+(map! "<mouse-9>" 'better-jumper-jump-forward)
 
 (map! "C-z" #'+default/newline-above)
 
@@ -46,88 +45,9 @@
 (define-key key-translation-map [?\C-x] [?\C-u])
 (define-key key-translation-map [?\C-u] [?\C-x])
 
-(map! "C-x C-'" #'+vterm/toggle)
-
 (map! "s-B" 'toggle-rot13-mode)
 
 (map! "s-i" #'qz/roam-capture-todo)
-
-(defun qz/thing-at-point-or-region-and-region (&optional thing prompt)
-  "Grab the current selection, THING at point, or xref identifier at point.
-
-Returns THING if it is a string. Otherwise, if nothing is found at point and
-PROMPT is non-nil, prompt for a string (if PROMPT is a string it'll be used as
-the prompting string). Returns nil if all else fails.
-
-NOTE: Don't use THING for grabbing symbol-at-point. The xref fallback is smarter
-in some cases."
-  (declare (side-effect-free t))
-  (cond ((stringp thing)
-         thing)
-        ((doom-region-active-p)
-         (cons (buffer-substring-no-properties (region-beginning) (region-end))
-               (cons (region-beginning)
-                     (region-end))))
-        (thing
-         (cons (thing-at-point thing t)
-               (bounds-of-thing-at-point thing)))
-        ((require 'xref nil t)
-         ;; Eglot, nox (a fork of eglot), and elpy implementations for
-         ;; `xref-backend-identifier-at-point' betray the documented purpose of
-         ;; the interface. Eglot/nox return a hardcoded string and elpy prepends
-         ;; the line number to the symbol.
-         (let* ((val
-                 (if (memq (xref-find-backend) '(eglot elpy nox))
-                     (thing-at-point 'symbol t)
-                   ;; A little smarter than using `symbol-at-point', though in most
-                   ;; cases, xref ends up using `symbol-at-point' anyway.
-                   (xref-backend-identifier-at-point (xref-find-backend)))))
-           (cons val (bounds-of-thing-at-point 'symbol))))
-        (prompt
-         (read-string (if (stringp prompt) prompt "")))))
-
-(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
-  "Find an Org-roam file, and insert a relative org link to it at point.
-Return selected file if it exists.
-If LOWERCASE is non-nil, downcase the link description.
-FILTER-FN is the name of a function to apply on the candidates
-which takes as its argument an alist of path-completions."
-  (interactive)
-  (unwind-protect
-      ;; Group functions together to avoid inconsistent state on quit
-      (atomic-change-group
-        (let* ((pt (qz/thing-at-point-or-region-and-region))
-               (beg (set-marker (make-marker) (car (cdr pt))))
-               (end (set-marker (make-marker) (cdr (cdr pt))))
-               (region-text (org-link-display-format
-                             (substring-no-properties (car pt))))
-               (node (if pass-thru
-                         (or (org-roam-node-from-title-or-alias region-text)
-                             (org-roam-node-create :title region-text))
-                       (org-roam-node-read region-text filter-fn)))
-               (description (or (and node region-text (org-roam-node-title node))
-                                region-text)))
-          (if (org-roam-node-id node)
-              (progn
-                (when region-text
-                  (delete-region beg end)
-                  (set-marker beg nil)
-                  (set-marker end nil))
-                (insert (org-link-make-string
-                         (concat "id:" (org-roam-node-id node))
-                         description)))
-            (funcall
-              `(lambda ()
-                 (org-roam-capture-
-                  :node node
-                  ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
-                  :props (append
-                          (when (and beg end)
-                            (list :region (cons beg end)))
-                          (list :insert-at (point-marker)
-                                :link-description description
-                                :finalize 'insert-link))))))))
-    (deactivate-mark)))
 
 (map! "s-=" #'er/expand-region)
 
@@ -526,6 +446,8 @@ start-process-shell-command' with COMMAND"
  "C-x 0" 'sticky-window-delete-window
  "C-x 1" 'sticky-window-delete-other-windows)
 
+(load-file "~/.doom.d/sticky-windows.el")
+
 (defvar qz/the-sticky-window nil)
 (defvar qz/last-before-sticky-window nil)
 (defvar qz/sticky-buffer-width 90)
@@ -537,7 +459,7 @@ start-process-shell-command' with COMMAND"
    (setq qz/the-sticky-window
          (let* ((w (or window (selected-window)))
                 (ww (- qz/sticky-buffer-width (window-width w))))
-           (when (and (> 0 window-resizable w ww)
+           (when (and (> 0 (window-resizable w ww))
                       (window-resize w ww t))
              (window-preserve-size w t t))
            (sticky-window-keep-window-visible)
@@ -637,6 +559,20 @@ local `exists?'."
 ;; Make class name the buffer name
 (add-hook 'exwm-update-class-hook
           (lambda () (exwm-workspace-rename-buffer exwm-class-name)))
+
+(map! "C-x C-'" #'+vterm/toggle)
+
+(map! :mode vterm-mode
+      "C-c C-b" #'vterm-copy-mode)
+
+(map! :mode vterm-copy-mode
+      "C-c C-b" #'vterm-copy-mode-done)
+
+(require 'em-tramp)
+(setq eshell-prefer-lisp-functions nil
+      eshell-prefer-lisp-variables t
+      password-cache t
+      password-cache-expiry 300)
 
 (require 'nano-layout)
 (require 'nano-theme-dark)
@@ -813,27 +749,33 @@ local `exists?'."
   (sql-send-string
    "\\echo ON_ERROR_ROLLBACK is :ON_ERROR_ROLLBACK"))
 
-  (defun qz/upcase-sql-keywords ()
-    (interactive)
-    (save-excursion
-      (dolist (keywords sql-mode-postgres-font-lock-keywords)
-        (goto-char (point-min))
-        (while (re-search-forward (car keywords) nil t)
-          (goto-char (+ 1 (match-beginning 0)))
-          (when (eql font-lock-keyword-face (face-at-point))
-            (backward-char)
-            (upcase-word 1)
-            (forward-char))))))
+(defun qz/upcase-sql-keywords ()
+  (interactive)
+  (save-excursion
+    (dolist (keywords sql-mode-postgres-font-lock-keywords)
+      (goto-char (point-min))
+      (while (re-search-forward (car keywords) nil t)
+        (goto-char (+ 1 (match-beginning 0)))
+        (when (eql font-lock-keyword-face (face-at-point))
+          (backward-char)
+          (upcase-word 1)
+          (forward-char))))))
 
 (setq sql-sqlite-program "sqlite3")
 (setq emacsql-sqlite-executable "~/.guix-profile/bin/emacsql-sqlite")
 
 (require 'elpy)
 (elpy-enable)
-(setq elpy-rpc-python-command "python3")
 
-(map! :mode python-mode
-   "M-." #'elpy-goto-definition-other-window)
+(setq elpy-rpc-python-command "python3"
+      elpy-rpc--backend-python-command "python3"
+      jedi:server-command (list "python3"
+                                (concat "/gnu/store/h2mkpmbw4c86saxqrd4q4wirk15na0r9-emacs-jedi-0.2.8/share/emacs/site-lisp/jedi-0.2.8/"
+                                        "jediepcserver.py")))
+
+(map! :mode elpy-mode
+   "M-." #'elpy-goto-definition
+   "C-M-." #'elpy-goto-definition-other-window)
 
 (map! :mode paredit-mode
       "M-p" #'paredit-forward-slurp-sexp
@@ -847,11 +789,7 @@ local `exists?'."
 
 (defvar geiser-scheme-implementation 'guile)
 
-(require 'em-tramp)
-(setq eshell-prefer-lisp-functions nil
-      eshell-prefer-lisp-variables t
-      password-cache t
-      password-cache-expiry 300)
+(require 'hyperbole)
 
 (map! "C-<mouse-2>" #'hkey-either)
 
@@ -1070,48 +1008,6 @@ v))
                                         ;(setq org-agenda-files
                                         ;      (append org-agenda-files (qz/rg-get-files-with-tags)))
 
-(setq qz/org-agenda-prefix-length 20
-      org-agenda-prefix-format nil)
-      ;; '((agenda . " %i Emacs Configuration %?-12t% s")
-      ;;   (todo . " %i Emacs Configuration  ")
-      ;;   (tags . " %i Emacs Configuration  ")
-      ;;   (search . " %i Emacs Configuration  ")))
-
-(defun vulpea-agenda-category (&optional len)
-  "Get category of item at point for agenda.
-
-Category is defined by one of the following items:
-- CATEGORY property
-- TITLE keyword
-- TITLE property
-- filename without directory and extension
-
-When LEN is a number, resulting string is padded right with
-spaces and then truncated with ... on the right if result is
-longer than LEN.
-
-Usage example:
-
-  (setq org-agenda-prefix-format
-        '((agenda . \" Emacs Configuration %?-12t %12s\")))
-
-Refer to `org-agenda-prefix-format' for more information."
-  (let* ((file-name (when buffer-file-name
-                      (file-name-sans-extension
-                       (file-name-nondirectory buffer-file-name))))
-         (title (qz/node-title))
-         (category (org-get-category))
-         (result
-          (or (if (and
-                   title
-                   (string-equal category file-name))
-                  title
-                category)
-              "")))
-    (if (numberp len)
-        (s-truncate len (s-pad-right len " " result))
-      result)))
-
 (defun qz/org-agenda-gtd ()
   (interactive)
   (org-agenda nil "g")
@@ -1141,7 +1037,7 @@ Refer to `org-agenda-prefix-format' for more information."
 
 (qz/pprint org-agenda-custom-commands)
 
- (defun +org-defer-mode-in-agenda-buffers-h ()
+(defun +org-defer-mode-in-agenda-buffers-h ()
       "`org-agenda' opens temporary, incomplete org-mode buffers.
 I've disabled a lot of org-mode's startup processes for these invisible buffers
 to speed them up (in `+org--exclude-agenda-buffers-from-recentf-a'). However, if
@@ -1270,8 +1166,6 @@ can grow up to be fully-fledged org-mode buffers."
 (require 'org-capture)
 
 (setq qz/capture-title-timestamp "20210813T161035Z-${slug}")
-
-;; ORG ROAM BREAKS COMPAT WITH ORG CATURE BY REQUIRING '.ORG' IN FILE
 
 (setq org-capture-templates
       `(("i" "inbox" entry
@@ -1527,10 +1421,12 @@ can grow up to be fully-fledged org-mode buffers."
 (setq
  qz/org-roam-dailies-filespec "private-%<%Y-%m-%d>.org"
  org-roam-dailies-capture-templates
-      `(("d" "default" plain
-         "* [%<%H:%M>] %?\nCREATED: %u\nFROM: %a"
-         :if-new (file+head ,qz/org-roam-dailies-filespec
-                            "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
+      `(("d" "default" entry
+         "* [%<%H:%M>] %?\nCREATED: <%<%Y-%m-%d %H:%M>>\nFROM: %a"
+         :if-new (file+head+olp
+                  ,qz/org-roam-dailies-filespec
+                  "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private project\n\n"
+                  ("journal")))))
 
 (defun qz/point->roam-id (&optional pos)
   (org-roam-node-id (org-roam-node-at-point)))
@@ -1811,7 +1707,6 @@ If ASSERT, throw an error if there is no node at point."
      :on (= tags:node_id nodes:id)
      :where (= tags:tag "project")])))
 
-
 ;(qz/project-files)
 
 (defun qz/agenda-daily-files-f ()
@@ -1904,6 +1799,10 @@ tasks.
   (message "has-tag-person-p %s" tags)
   (seq-contains-p tags "person"))
 
+(defun qz/is-project-p (&rest _)
+  (and (qz/file-has-todo-p _)
+       (qz/is-daily-p _)))
+
 (defun qz/has-link-p (a b)
   "undirected connection exists, from `src' to `dst'"
    (org-roam-db-query
@@ -1932,8 +1831,12 @@ tasks.
           (string-match-p "meeting" title)                                    ; concerns a meeting
           (qz/has-link-to-p (qz/title->roam-id "thinkproject"))))))           ; concerns work
 
+(defun qz/is-daily-p (&rest _)
+  (if-let ((title (qz/node-title)))
+      (string-match-p qz/daily-title-regexp title)))
+
 (setq qz/auto-buffer-action
-      '((qz/file-has-todo-p  . (lambda (tagstring) (qz/ensure-tag tagstring "project")))
+      '((qz/is-project-p  . (lambda (tagstring) (qz/ensure-tag tagstring "project")))
         (qz/private-p   . (lambda (tagstring) (qz/ensure-tag tagstring "private")))
         (qz/has-tag-person-p . (lambda (tagstring)
                                  (qz/ensure-tag tagstring (qz/title-to-tag (qz/node-title)))))))
@@ -2185,7 +2088,7 @@ defines if the text should be inserted inside the note."
                  (mathpix-get-result mathpix-screenshot-file)))
           (delete-file mathpix-screenshot-file)))))
 
-                                        ;(require 'orderless)
+;(require 'orderless)
                                         ;(setq completion-styles '(orderless))
                                         ;(icomplete-mode) ; optional but recommended!
                                         ;
@@ -2252,3 +2155,122 @@ outputting the result in the buffer at-point"
        (args (+org--get-property (completing-read "property: " org-default-properties))))
    (setq current-prefix-arg '(4))
    (shell-command (concat command " " args " &"))))
+
+(defun qz/thing-at-point-or-region-and-region (&optional thing prompt)
+  "Grab the current selection, THING at point, or xref identifier at point.
+
+Returns THING if it is a string. Otherwise, if nothing is found at point and
+PROMPT is non-nil, prompt for a string (if PROMPT is a string it'll be used as
+the prompting string). Returns nil if all else fails.
+
+NOTE: Don't use THING for grabbing symbol-at-point. The xref fallback is smarter
+in some cases."
+  (declare (side-effect-free t))
+  (cond ((stringp thing)
+         thing)
+        ((doom-region-active-p)
+         (cons (buffer-substring-no-properties (region-beginning) (region-end))
+               (cons (region-beginning)
+                     (region-end))))
+        (thing
+         (cons (thing-at-point thing t)
+               (bounds-of-thing-at-point thing)))
+        ((require 'xref nil t)
+         ;; Eglot, nox (a fork of eglot), and elpy implementations for
+         ;; `xref-backend-identifier-at-point' betray the documented purpose of
+         ;; the interface. Eglot/nox return a hardcoded string and elpy prepends
+         ;; the line number to the symbol.
+         (let* ((val
+                 (if (memq (xref-find-backend) '(eglot elpy nox))
+                     (thing-at-point 'symbol t)
+                   ;; A little smarter than using `symbol-at-point', though in most
+                   ;; cases, xref ends up using `symbol-at-point' anyway.
+                   (xref-backend-identifier-at-point (xref-find-backend)))))
+           (cons val (bounds-of-thing-at-point 'symbol))))
+        (prompt
+         (read-string (if (stringp prompt) prompt "")))))
+
+(defun qz/org-roam-node-insert (&optional filter-fn pass-thru)
+  "Find an Org-roam file, and insert a relative org link to it at point.
+Return selected file if it exists.
+If LOWERCASE is non-nil, downcase the link description.
+FILTER-FN is the name of a function to apply on the candidates
+which takes as its argument an alist of path-completions."
+  (interactive)
+  (unwind-protect
+      ;; Group functions together to avoid inconsistent state on quit
+      (atomic-change-group
+        (let* ((pt (qz/thing-at-point-or-region-and-region))
+               (beg (set-marker (make-marker) (car (cdr pt))))
+               (end (set-marker (make-marker) (cdr (cdr pt))))
+               (region-text (org-link-display-format
+                             (substring-no-properties (car pt))))
+               (node (if pass-thru
+                         (or (org-roam-node-from-title-or-alias region-text)
+                             (org-roam-node-create :title region-text))
+                       (org-roam-node-read region-text filter-fn)))
+               (description (or (and node region-text (org-roam-node-title node))
+                                region-text)))
+          (if (org-roam-node-id node)
+              (progn
+                (when region-text
+                  (delete-region beg end)
+                  (set-marker beg nil)
+                  (set-marker end nil))
+                (insert (org-link-make-string
+                         (concat "id:" (org-roam-node-id node))
+                         description)))
+            (funcall
+              `(lambda ()
+                 (org-roam-capture-
+                  :node node
+                  ,@(when pass-thru '(:keys "n")) ; ; [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
+                  :props (append
+                          (when (and beg end)
+                            (list :region (cons beg end)))
+                          (list :insert-at (point-marker)
+                                :link-description description
+                                :finalize 'insert-link))))))))
+    (deactivate-mark)))
+
+(setq qz/org-agenda-prefix-length 20
+      org-agenda-prefix-format nil)
+      ;; '((agenda . " %i Emacs Configuration %?-12t% s")
+      ;;   (todo . " %i Emacs Configuration  ")
+      ;;   (tags . " %i Emacs Configuration  ")
+      ;;   (search . " %i Emacs Configuration  ")))
+
+(defun vulpea-agenda-category (&optional len)
+  "Get category of item at point for agenda.
+
+Category is defined by one of the following items:
+- CATEGORY property
+- TITLE keyword
+- TITLE property
+- filename without directory and extension
+
+When LEN is a number, resulting string is padded right with
+spaces and then truncated with ... on the right if result is
+longer than LEN.
+
+Usage example:
+
+  (setq org-agenda-prefix-format
+        '((agenda . \" Emacs Configuration %?-12t %12s\")))
+
+Refer to `org-agenda-prefix-format' for more information."
+  (let* ((file-name (when buffer-file-name
+                      (file-name-sans-extension
+                       (file-name-nondirectory buffer-file-name))))
+         (title (qz/node-title))
+         (category (org-get-category))
+         (result
+          (or (if (and
+                   title
+                   (string-equal category file-name))
+                  title
+                category)
+              "")))
+    (if (numberp len)
+        (s-truncate len (s-pad-right len " " result))
+      result)))

@@ -4,8 +4,6 @@
 #+title: Emacs Configuration
 #+property: header-args :tangle yes
 
-
-
 * about this configuration
 ** metaprogramming
 *** dice function
@@ -61,6 +59,11 @@ or
 | 4 | 6 | (lambda nil (list :title const value))          | (:title const value)          |
 | 5 | 2 | (lambda nil (list :title const value))          | (:title const value)          |
 | 6 | 4 | (lambda nil (list :title const value))          | (:title const value)          |
+** keeping track of information
+- [[id:6baf4bff-d5fe-4ce0-a130-0464e49de67d][org-mode]]
+- [[id:d904ace6-a941-49fc-a6d4-7fe3797b0d8e][org-agenda]]
+- [[id:b33372ae-f731-4482-8e3a-0c5e986ac70a][org-roam]]
+- [[id:6ae36e2f-ab6d-45bc-9448-8dce233c8528][data-driven automatic actions in org roam]]
 
 * globals
 ** guix-autoload
@@ -72,7 +75,6 @@ or
 #+begin_src emacs-lisp
 (setq user-full-name "Samuel Culpepper"
       user-mail-address "samuel@samuelculpepper.com")
-(setq qz/capture-title-timestamp-roam "20210813T161035Z-${slug}.org")
 #+end_src
 
 #+RESULTS:
@@ -183,16 +185,7 @@ keyboard layout. This stellar advice came from [[https://www.emacswiki.org/emacs
 #+RESULTS:
 : [24]
 
-*** Shell pop
-#+begin_src emacs-lisp
-(map! "C-x C-'" #'+vterm/toggle)
-#+end_src
-
-#+RESULTS:
-
-**** TODO Abstract this to a ~user-shell/toggle~ function
-incase the shell needs to be changed
-*** ROT13 buffer
+**** ROT13 buffer
 #+begin_src emacs-lisp
 (map! "s-B" 'toggle-rot13-mode)
 #+end_src
@@ -1032,6 +1025,7 @@ Emacs can recognise x-windows as 'real' per <link-to-elisp-doc 'doom-real-buffer
 
 *** sticky-windows.el :file:
 :: https://www.emacswiki.org/emacs/sticky-windows.el
+
 #+begin_src emacs-lisp :tangle sticky-windows.el
 ;;; sticky-windows.el --- Make windows stay visible
 ;;;
@@ -1093,6 +1087,16 @@ with `sticky-window-keep-window-visible'."
 
 #+RESULTS:
 : sticky-windows
+
+**** define
+**** load :init:
+#+begin_src emacs-lisp
+(load-file "~/.doom.d/sticky-windows.el")
+#+end_src
+
+#+RESULTS:
+: t
+
 ** windows; sticky daily buffer
 :: [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Window-Sizes.html]]
 it is desirable to have my current overview at hand so I'm not getting
@@ -1127,18 +1131,17 @@ goals:
    (setq qz/the-sticky-window
          (let* ((w (or window (selected-window)))
                 (ww (- qz/sticky-buffer-width (window-width w))))
-           (when (and (> 0 window-resizable w ww)
+           (when (and (> 0 (window-resizable w ww))
                       (window-resize w ww t))
              (window-preserve-size w t t))
            (sticky-window-keep-window-visible)
            w)))
   qz/the-sticky-window)
 ;(qz/make-window-sticky)
-
-
 #+end_src
 
 #+RESULTS:
+: qz/make-window-sticky
 
 *** goto-the-sticky-window :func:
 #+begin_src emacs-lisp
@@ -1274,6 +1277,37 @@ to save my fucking neck in 5120x1440 exwm man
 #+RESULTS:
 | lambda | nil | (exwm-workspace-rename-buffer exwm-class-name) |
 
+* shell
+** open the shell with {C-x C-'}
+aka the comfiest
+#+begin_src emacs-lisp
+(map! "C-x C-'" #'+vterm/toggle)
+#+end_src
+
+#+RESULTS:
+
+**** TODO Abstract this to a ~user-shell/toggle~ function
+incase the shell needs to be changed
+** vterm, enter copy-mode with better binding {C-c C-b}
+#+begin_src emacs-lisp
+(map! :mode vterm-mode
+      "C-c C-b" #'vterm-copy-mode)
+
+(map! :mode vterm-copy-mode
+      "C-c C-b" #'vterm-copy-mode-done)
+#+end_src
+
+#+RESULTS:
+
+** eshell; secret caching (sudo, password) :vars:
+#+begin_src emacs-lisp
+(require 'em-tramp)
+(setq eshell-prefer-lisp-functions nil
+      eshell-prefer-lisp-variables t
+      password-cache t
+      password-cache-expiry 300)
+
+#+end_src
 
 * nano
 #+begin_src emacs-lisp
@@ -1614,15 +1648,21 @@ Lifted from [[https://www.emacswiki.org/emacs/SqlMode#toc4][EmacsWiki: Sql Mode]
 #+begin_src emacs-lisp
 (require 'elpy)
 (elpy-enable)
-(setq elpy-rpc-python-command "python3")
+
+(setq elpy-rpc-python-command "python3"
+      elpy-rpc--backend-python-command "python3"
+      jedi:server-command (list "python3"
+                                (concat "/gnu/store/h2mkpmbw4c86saxqrd4q4wirk15na0r9-emacs-jedi-0.2.8/share/emacs/site-lisp/jedi-0.2.8/"
+                                        "jediepcserver.py")))
 #+end_src
 
 #+RESULTS:
-: python3
+: (python3 . /gnu/store/h2mkpmbw4c86saxqrd4q4wirk15na0r9-emacs-jedi-0.2.8/share/emacs/site-lisp/jedi-0.2.8/jediepcserver.py)
 *** binds
 #+begin_src emacs-lisp
-(map! :mode python-mode
-   "M-." #'elpy-goto-definition-other-window)
+(map! :mode elpy-mode
+   "M-." #'elpy-goto-definition
+   "C-M-." #'elpy-goto-definition-other-window)
 #+end_src
 
 #+RESULTS:
@@ -1695,23 +1735,10 @@ yep, [[id:c20edb0c-16a1-4b6a-ac73-8b98782740cd][SLIME]] conventions please
 #+RESULTS:
 : geiser-scheme-implementation
 
-** eshell
-*** sudo, password caching :vars:
-#+begin_src emacs-lisp
-(require 'em-tramp)
-(setq eshell-prefer-lisp-functions nil
-      eshell-prefer-lisp-variables t
-      password-cache t
-      password-cache-expiry 300)
-
-#+end_src
-
-#+RESULTS:
-: 300
-**
 
 * [[id:d342065d-2042-4e8b-938d-ed121debc179][hyperbole]]
-** Initialisation :init:#+begin_src emacs-lisp
+** Initialisation :init:
+#+begin_src emacs-lisp
 (require 'hyperbole)
 #+end_src
 
@@ -2374,12 +2401,11 @@ javascript:location.href =
     + '&body='  + encodeURIComponent(window.getSelection());
 #+end_src
 *** TODO templates :init:vars:
+NOTE: [[id:b33372ae-f731-4482-8e3a-0c5e986ac70a][org-roam]] breaks compat with org capture by requiring =.org= in capture template file-spec
 #+begin_src emacs-lisp
 (require 'org-capture)
 
 (setq qz/capture-title-timestamp "20210813T161035Z-${slug}")
-
-;; ORG ROAM BREAKS COMPAT WITH ORG CATURE BY REQUIRING '.ORG' IN FILE
 
 (setq org-capture-templates
       `(("i" "inbox" entry
@@ -2893,18 +2919,25 @@ cat /tmp/roamcounts | wc -l | Rscript -e 'd<-scan("stdin", quiet=TRUE)' -e 'cat(
 | r | ref | plain | %? | :if-new | (file+head 20210813T161035Z-${slug}.org #+title: ${title} |
 
 **** dailies :vars:
+each capture {C-c n j} will make an entry under =journal= headline in the daily file.
+- active timestamp, to show up in agenda
+  + see also, [[id:6ae36e2f-ab6d-45bc-9448-8dce233c8528][data-driven automatic actions in org roam]]
+
 #+begin_src emacs-lisp
 (setq
  qz/org-roam-dailies-filespec "private-%<%Y-%m-%d>.org"
  org-roam-dailies-capture-templates
-      `(("d" "default" plain
-         "* [%<%H:%M>] %?\nCREATED: %u\nFROM: %a"
-         :if-new (file+head ,qz/org-roam-dailies-filespec
-                            "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private\n\n"))))
+      `(("d" "default" entry
+         "* [%<%H:%M>] %?\nCREATED: <%<%Y-%m-%d %H:%M>>\nFROM: %a"
+         :if-new (file+head+olp
+                  ,qz/org-roam-dailies-filespec
+                  "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private project\n\n"
+                  ("journal")))))
 #+end_src
 
 #+RESULTS:
-| d | default | plain | * [%<%H:%M>] %? |
+| d | default | entry | * [%<%H:%M>] %? |
+
 
 *** helpers :func:
 **** TODO point->roam-id; get id from node at point
@@ -3227,8 +3260,8 @@ https://github.com/org-roam/org-roam/issues/1734
 (org-id-update-id-locations (directory-files-recursively org-roam-directory ".org$\\|.org.gpg$"))
 #+end_src
 
-*** data-driven automatic actions in org roam :project:
-:PROPERTIES:  :project:person:
+*** data-driven automatic actions in org roam
+:PROPERTIES:
 :ID:       6ae36e2f-ab6d-45bc-9448-8dce233c8528
 :END:
 'automatic' routines, pegged to file actions like 'visit, save' by way of advice
@@ -3306,7 +3339,6 @@ addressing caching & consistency problems with :PROPERTIES: drawer and #+propert
      :inner :join nodes
      :on (= tags:node_id nodes:id)
      :where (= tags:tag "project")])))
-
 
 ;(qz/project-files)
 #+end_src
@@ -3394,10 +3426,9 @@ candidates]]
 #+RESULTS:
 : (qz/agenda-files-update)
 
-
 **** auto predicates
 ***** TODO note-buffer-p
-expand this for all files in roam thing
+expand this for all files in roam thing, not just in OR directory
 
 #+begin_src emacs-lisp
 (defun qz/note-buffer-p (&rest _)
@@ -3459,6 +3490,15 @@ tasks.
 
 #+RESULTS:
 : qz/has-tag-person-p
+***** is-project-p
+#+begin_src emacs-lisp
+(defun qz/is-project-p (&rest _)
+  (and (qz/file-has-todo-p _)
+       (qz/is-daily-p _)))
+#+end_src
+
+#+RESULTS:
+: qz/is-project-p
 
 ***** has-link-p
 good for restricting to work stuff
@@ -3509,13 +3549,22 @@ might be better to use the file prop, but maybe we keep the message in to deem
 #+RESULTS:
 : qz/private-p
 
+***** is-daily-p
+#+begin_src emacs-lisp
+(defun qz/is-daily-p (&rest _)
+  (if-let ((title (qz/node-title)))
+      (string-match-p qz/daily-title-regexp title)))
+#+end_src
+
+#+RESULTS:
+: qz/is-daily-p
 
 **** auto (predicate . action)
 thinking about using a macro for generating these lambdas & inverting control here
 
 #+begin_src emacs-lisp
 (setq qz/auto-buffer-action
-      '((qz/file-has-todo-p  . (lambda (tagstring) (qz/ensure-tag tagstring "project")))
+      '((qz/is-project-p  . (lambda (tagstring) (qz/ensure-tag tagstring "project")))
         (qz/private-p   . (lambda (tagstring) (qz/ensure-tag tagstring "private")))
         (qz/has-tag-person-p . (lambda (tagstring)
                                  (qz/ensure-tag tagstring (qz/title-to-tag (qz/node-title)))))))
@@ -3577,12 +3626,6 @@ thinking about using a macro for generating these lambdas & inverting control he
  (append qz/org-agenda-files (qz/project-files)))
 #+end_src
 
-#+RESULTS:
-:
-: ("/home/qzdl/life/roam/calendar-home.org" "/home/qzdl/life/roam/calendar-work.org"
-:  "/home/qzdl/life/roam/schedule.org"
-:  "/home/qzdl/life/roam/private-2020-08-03.org"
-:  "/home/qzdl/life/roam/private-2020-08-03.org")
 
 *** get list of private notes
 #+begin_src emacs-lisp
