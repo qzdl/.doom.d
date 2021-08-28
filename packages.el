@@ -73,6 +73,11 @@
 
 (package! emacs-slack
   :recipe (:host github :repo "yuya373/emacs-slack"))
+
+(package! eva
+  :recipe (:host github :repo "meedstrom/eva"
+           :files (:defaults "assets"  "renv" "*.R" "*.gnuplot")))
+
 ;;=============
 ;; ORG STUFF ;;
 ;;=============
