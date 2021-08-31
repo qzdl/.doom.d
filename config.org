@@ -53,12 +53,12 @@ or
 #+end_src
 
 #+RESULTS:
-| 1 | 2 | (lambda nil (list :title const value))          | (:title const value)          |
-| 2 | 4 | (lambda nil (list :title const value))          | (:title const value)          |
-| 3 | 1 | (lambda nil (list :title const value :id yaaa)) | (:title const value :id yaaa) |
+| 1 | 1 | (lambda nil (list :title const value :id yaaa)) | (:title const value :id yaaa) |
+| 2 | 1 | (lambda nil (list :title const value :id yaaa)) | (:title const value :id yaaa) |
+| 3 | 5 | (lambda nil (list :title const value))          | (:title const value)          |
 | 4 | 6 | (lambda nil (list :title const value))          | (:title const value)          |
-| 5 | 2 | (lambda nil (list :title const value))          | (:title const value)          |
-| 6 | 4 | (lambda nil (list :title const value))          | (:title const value)          |
+| 5 | 1 | (lambda nil (list :title const value :id yaaa)) | (:title const value :id yaaa) |
+| 6 | 6 | (lambda nil (list :title const value))          | (:title const value)          |
 ** keeping track of information
 - [[id:6baf4bff-d5fe-4ce0-a130-0464e49de67d][org-mode]]
 - [[id:d904ace6-a941-49fc-a6d4-7fe3797b0d8e][org-agenda]]
@@ -894,17 +894,24 @@ start-process-shell-command' with COMMAND"
     ([?\M-f] . C-right)
     ([?\C-p] . up)
     ([?\C-n] . down)
-    ([?\C-a] . home)
-    ([?\C-e] . end)
-    ([?\M-v] . prior)
-    ([?\C-v] . next)
-    ([?\C-d] . delete)
-    ([?\C-k] . (S-end delete))
-    ([?\M-d] . (C-S-right delete))
+    ([?\C-a] . home)                ;; start-line
+    ([?\C-e] . end)                 ;; end-line
+    ([?\C-A] . S-home)              ;; sel; start-line
+    ([?\C-E] . S-end)               ;; sel; end-line
+    ([?\M-<] . C-home)              ;; start-page
+    ([?\M->] . C-end)             ;; end-page
+    ([?\M-v] . prior)               ;; page-up
+    ([?\C-v] . next)                ;; page-down
+    ([?\C-d] . delete)              ;; delete-char
+    ([?\C-k] . (S-end ?\C-x))         ;; highlight to end and cut
+    ([?\M-d] . (C-S-right ?\C-x))
     ;; cut/paste.
     ([?\C-w] . ?\C-x)
     ([?\M-w] . ?\C-c)
     ([?\C-y] . ?\C-v)
+    ;; undo/redo
+    ([?\C-/] . ?\C-z)
+    ([?\C-?] . ?\C-y)
     ;; search
     ([?\C-s] . ?\C-f)))
 
@@ -1026,7 +1033,7 @@ Emacs can recognise x-windows as 'real' per <link-to-elisp-doc 'doom-real-buffer
 *** sticky-windows.el :file:
 :: https://www.emacswiki.org/emacs/sticky-windows.el
 
-#+begin_src emacs-lisp :tangle sticky-windows.el
+#+begin_src emacs-lisp :tangle modules/sticky-windows.el
 ;;; sticky-windows.el --- Make windows stay visible
 ;;;
 ;;; Commentary:
@@ -1091,7 +1098,7 @@ with `sticky-window-keep-window-visible'."
 **** define
 **** load :init:
 #+begin_src emacs-lisp
-(load-file "~/.doom.d/sticky-windows.el")
+(load-file "~/.doom.d/modules/sticky-windows.el")
 #+end_src
 
 #+RESULTS:
@@ -1562,7 +1569,7 @@ the absolute GOAT for ultrawide monitors. {C-x 1} is your friend
 : message-filter-center
 
 * TODO hydra
-** n :kbd:
+** =n= notes :kbd:
 The =n= of {C-c n} denotes notes.
 
 #+begin_src emacs-lisp
@@ -1579,6 +1586,56 @@ The =n= of {C-c n} denotes notes.
 
 #+RESULTS:
 : find-file-in-notes
+** =p= projectile
+
+*** with-project
+:: 'counsel-projectile-switch-project
+:: 'counsel-projectile-switch-project-action
+
+consume projectile function, with predefined action
+- =(v . vc-something)=
+- =(s . search=)
+- =(xv . vterm)=
+
+#+begin_src emacs-lisp
+;; magit-status in PROJECT
+(defun qz/with-project--magit ()
+  (interactive)
+  (counsel-projectile-switch-project "v"))
+
+;; search (rg) in PROJECT
+(defun qz/with-project--search ()
+  (interactive)
+  (counsel-projectile-switch-project "s"))
+
+;; search (rg) in PROJECT
+(defun qz/with-project--shell ()
+  (interactive)
+  (counsel-projectile-switch-project "xv")) ;; vterm
+
+(map! :map projectile-mode-map
+      "C-c p C-s" #'qz/with-project--search
+      "C-c p C-m" #'qz/with-project--magit
+      "C-c p C-'" #'qz/with-project--shell)
+#+end_src
+
+#+RESULTS:
+
+**** =counsel-projectile-switch-project-action= + =counsel-projectile-switch-project-action-run-vterm=
+
+the default action list doesn't include vterm, so add it
+#+begin_src emacs-lisp
+(add-to-list
+ 'counsel-projectile-switch-project-action
+ '("xv" counsel-projectile-switch-project-action-run-vterm
+   "invoke vterm from project root")))
+
+;(qz/pprint counsel-projectile-switch-project-action)
+#+end_src
+
+#+RESULTS:
+| (xv counsel-projectile-switch-project-action-run-vterm invoke vterm from project root) | 1 | (o +workspaces-switch-to-project-h open project in new workspace) | (O counsel-projectile-switch-project-action jump to a project buffer or file) | (f counsel-projectile-switch-project-action-find-file jump to a project file) | (d counsel-projectile-switch-project-action-find-dir jump to a project directory) | (D counsel-projectile-switch-project-action-dired open project in dired) | (b counsel-projectile-switch-project-action-switch-to-buffer jump to a project buffer) | (m counsel-projectile-switch-project-action-find-file-manually find file manually from project root) | (w counsel-projectile-switch-project-action-save-all-buffers save all project buffers) | (k counsel-projectile-switch-project-action-kill-buffers kill all project buffers) | (r counsel-projectile-switch-project-action-remove-known-project remove project from known projects) | (c counsel-projectile-switch-project-action-compile run project compilation command) | (C counsel-projectile-switch-project-action-configure run project configure command) | (e counsel-projectile-switch-project-action-edit-dir-locals edit project dir-locals) | (v counsel-projectile-switch-project-action-vc open project in vc-dir / magit / monky) | (s (lambda (project) (let ((projectile-switch-project-action (lambda nil (call-interactively #'+ivy/project-search)))) (counsel-projectile-switch-project-by-name project))) search project) | (xs counsel-projectile-switch-project-action-run-shell invoke shell from project root) | (xe counsel-projectile-switch-project-action-run-eshell invoke eshell from project root) | (xt counsel-projectile-switch-project-action-run-term invoke term from project root) | (X counsel-projectile-switch-project-action-org-capture org-capture into project) |
+
 ** TODO {s-o} tasks, clocking
 #+begin_src emacs-lisp :tangle no
 (map! :leader
@@ -1727,14 +1784,22 @@ yep, [[id:c20edb0c-16a1-4b6a-ac73-8b98782740cd][SLIME]] conventions please
 #+end_src
 
 #+RESULTS:
-** scheme
+** geiser scheme
 #+begin_src emacs-lisp
-(defvar geiser-scheme-implementation 'guile)
+(setq geiser-scheme-implementation 'guile
+      geiser-guile-load-init-file-p t)
+      ;geiser-guile-init-file "~/.config/guile/.guile-geiser")
 #+end_src
 
 #+RESULTS:
-: geiser-scheme-implementation
+: t
 
+** (ma)git (forge)
+
+*** yeahboy
+#+begin_src emacs-lisp
+
+#+end_src
 
 * [[id:d342065d-2042-4e8b-938d-ed121debc179][hyperbole]]
 ** Initialisation :init:
@@ -1846,12 +1911,17 @@ A package that logs command usage; blessed be Xah Lee
                                        ("sb" . "src bash")
                                        ("se" . "src emacs-lisp")
                                        ("sp" . "src psql")
-                                       ("jp" . "src    jupyter-python")
+                                       ("jp" . "src jupyter-python")
                                        ("jr" . "src jupyter-R")
                                        ("sr" . "src R")
                                        ("el" . "src emacs-lisp")))
   (with-eval-after-load 'flycheck
     (flycheck-add-mode 'proselint 'org-mode)))
+#+end_src
+
+*** org-mode-hook -> org-fragtog
+#+begin_src emacs-lisp
+(add-hook 'org-mode-hook 'org-fragtog-mode)
 #+end_src
 
 ** org-id :init:vars:
@@ -2295,51 +2365,7 @@ set in authinfo.el
 #+RESULTS:
 : ((next.org :level . 0) (reading.org :level . 0) (watching.org :level . 0) (learning.org :level . 0) (wip.org :level . 1))
 
-** [[id:6baf4bff-d5fe-4ce0-a130-0464e49de67d][org-mode]] :init:vars:
-#+begin_src emacs-lisp :results none
-(use-package! org
-  :mode ("\\.org\\'" . org-mode)
-  :init
-  (map! :leader
-        :prefix "n"
-        "l" #'org-capture)
-  (map! :map org-mode-map
-        "M-n" #'outline-next-visible-heading
-        "M-p" #'outline-previous-visible-heading
-        "C->" #'org-do-demote
-        "C-<" #'org-do-promote)
-  (setq org-src-window-setup 'current-window
-        org-return-follows-link t
-        org-babel-load-languages '((emacs-lisp . t)
-                                   (jupyter . t)
-                                   (lisp . t)
-                                   (python . t)
-                                   (R . t))
-        org-ellipsis " ▼ "
-        org-confirm-babel-evaluate nil
-        org-use-speed-commands t
-        org-catch-invisible-edits 'show
-        org-preview-latex-image-directory "/tmp/ltximg/"
-        ;; ORG SRC BLOCKS {C-c C-,}
-        org-structure-template-alist '(("q" . "quote")
-                                       ("d" . "definition")
-                                       ("s" . "src")
-                                       ("sb" . "src bash")
-                                       ("sp" . "src psql")
-                                       ("sr" . "src R")
-                                       ("ss" . "src ")
-                                       ("jp" . "src jupyter-python")
-                                       ("jr" . "src jupyter-R")
-                                       ("el" . "src emacs-lisp")))
-  (with-eval-after-load 'flycheck
-    (flycheck-add-mode 'proselint 'org-mode)))
-#+end_src
 
-
-*** org-mode-hook -> org-fragtog
-#+begin_src emacs-lisp
-(add-hook 'org-mode-hook 'org-fragtog-mode)
-#+end_src
 
 
 ** org-habit
@@ -2931,13 +2957,12 @@ each capture {C-c n j} will make an entry under =journal= headline in the daily 
          "* [%<%H:%M>] %?\nCREATED: <%<%Y-%m-%d %H:%M>>\nFROM: %a"
          :if-new (file+head+olp
                   ,qz/org-roam-dailies-filespec
-                  "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private project\n\n"
+                  "#+title: <%<%Y-%m-%d>>\n#+filetags: daily private project\n\n%(qz/today-dateref)\n\n"
                   ("journal")))))
 #+end_src
 
 #+RESULTS:
 | d | default | entry | * [%<%H:%M>] %? |
-
 
 *** helpers :func:
 **** TODO point->roam-id; get id from node at point
@@ -3007,8 +3032,6 @@ if ~pass-thru~, then fire capture template from thing at point, to template "n"
 of [[id:bc3c61d4-d720-40a8-9018-6357f05ae85e][roam-capture-template]]
 
 #+begin_src emacs-lisp
-
-
 (defun qz/roam-immediate-insert ()
   (interactive)
   (qz/org-roam-node-insert nil t))
@@ -3256,9 +3279,112 @@ If ASSERT, throw an error if there is no node at point."
 **** fixing wrong-type-argument hash-table-p nil
 this plagued me for WEEKS
 https://github.com/org-roam/org-roam/issues/1734
-#+begin_src emacs-lisp :tangle no
-(org-id-update-id-locations (directory-files-recursively org-roam-directory ".org$\\|.org.gpg$"))
+
+will take a WHILE, best to run without config/site, as it will run the org init
+hook for each file (so latex, formatting etc will be hit)
+
+#+begin_src emacs-lisp :tangle scripts/org-id-update-locations.el
+(require 'org)
+(org-id-update-id-locations
+    (directory-files-recursively "~/life/roam" ".org$\\|.org.gpg$"))
 #+end_src
+
+
+***** running
+#+begin_src shell :tangle no
+emacs -Q --batch --script scripts/org-id-update-locations.el
+#+end_src
+
+**** today's date reference as roam links
+:PROPERTIES:
+:ID:       24cca9c1-2a89-4de2-b840-5d2adb9180931
+:END:
+
+This is just a nice reference spec to include in the daily notes.
+
+I've used explicit lookups for day/month here, because it's quicker to =assoc= a
+small list than to hit the cache (=>2k=) or hit the database a bunch.
+
+=year= is left as a call to =(org-roam-node-from-title-or-alias "2021")= as years
+are less discrete; I haven't made all possible years, and it's infrequent to
+make a new year in this case.
+#+begin_src emacs-lisp
+
+
+(defvar qz/day-lookup
+ '((Mon . "[[id:d5ad0bac-e82b-43d0-960f-26eeb1daf91b][Monday]]")
+   (Tue . "[[id:cb662cc6-bde2-4f9c-b3fa-62346c6df27a][Tuesday]]")
+   (Wed . "[[id:411a8e5a-8d89-4886-b2ea-047a3970710a][Wednesday]]")
+   (Thu . "[[id:659b9931-ae09-422b-8e91-1bf4cc58e94c][Thursday]]")
+   (Fri . "[[id:b3255cd1-db37-4e07-99cf-5e60d52a2579][Friday]]")
+   (Sat . "[[id:b63897c3-30cc-42eb-83b5-c8e372e5af9a][Saturday]]")
+   (Sun . "[[id:2e28574b-4793-4c05-b83d-e36e9a77515b][Sunday]]"))
+ "an index; get days from abbrev (assoc 'Mon qz/day-lookup)")
+
+(defvar qz/month-lookup
+ '("[[id:b92355d7-110e-467c-b7a7-d02b2043af3f][January]]"
+   "[[id:7e0af966-8d3e-4e88-b53f-d074902e175a][February]]"
+   "[[id:f41751f8-a2a9-4b38-ba03-2ceec2fae4cc][March]]"
+   "[[id:ae0ae458-2216-4178-8073-4a26f23747d9][April]]"
+   "[[id:6a680100-e842-4257-819f-8cf6cbedddbc][May]]"
+   "[[id:f811621c-1b37-43f7-9d01-52bdf9f27637][June]]"
+   "[[id:a4d5c8fe-3910-4483-b59e-ce50cd6699a7][July]]"
+   "[[id:94e9b0a7-6cd0-4104-821e-613876fe76e3][August]]"
+   "[[id:f9ad8160-cae5-4195-a85f-0160710ce8dd][September]]"
+   "[[id:da9f0d53-e3f7-4f72-bc1a-d060bc2d1745][October]]"
+   "[[id:a4e3a97a-dac9-4bc6-a5e9-5949f707a6de][November]]"
+   "[[id:f874ca1a-0d3f-4840-8340-511ed0ac286f][December]]")
+"an index; get days from abbrev (nth 0 qz/month-lookup)")
+
+(defun qz/today-dateref (&optional time)
+  (cl-destructuring-bind (day nday month year)
+    (split-string
+     (format-time-string "%a:%d:%m:%Y" (or time (current-time))) ":")
+    (format "%s %s %s, %s"
+            (cdr (assoc (intern day) qz/day-lookup))
+            nday
+            (nth (1- (string-to-number month)) qz/month-lookup)
+            (or (if-let ((node (org-roam-node-from-title-or-alias year)))
+                  (org-link-make-string
+                   (concat "id:" (org-roam-node-id node))
+                   (org-roam-node-title node)))
+                year))))
+
+;(qz/today-dateref)
+#+end_src
+
+#+RESULTS:
+: [[id:cb662cc6-bde2-4f9c-b3fa-62346c6df27a][Tuesday]] 31 [[id:94e9b0a7-6cd0-4104-821e-613876fe76e3][August]], [[id:ccc8b8fe-120a-4e10-8167-09e3bd76927f][2021]]
+
+*** mods
+**** show olp hierarchy of nodes for completing-read candidates {C-c n f}
+#+begin_src emacs-lisp
+  (cl-defmethod org-roam-node-filetitle ((node org-roam-node))
+    "Return the file TITLE for the node."
+    (if-let ((file (org-roam-node-file node)))
+        (with-temp-buffer
+          (insert-file-contents file nil 0 1024)
+          (cadr (assoc "TITLE"
+                       (org-collect-keywords (list "TITLE")))))
+      (cadr (assoc "TITLE"
+                   (org-collect-keywords (list "TITLE"))))))
+
+  (cl-defmethod org-roam-node-hierarchy ((node org-roam-node))
+    "Return the hierarchy for the node."
+    (let ((title (org-roam-node-title node))
+          (olp (org-roam-node-olp node))
+          (level (org-roam-node-level node))
+          (filetitle (org-roam-node-filetitle node)))
+      (concat
+       (if (> level 0) (concat filetitle " > "))
+       (if (> level 1) (concat (string-join olp " > ") " > "))
+       title)))
+  #+end_src
+
+  #+RESULTS:
+  : org-roam-node-hierarchy
+
+
 
 *** data-driven automatic actions in org roam
 :PROPERTIES:
@@ -3403,8 +3529,9 @@ entry); covering 'inherited match'.
 
 this could be updated to jump back, but only 'landing' final on
 PROPERTIES with non-nil :ID:"
-  (progn (message "ensuring tag for %s" tag)
-         (org-roam-tag-add tag)))
+  (let ((ltag (or (and (listp tag) tag) (list tag))))
+    (progn (message "ensuring tag for %s" ltag)
+           (org-roam-tag-add ltag))))
 #+end_src
 
 #+RESULTS:
@@ -3587,7 +3714,7 @@ thinking about using a macro for generating these lambdas & inverting control he
              (qz/note-buffer-p))
     (when-let ((tags (qz/node-tags)))
       (mapc (lambda (tag+fun)
-              (when (funcall (car tag+fun) tags)
+              (when (and tag+fun (funcall (car tag+fun) tags))
                 (funcall (cdr tag+fun) "")))
             qz/auto-buffer-action))))
 
@@ -3626,7 +3753,6 @@ thinking about using a macro for generating these lambdas & inverting control he
  (append qz/org-agenda-files (qz/project-files)))
 #+end_src
 
-
 *** get list of private notes
 #+begin_src emacs-lisp
 (defun qz/org-roam-private-files ()
@@ -3643,7 +3769,6 @@ thinking about using a macro for generating these lambdas & inverting control he
 
 #+RESULTS:
 : qz/org-roam-private-files
-
 
 *** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
