@@ -839,12 +839,13 @@ local `exists?'."
       "C-c p C-m" #'qz/with-project--magit
       "C-c p C-'" #'qz/with-project--shell)
 
-(add-to-list
- 'counsel-projectile-switch-project-action
- '("xv" counsel-projectile-switch-project-action-run-vterm
-   "invoke vterm from project root")))
+(setq counsel-projectile-switch-project-action
+      (seq-uniq
+       (append counsel-projectile-switch-project-action
+               '(("xv" counsel-projectile-switch-project-action-run-vterm
+                  "invoke vterm from project root")))))
 
-;(qz/pprint counsel-projectile-switch-project-action)
+(qz/pprint counsel-projectile-switch-project-action)
 
 (setq qz/psql-error-rollback 0)
 
