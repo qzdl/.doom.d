@@ -78,6 +78,8 @@
   :recipe (:host github :repo "meedstrom/eva"
            :files (:defaults "assets"  "renv" "*.R" "*.gnuplot")))
 
+(package! kubernetes)
+
 ;;=============
 ;; ORG STUFF ;;
 ;;=============

@@ -507,6 +507,8 @@ start-process-shell-command' with COMMAND"
 (setq window-divider-default-bottom-width 4)
 (window-divider-mode 1)
 
+(setq window-min-width 90)
+
 (defcustom qz/exwm-floating-window-classes '("keybase" "mpv")
   "List of instance names of windows that should start in the floating mode.")
 
@@ -1051,6 +1053,28 @@ v))
 ;;               (let ((s (match-string-no-properties 0)))
 ;;                 (push (if with-point (cons s (point)) s) matches)))))))
 ;;     matches))
+
+(defun qz/yank-buffer-path-and-line-num (&optional root spec)
+  "Copy the current buffer's path to the kill ring."
+  (interactive)
+  (if-let (filename (or (buffer-file-name (buffer-base-buffer))
+                        (bound-and-true-p list-buffers-directory)))
+      (message
+       "Copied path to clipboard: %s"
+       (kill-new (format
+                  (or spec "%s:%i")
+                  (abbreviate-file-name
+                   (if root
+                       (file-relative-name filename root)
+                     filename))
+                  (locate-current-line-number))))
+    (error "Couldn't find filename in current buffer")))
+
+;(qz/yank-buffer-path-and-line-num nil "example -> %s")
+
+(add-to-list 'load-path "~/.doom.d/modules/org-share")
+
+(require 'ol-info)
 
 (setq org-directory "~/life/"
       qz/notes-directory (concat org-directory "roam/")

@@ -982,6 +982,13 @@ suspicious; acts as soon as eval'd
 
 #+RESULTS:
 : t
+** windows: min-width
+#+begin_src emacs-lisp
+(setq window-min-width 90)
+#+end_src
+
+#+RESULTS:
+: 90
 
 ** windows; automatically float windows :func:
 #+begin_src emacs-lisp
@@ -2070,6 +2077,183 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 #+RESULTS:
 : qz/insert-radio-children
+
+*** HACK on getting buffer info (file+line) for links
+:PROPERTIES:
+:ID:       43725885-d44a-4972-94de-1a063464fb21
+:END:
+#+begin_src emacs-lisp
+(defun qz/yank-buffer-path-and-line-num (&optional root spec)
+  "Copy the current buffer's path to the kill ring."
+  (interactive)
+  (if-let (filename (or (buffer-file-name (buffer-base-buffer))
+                        (bound-and-true-p list-buffers-directory)))
+      (message
+       "Copied path to clipboard: %s"
+       (kill-new (format
+                  (or spec "%s:%i")
+                  (abbreviate-file-name
+                   (if root
+                       (file-relative-name filename root)
+                     filename))
+                  (locate-current-line-number))))
+    (error "Couldn't find filename in current buffer")))
+
+;(qz/yank-buffer-path-and-line-num nil "example -> %s")
+#+end_src
+
+#+RESULTS:
+: qz/yank-buffer-path-and-line-num
+
+*** org-share: ol-links :module:
+:PROPERTIES:
+:ID:       d48a91f6-d7a7-4516-a761-f270e34cd279
+:END:
+:: modules/org-share
+[[id:6baf4bff-d5fe-4ce0-a130-0464e49de67d][org-mode]] + [[id:edd82bc1-eb33-4170-a953-051ec2c50fae][Information and the Universe]] mechanisms
+
+
+**** TODO extrapolate to other link types (http, file, etc)
+- pre-store: identity hierarchy
+  - which identity backend for a link?
+  - is this a question for storage as well as export?
+    + yes, because files/views are mutable
+
+***** identity ontology
+- ipfs: SHA of file
+- ipfs: SHA of (file + datetime) -> uses in adhoc
+- repo+commit SHA
+- func: latest file -> e.g. most roam links
+
+what are we prioritising?
+- strength of identity? -> hash -> IPFS
+- strength of context? -> repo+SHA -> (constraint: filesize)
+- strength of relevance? -> head of =version-view= / ipld / mutable page
+
+to establish which identity is most suitable, address the reason for making the link
+- a highlight / region -> content-based -> identity with respect to content
+- denoting =oneof= -> ? (reference/link/edge based) -> identity with respect to context
+
+***** privacy: gpg password / key / etc
+
+****** declarative key spec :spec:
+(:keys ((key-name . file-list) ...)
+ :passwords ((password-name . file-list ) ...))
+
+(key-name . public-key) -> gpg / other crypt backend
+(password-name . authinfo)
+
+
+so we can produce a given file-list with a set of predicates, like =private-p=
+auto-roam-function
+
+****** good to have a prompt workflow to adhoc add file to given lists
+
+***** maintenance
+****** garbage collecting
+pastebin-style timeouts
+- clearweb: delete FILE from webserver
+- ipfs: stop providing FILE on nodes
+
+***** export format
+  + recursive exporter (if linked file is not 'shared', then =(share-adhoc link-file)=
+    - prompt "should we share FILE?" and thuis recursively for further linked files
+    - don't need to be immediate, but =share-lint= should detect dangling links
+    - so, could be one such maintenance tasks
+- copy actions
+- versioning
+**** TODO init :init:
+#+begin_src emacs-lisp
+(add-to-list 'load-path "~/.doom.d/modules/org-share")
+
+(require 'ol-info)
+#+end_src
+
+#+RESULTS:
+: ol-info
+
+**** ol-info :module:
+:PROPERTIES:
+:ID:       b98ba365-6e16-46d1-a370-fb0cd5061511
+:END:
+:: https://stackoverflow.com/questions/10445285/org-mode-embed-links-to-info-files#10453313
+:: https://orgmode.org/manual/Adding-Hyperlink-Types.html
+:: https://samuelculpepper.com/share/info
+:: modules/org-share/ol-info.el
+
+a backend for =info=
+#+begin_src emacs-lisp :tangle modules/org-share/ol-info.el
+;; Modified version of contrib/lisp/org-man.el; see
+;; (http://orgmode.org/manual/Adding-hyperlink-types.html#Adding-hyperlink-types)
+(require 'org)
+
+(org-add-link-type "info" 'org-info-open)
+(org-link-set-parameters "man"
+                         :follow #'org-info-open
+                         :export #'org-info-export
+                         :store #'org-info-store-link)
+
+(defcustom org-info-command 'info
+  "The Emacs command to be used to display an info page."
+  :group 'org-link
+  :type '(choice (const info)))
+
+(defun org-info-open (path)
+  "Visit the infopage on PATH.
+   PATH should be a topic that can be thrown at the info command."
+  (funcall org-info-command path))
+
+(defun org-info-store-link ()
+  "Store a link to an info page."
+  (when (memq major-mode '(Info-mode))
+    ;; This is a info page, we do make this link
+    (let* ((page (org-info-get-page-name))
+           (link (concat "info:" page))
+           (description (format "Infopage for %s (L%s)" page (locate-current-line-number))))
+      (org-store-link-props
+       :type "info"
+       :link link
+       :description description))))
+
+(defun org-info-get-page-name ()
+  "Extract the page name from Info in a hackish way."
+  ;; This works for `Info-mode'.
+  ;; Hackity-hack: copy the node name into the kill ring.
+  (concat (Info-copy-current-node-name) ":" (locate-current-line-num)
+  ;; Just return the kill.
+  (current-kill 0))
+
+(defun org-info-export (link description format _)
+  "Export an info page link from Org files."
+  (let ((path (format "https://samuelculpepper.com/share/info/%s" link))
+        (desc (or description link)))
+    (pcase format
+      (`html (format "<a target=\"_blank\" href=\"%s\">%s</a>" path desc))
+      (`latex (format "\\href{%s}{%s}" path desc))
+      (`texinfo (format "@uref{%s,%s}" path desc))
+      (`ascii (format "%s (%s)" desc path))
+      (t path)))))
+
+(provide 'ol-info)
+#+end_src
+
+#+RESULTS:
+: org-info-export
+
+***** TODO add infofile hosting on samuelculpepper.com :@share:
+relevant to [[id:eb5bf554-0804-4487-be65-8ec1fac85d4f][data sync]], [[id:edd82bc1-eb33-4170-a953-051ec2c50fae][Information and the Universe]]
+
+this is one such "external data" as described in the above notes
+
+***** TODO add infofile version to extract
+in order of
+- sha256 of build (from guix info)
+- build version +  datetime
+- version
+- datetime
+- local path (relative to infodir)
+
+
 
 ** directories :vars:
 #+begin_src emacs-lisp
