@@ -31,10 +31,14 @@
 (map! "C-x C-k" #'kill-this-buffer)
 (map! "C-x k" #'kmacro-keymap)
 
-(map! "s-h" #'windmove-left)
-(map! "s-j" #'windmove-down)
-(map! "s-k" #'windmove-up)
-(map! "s-l" #'windmove-right)
+(map! "s-h" #'windmove-left
+      "s-H" #'windmove-swap-states-left
+      "s-j" #'windmove-down
+      "s-J" #'windmove-swap-states-down
+      "s-k" #'windmove-up
+      "s-K" #'windmove-swap-states-up
+      "s-l" #'windmove-right
+      "s-L" #'windmove-swap-states-right)
 
 (map! "C-x C-o" #'ace-window)
 (map! "C-x o" #'delete-blank-lines)
@@ -448,16 +452,16 @@ start-process-shell-command' with COMMAND"
     ([?\M-f] . C-right)
     ([?\C-p] . up)
     ([?\C-n] . down)
-    ([?\C-a] . home)                ;; start-line
-    ([?\C-e] . end)                 ;; end-line
-    ([?\C-A] . S-home)              ;; sel; start-line
-    ([?\C-E] . S-end)               ;; sel; end-line
-    ([?\M-<] . C-home)              ;; start-page
-    ([?\M->] . C-end)             ;; end-page
-    ([?\M-v] . prior)               ;; page-up
-    ([?\C-v] . next)                ;; page-down
-    ([?\C-d] . delete)              ;; delete-char
-    ([?\C-k] . (S-end ?\C-x))         ;; highlight to end and cut
+    ([?\C-a] . home)               ;; start-line
+    ([?\C-e] . end)                ;; end-line
+    ;([?\C-A] . S-home)            ;; sel; start-line
+    ;([?\C-E] . S-end)             ;; sel; end-line
+    ([?\M-<] . C-home)             ;; start-page
+    ([?\M->] . C-end)              ;; end-page
+    ([?\M-v] . prior)              ;; page-up
+    ([?\C-v] . next)               ;; page-down
+    ([?\C-d] . delete)             ;; delete-char
+    ([?\C-k] . (S-end ?\C-x))      ;; highlight to end and cut
     ([?\M-d] . (C-S-right ?\C-x))
     ;; cut/paste.
     ([?\C-w] . ?\C-x)
@@ -902,8 +906,27 @@ local `exists?'."
 (define-key! emacs-lisp-mode-map "C-c C-c" 'eval-defun)
 
 (setq geiser-scheme-implementation 'guile
-      geiser-guile-load-init-file-p t)
+      geiser-guile-load-init-file-p t
+      geiser-repl-highlight-output-p t)
       ;geiser-guile-init-file "~/.config/guile/.guile-geiser")
+
+(defun geiser-eval-last-sexp (print-to-buffer-p)
+  "Eval the previous sexp in the Geiser REPL.
+
+With a prefix, print the result of the evaluation to the buffer."
+  (interactive "P")
+  (let* ((ret (geiser-eval-region (save-excursion (backward-sexp) (point))
+                                  (point)
+                                  nil
+                                  t
+                                  print-to-buffer-p))
+         (str (geiser-eval--retort-result-str ret (when print-to-buffer-p ""))))
+    (eros--eval-overlay (substring str 3) (point))
+    (when (and print-to-buffer-p (not (string= "" str)))
+      (push-mark)
+      (insert str))))
+
+;; (substring "=>  'boy'" 4) ;; removes "=> " from geiser eval
 
 
 
@@ -1438,18 +1461,6 @@ can grow up to be fully-fledged org-mode buffers."
     (and str (split-string str ","))))
 
 ;(qz/roam-key->yt-channel "https://www.youtube.com/watch?v=KopB4l5QkEg")
-
-(defun qz/get-headline-path (&optional self? reverse? sepf)
-  (interactive)
-  (let* ((s (or sepf
-                (lambda (i)
-                  (if (< 0 i) " -> " ""))))
-         (c (org-get-outline-path self?)))
-    (insert "\n")
-    (cl-loop
-     for e in (if reverse? (reverse c) c)
-     for i = 0 then (1+ i)
-     do (insert (funcall s i) e))))
 
 (setq org-roam-v2-ack t)
 (use-package! org-roam
@@ -2094,23 +2105,30 @@ tasks.
 ;(qz/pprint (qz/org-roam-private-files))
 
 (defun qz/get-headline-path (&optional self? reverse? sepf)
+  "return qualified outline path (olp), maybe including `this' node, maybe REVERSE?, self for a
+given separation function (SEPF)
+
+if the output is fucked or there is a type error `listp', look for
+backwards compat version `qz/get-headline-path-insert'"
   (interactive)
   (let* ((s (or sepf
                 (lambda (i)
                   (if (< 0 i) " -> " ""))))
          (c (org-get-outline-path self?)))
-    (insert "\n")
     (cl-loop
      for e in (if reverse? (reverse c) c)
      for i = 0 then (1+ i)
-     do (insert (funcall s i) e))))
+     collect (concat (funcall s i) (org-link-display-format e)))))
+
+(defun qz/get-headline-path-insert (&optional self? reverse? sepf)
+  "backwards compat version of `qz/get-headline-path'"
+  (insert "\n")
+  (mapc (lambda (s) (insert s)) (qz/get-headline-path self? reverse? sepf)))
 
 (defun qz/headline-mm (i)
+  "headline output format for https://www.text2mm.com/"
   (if (< 0 i)
       (concat "\n" (make-string i ?	)) ""))
-
-;;(qz/get-headline-path t t 'qz/headline-mm)
-
 
 ;; (progn
 ;;   (qz/get-headline-path)

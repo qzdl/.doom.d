@@ -151,10 +151,14 @@ this bind is a DOOM emacs function, lilke )
 
 *** HJKL Window control
 #+begin_src emacs-lisp
-(map! "s-h" #'windmove-left)
-(map! "s-j" #'windmove-down)
-(map! "s-k" #'windmove-up)
-(map! "s-l" #'windmove-right)
+(map! "s-h" #'windmove-left
+      "s-H" #'windmove-swap-states-left
+      "s-j" #'windmove-down
+      "s-J" #'windmove-swap-states-down
+      "s-k" #'windmove-up
+      "s-K" #'windmove-swap-states-up
+      "s-l" #'windmove-right
+      "s-L" #'windmove-swap-states-right)
 #+end_src
 
 #+RESULTS:
@@ -166,7 +170,7 @@ this bind is a DOOM emacs function, lilke )
 
 #+RESULTS:
 
-*** Buffer control
+*** Buffer control {s-n} and {s-p}
 #+begin_src emacs-lisp
 (map! "s-n" #'next-buffer)
 (map! "s-p" #'previous-buffer)
@@ -894,16 +898,16 @@ start-process-shell-command' with COMMAND"
     ([?\M-f] . C-right)
     ([?\C-p] . up)
     ([?\C-n] . down)
-    ([?\C-a] . home)                ;; start-line
-    ([?\C-e] . end)                 ;; end-line
-    ([?\C-A] . S-home)              ;; sel; start-line
-    ([?\C-E] . S-end)               ;; sel; end-line
-    ([?\M-<] . C-home)              ;; start-page
-    ([?\M->] . C-end)             ;; end-page
-    ([?\M-v] . prior)               ;; page-up
-    ([?\C-v] . next)                ;; page-down
-    ([?\C-d] . delete)              ;; delete-char
-    ([?\C-k] . (S-end ?\C-x))         ;; highlight to end and cut
+    ([?\C-a] . home)               ;; start-line
+    ([?\C-e] . end)                ;; end-line
+    ;([?\C-A] . S-home)            ;; sel; start-line
+    ;([?\C-E] . S-end)             ;; sel; end-line
+    ([?\M-<] . C-home)             ;; start-page
+    ([?\M->] . C-end)              ;; end-page
+    ([?\M-v] . prior)              ;; page-up
+    ([?\C-v] . next)               ;; page-down
+    ([?\C-d] . delete)             ;; delete-char
+    ([?\C-k] . (S-end ?\C-x))      ;; highlight to end and cut
     ([?\M-d] . (C-S-right ?\C-x))
     ;; cut/paste.
     ([?\C-w] . ?\C-x)
@@ -983,6 +987,10 @@ suspicious; acts as soon as eval'd
 #+RESULTS:
 : t
 ** windows: min-width
+- window width minimum for 90. -> why not try out a change
+
+so far, kind of annoying how it blocks splits, maybe some 'warn less than LIMIT -> resize?'
+would be better
 #+begin_src emacs-lisp
 (setq window-min-width 90)
 #+end_src
@@ -1845,13 +1853,40 @@ yep, [[id:c20edb0c-16a1-4b6a-ac73-8b98782740cd][SLIME]] conventions please
 ** geiser scheme
 #+begin_src emacs-lisp
 (setq geiser-scheme-implementation 'guile
-      geiser-guile-load-init-file-p t)
+      geiser-guile-load-init-file-p t
+      geiser-repl-highlight-output-p t)
       ;geiser-guile-init-file "~/.config/guile/.guile-geiser")
 #+end_src
 
 #+RESULTS:
 : t
+*** annoying results to echo always
+**** at point annotated (CIDER)
+#+begin_src emacs-lisp
 
+(defun geiser-eval-last-sexp (print-to-buffer-p)
+  "Eval the previous sexp in the Geiser REPL.
+
+With a prefix, print the result of the evaluation to the buffer."
+  (interactive "P")
+  (let* ((ret (geiser-eval-region (save-excursion (backward-sexp) (point))
+                                  (point)
+                                  nil
+                                  t
+                                  print-to-buffer-p))
+         (str (geiser-eval--retort-result-str ret (when print-to-buffer-p ""))))
+    (eros--eval-overlay (substring str 3) (point))
+    (when (and print-to-buffer-p (not (string= "" str)))
+      (push-mark)
+      (insert str))))
+
+;; (substring "=>  'boy'" 4) ;; removes "=> " from geiser eval
+#+end_src
+
+#+RESULTS:
+: geiser-eval-last-sexp
+
+**** to repl (SLIME)
 ** (ma)git (forge)
 
 *** yeahboy
@@ -2104,6 +2139,119 @@ Handle opening with { C-c C-o } or { RET } or { mouse-1 }
 
 #+RESULTS:
 : qz/yank-buffer-path-and-line-num
+*** org-map-entries
+relevant for
+- [[id:eb5bf554-0804-4487-be65-8ec1fac85d4f][data sync]] (org-jira)
+- index of headlines in buffer(s)/file(s)
+
+if headline or tag matches CONCEPT
+
+entry backend
+- flat links
+  * =concept1=: link1, link2, ..., linkN
+  * =concept2=: link1, link2, ..., linkN
+
+- flat numbers
+  * =concept1=: L1, L2, ..., LN
+  * =concept2=: L1, L2, ..., LN
+
+
+[[~/dotfiles/.doom.d/config.org::*highest identity spec available]]
+link reference get (highest identity spec available)
+- orgid, file+headline
+- precommit build task for [[id:eb5bf554-0804-4487-be65-8ec1fac85d4f][data sync]]
+
+#+begin_src emacs-lisp :tangle no :results drawer
+(defun qz/headline-concepts (concepts)
+  (apply
+   'append
+   (remove
+    nil
+    (org-map-entries ;; where the unit is entries. could generalize for any such LINE
+     (lambda ()
+       (cl-destructuring-bind
+           (level _ kword priority headline tags) (org-heading-components)
+         (remove nil
+                 (cl-loop for concept in concepts
+                          collect (progn
+                                    ;;(message "%s:%s:%s" (string-match (symbol-name concept) headline) concept headline)
+                                    (when-let ((hl (string-match (symbol-name concept) headline)))
+                                      (list concept
+                                            (concat "[[" (f-this-file) "::*" (org-link-display-format headline) "]"
+                                                    "[" (org-link-display-format headline) "]]")
+                                            (locate-current-line-number))))))))))))
+
+
+(defun qz/entry-index (concepts &optional buffer)
+  (let ((buffer (or buffer (current-buffer))))
+
+
+    ))
+
+(defun qz/universe-entry-index (concepts &optional files)
+  (let ((files (or files (org-roam-list-files))))
+    ))
+
+;; (let* ((concepts '(headline debug))
+;;       (res (qz/headline-concepts concepts)))
+;;   (cl-loop for concept in concepts
+;;            do (cl-destructuring-bind (c h l) (assoc concept res)
+;;                 (insert "**** ")
+;;                 (insert h)
+;;                 (insert "\n"))))
+
+;;(qz/pprint (qz/headline-concepts '(headline test debug roam)))
+#+end_src
+
+#+RESULTS:
+:results:
+
+((roam "[[/home/samuel/dotfiles/.doom.d/config.org::*roam insert todo on {s-i}][roam insert todo on {s-i}]]"
+       194)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*org-mode][org-mode]]"
+       1971)
+ (headline "[[/home/samuel/dotfiles/.doom.d/config.org::*recurring events headlines][recurring events headlines]]"
+           2926)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*org-roam][org-roam]]"
+       3009)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*roam counts][roam counts]]"
+       3234)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*roam capture templates][roam capture templates]]"
+       3250)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*point->roam-id; get id from node at point][point->roam-id; get id from node at point]]"
+       3308)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*title->roam-id][title->roam-id]]"
+       3324)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*custom roam-insert][custom roam-insert]]"
+       3370)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*org-roam-immediate-node-insert][org-roam-immediate-node-insert]]"
+       3505)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*org-roam-node-insert][org-roam-node-insert]]"
+       3517)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*today's date reference as roam links][today's date reference as roam links]]"
+       3638)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*data-driven automatic actions in org roam][data-driven automatic actions in org roam]]"
+       3729)
+ (headline "[[/home/samuel/dotfiles/.doom.d/config.org::*=get-headline-path= headline parsing function][=get-headline-path= headline parsing function]]"
+           4118)
+ (headline "[[/home/samuel/dotfiles/.doom.d/config.org::*query slice of headlines, containing REGEXP, build path with headline parsing function][query slice of headlines, containing REGEXP, build path with headline parsing function]]"
+           4174)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*org-roam-server][org-roam-server]]"
+       4176)
+ (roam "[[/home/samuel/dotfiles/.doom.d/config.org::*can we please AUTO/org-roam create a missing note?][can we please AUTO/org-roam create a missing note?]]"
+       4338))
+:end:
+
+**
+#+RESULTS:
+:results:
+
+((headline "[[~/dotfiles/.doom.d/config.org::*recurring events headlines]]" 2902)
+ (headline "[[=get-headline-path= headline parsing function]]" 4094)
+ (headline "[[query slice of headlines, containing REGEXP, build path with headline parsing function]]"
+           4150))
+:end:
+
 
 *** org-share: ol-links :module:
 :PROPERTIES:
@@ -2879,6 +3027,7 @@ with open('./ytdl.json') as f:
 
 print(c.get('channel'))
 #+end_src
+2164
 
 #+RESULTS:
 : HexiBase
@@ -2887,20 +3036,7 @@ print(c.get('channel'))
 *** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
 - restrict graph (e.g. exclude sensitive information)
-*** headline parsing function
-#+begin_src emacs-lisp
-(defun qz/get-headline-path (&optional self? reverse? sepf)
-  (interactive)
-  (let* ((s (or sepf
-                (lambda (i)
-                  (if (< 0 i) " -> " ""))))
-         (c (org-get-outline-path self?)))
-    (insert "\n")
-    (cl-loop
-     for e in (if reverse? (reverse c) c)
-     for i = 0 then (1+ i)
-     do (insert (funcall s i) e))))
-#+end_src
+
 ** [[id:b33372ae-f731-4482-8e3a-0c5e986ac70a][org-roam]]
 *** V1 Initialisation :init:vars:
 #+begin_src emacs-lisp :tangle no
@@ -3982,7 +4118,8 @@ thinking about using a macro for generating these lambdas & inverting control he
 #+RESULTS:
 : qz/sqlite-row-col
 
-*** testing
+
+testing -> org-roam -> org*** testing
 #+begin_src emacs-lisp :tangle no
 (qz/pprint
  (append qz/org-agenda-files (qz/project-files)))
@@ -4008,26 +4145,36 @@ thinking about using a macro for generating these lambdas & inverting control he
 *** TODO Run analysis :func:
 Run analysis from source file on org-roam DB
 - restrict graph (e.g. exclude sensitive information)
-*** headline parsing function
+
+***  =get-headline-path= headline parsing function
+:: [[https://www.text2mm.com/][Text 2 MindMap]]
+
 #+begin_src emacs-lisp
 (defun qz/get-headline-path (&optional self? reverse? sepf)
+  "return qualified outline path (olp), maybe including `this' node, maybe REVERSE?, self for a
+given separation function (SEPF)
+
+if the output is fucked or there is a type error `listp', look for
+backwards compat version `qz/get-headline-path-insert'"
   (interactive)
   (let* ((s (or sepf
                 (lambda (i)
                   (if (< 0 i) " -> " ""))))
          (c (org-get-outline-path self?)))
-    (insert "\n")
     (cl-loop
      for e in (if reverse? (reverse c) c)
      for i = 0 then (1+ i)
-     do (insert (funcall s i) e))))
+     collect (concat (funcall s i) (org-link-display-format e)))))
+
+(defun qz/get-headline-path-insert (&optional self? reverse? sepf)
+  "backwards compat version of `qz/get-headline-path'"
+  (insert "\n")
+  (mapc (lambda (s) (insert s)) (qz/get-headline-path self? reverse? sepf)))
 
 (defun qz/headline-mm (i)
+  "headline output format for https://www.text2mm.com/"
   (if (< 0 i)
       (concat "\n" (make-string i ?	)) ""))
-
-;;(qz/get-headline-path t t 'qz/headline-mm)
-
 
 ;; (progn
 ;;   (qz/get-headline-path)
@@ -4041,6 +4188,16 @@ Run analysis from source file on org-roam DB
 
 #+RESULTS:
 : qz/headline-mm
+**** example
+#+begin_src emacs-lisp :eval yes :tangle no
+(qz/get-headline-path-insert t nil 'qz/headline-mm)
+#+end_src
+
+
+org
+	org-roam
+		=get-headline-path= headline parsing function
+			example
 *** TODO transform an org subtree, into mindmap for ttmm :ttmm:
 tab delimit
 given a subtree (at point)

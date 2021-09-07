@@ -72,7 +72,15 @@
 (package! ovpn-mode)
 
 (package! emacs-slack
-  :recipe (:host github :repo "yuya373/emacs-slack"))
+  :recipe (:host github :repo "aculich/emacs-slack"
+           :branch "cookie"))
+
+
+;; matrix
+(package! plz
+  :recipe (:host github :repo "alphapapa/plz.el"))
+(package! ement
+  :recipe (:host github :repo "alphapapa/ement.el"))
 
 (package! eva
   :recipe (:host github :repo "meedstrom/eva"
