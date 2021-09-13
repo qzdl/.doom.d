@@ -5,5 +5,3 @@
 
 [[file:images/screenshot-01.png]]
 
-
-* Table of Contents :TOC_3:noexport:
